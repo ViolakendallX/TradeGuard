@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppShell from './components/AppShell.jsx';
 import TradeIdeaScreen from './screens/TradeIdeaScreen.jsx';
+import InvestigationScreen from './screens/InvestigationScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
@@ -16,6 +17,9 @@ function readScreenFromHash() {
 export default function App() {
   const [screen, setScreen] = useState(readScreenFromHash);
   const [apiOnline, setApiOnline] = useState(false);
+  // Phase 2: carry the submitted trade context from Trade Idea into Investigation.
+  const [submission, setSubmission] = useState(null);
+  const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     const onHashChange = () => setScreen(readScreenFromHash());
@@ -42,7 +46,29 @@ export default function App() {
     setScreen(id);
   }, []);
 
+  // Called by Trade Idea on a successful submission (online or local offline capture).
+  const handleSubmitted = useCallback(
+    (data, form) => {
+      setSubmission(data);
+      setDraft(form);
+      navigate('investigation');
+    },
+    [navigate]
+  );
+
+  // Return the trader to the Trade Idea screen with the previous submission restored.
+  const handleEdit = useCallback(() => {
+    navigate('trade-idea');
+  }, [navigate]);
+
   const active = NAV_ITEMS.find((item) => item.id === screen) ?? NAV_ITEMS[0];
+
+  const subtitle =
+    screen === 'trade-idea'
+      ? 'Submit the trade you are considering.'
+      : screen === 'investigation'
+      ? 'TradeGuard is examining your thesis before you risk capital.'
+      : 'Not built in this phase.';
 
   return (
     <AppShell
@@ -50,14 +76,12 @@ export default function App() {
       onNavigate={navigate}
       apiOnline={apiOnline}
       title={active.label}
-      subtitle={
-        screen === 'trade-idea'
-          ? 'Submit the trade you are considering.'
-          : 'Not built in Phase 1.'
-      }
+      subtitle={subtitle}
     >
       {screen === 'trade-idea' ? (
-        <TradeIdeaScreen />
+        <TradeIdeaScreen initialForm={draft} onSubmitted={handleSubmitted} />
+      ) : screen === 'investigation' ? (
+        <InvestigationScreen submission={submission} onEdit={handleEdit} />
       ) : (
         <PlaceholderScreen screenId={screen} onNavigate={navigate} />
       )}

@@ -1,6 +1,8 @@
 import { NAV_ITEMS } from '../lib/constants.js';
 
-const PHASE_1_ID = 'trade-idea';
+// Phases that are actually built. Everything at or below this is interactive;
+// later phases remain disabled until their phase lands.
+const CURRENT_PHASE = 2;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
   return (
@@ -17,7 +19,7 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
         <div className="nav__label">Decision flow</div>
         {NAV_ITEMS.map((item, index) => {
           const isActive = item.id === activeId;
-          const isAvailable = item.id === PHASE_1_ID;
+          const isAvailable = item.phase <= CURRENT_PHASE;
           return (
             <button
               key={item.id}
@@ -42,7 +44,7 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 1 — Foundation. Research, thesis attack and stress testing are not enabled yet.
+          Phase 2 — Investigation. Live market/event research arrives in Phase 3.
         </div>
       </div>
     </aside>

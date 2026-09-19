@@ -5,8 +5,8 @@ import SubmissionResult from '../components/trade-idea/SubmissionResult.jsx';
 import { submitTradeIdea } from '../lib/api.js';
 import { EMPTY_FORM, validateIdeaForm, toSubmissionPayload } from '../lib/validation.js';
 
-export default function TradeIdeaScreen() {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function TradeIdeaScreen({ initialForm, onSubmitted }) {
+  const [form, setForm] = useState(initialForm ?? EMPTY_FORM);
   const [touched, setTouched] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [serverErrors, setServerErrors] = useState({});
@@ -56,7 +56,8 @@ export default function TradeIdeaScreen() {
       try {
         const response = await submitTradeIdea(toSubmissionPayload(form));
         if (response.ok) {
-          setResult({ kind: 'success', data: response.data, offline: false });
+          // Phase 2: carry the captured context into the Investigation screen.
+          onSubmitted({ ...response.data, offline: false }, form);
         } else if (response.kind === 'validation') {
           setServerErrors(response.errors);
           setResult({ kind: 'error', message: response.message, errors: response.errors });
@@ -64,24 +65,25 @@ export default function TradeIdeaScreen() {
           setResult({ kind: 'error', message: response.message });
         }
       } catch {
-        // Backend unreachable: keep the validated thesis visible, but state clearly
-        // that nothing was validated or analysed server-side.
-        setResult({
-          kind: 'success',
-          offline: true,
-          data: {
+        // Backend unreachable: still transition into Investigation with a locally
+        // captured thesis, but state clearly that nothing was validated or
+        // analysed server-side.
+        onSubmitted(
+          {
             receivedAt: new Date().toISOString(),
             idea: toSubmissionPayload(form),
             message:
               'Thesis captured in the browser only. The TradeGuard backend is not reachable, ' +
               'so nothing was validated or analysed server-side.',
+            offline: true,
           },
-        });
+          form
+        );
       } finally {
         setSubmitting(false);
       }
     },
-    [form]
+    [form, onSubmitted]
   );
 
   const dismissResult = useCallback(() => {
