@@ -1268,6 +1268,292 @@ textarea {
   }
 }
 
+/* ============================================================
+   Phase 4 — Devil's Advocate (thesis attack)
+   ============================================================ */
+
+.da {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.da__strength {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.da__badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.da__badge--supported {
+  background: var(--ok-soft);
+  border-color: rgba(23, 201, 138, 0.4);
+  color: var(--ok);
+}
+
+.da__badge--mixed {
+  background: var(--warn-soft);
+  border-color: rgba(245, 165, 36, 0.4);
+  color: var(--warn);
+}
+
+.da__badge--weak {
+  background: var(--danger-soft);
+  border-color: rgba(255, 84, 112, 0.4);
+  color: var(--danger);
+}
+
+.da__badge--insufficient-evidence {
+  background: var(--bg-panel);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.da__basis {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.da__summary {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.da__notice {
+  padding: 9px 11px;
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  color: var(--warn);
+  line-height: 1.5;
+}
+
+/* Strongest counterargument — deliberately prominent, not buried. */
+.da__callout {
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 84, 112, 0.42);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius);
+}
+
+.da__callout-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: 5px;
+}
+
+.da__callout-title {
+  font-size: 13px;
+  font-weight: 640;
+  color: var(--text);
+}
+
+/* Shown when the challenge is the absence of evidence, so the reader cannot
+   mistake "no contradicting evidence" for "the thesis is supported". */
+.da__callout-basis {
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.da__callout-detail {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.da__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.da__section {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.da__section--support {
+  border-left-color: var(--ok);
+}
+.da__section--contradict {
+  border-left-color: var(--danger);
+}
+.da__section--risk {
+  border-left-color: var(--warn);
+}
+.da__section--invalidation {
+  border-left-color: var(--accent);
+}
+.da__section--missing {
+  border-left-color: var(--text-muted);
+}
+
+.da__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.da__section--support .da__section-title {
+  color: var(--ok);
+}
+.da__section--contradict .da__section-title {
+  color: var(--danger);
+}
+.da__section--risk .da__section-title {
+  color: var(--warn);
+}
+.da__section--invalidation .da__section-title {
+  color: var(--accent);
+}
+
+.da__count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.da__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.da__item-title {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.da__item-index {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.da__item-detail {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.da__item-src {
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.da__empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.da__interpretation {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+}
+
+.da__interpretation-text {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Keeps "your thesis" clearly separated from verified market evidence. */
+.da__interpretation-note {
+  margin: 0 0 9px;
+  padding: 6px 9px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.da__assumptions-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.da__assumptions {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.da__assumptions li {
+  margin-bottom: 3px;
+}
+
+.da__disclaimer {
+  margin-top: 0;
+  font-style: italic;
+}
+
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;

@@ -1,110 +1,371 @@
 # TradeGuard
 
-> An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.
+> **An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.**
 
-## Phase 1 — Foundation (current build)
+**Stress-test your trade thesis before you risk capital.**
 
-This build contains **only** Phase 1 of the TradeGuard PRD (`TradeGuard.md`):
+TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, and tells you what could make it wrong — then leaves the decision to you.
 
-- React + Vite frontend
-- Minimal Express backend foundation
-- Clean application shell + navigation (Trade Idea active, later screens marked as planned)
-- Trade Idea screen with the thesis form
-- `STRESS-TEST MY TRADE` button — validates and captures the thesis, then shows a
-  "thesis captured" state
+**Status:** Phases 1–4 complete · Phases 5–13 planned. See [Current development status](#current-development-status).
 
-**Not built in this phase** (by design): market data, news, AI research, thesis attack,
-Devil's Advocate, historical stress testing, risk engine, trade structuring, paper
-execution, trade memory, post-trade review, trader review.
+---
 
-## Run locally
+## What is TradeGuard?
+
+TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
+
+It does four things:
+
+- **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
+- **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
+- **Separates supporting from contradicting evidence** — you see both sides classified, not blended into a single opinion.
+- **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
+
+The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
+
+---
+
+## The problem
+
+Most tools are built to find reasons to take a trade. Traders, meanwhile, are the worst-placed people to challenge their own idea — you get attached to the thesis, and the reasons to enter start to look more convincing than the reasons not to.
+
+The questions that actually matter before execution are uncomfortable ones:
+
+- What am I missing?
+- What contradicts my thesis?
+- What would prove me wrong?
+- Am I trading on data I actually have, or data I assume I have?
+
+TradeGuard exists to answer those questions in a structured way before the money moves.
+
+---
+
+## Core workflow
+
+```
+THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
+       →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
+```
+
+**Implemented today:** THESIS → RESEARCH → CHALLENGE.
+**Still on the roadmap:** STRESS TEST (historical analogues), RISK CHECK, HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
+
+Later stages are planned, not built. Nothing after Phase 4 is presented as working.
+
+---
+
+## How it currently works
+
+The implemented flow runs end to end in the browser:
+
+```
+Trade Idea  →  Investigation  →  Market Context
+                              →  Events & Catalysts
+                              →  Devil's Advocate / Thesis Attack
+```
+
+**You submit:** asset, direction, thesis, timeframe, entry price, risk amount, confidence, and existing position.
+
+**The investigation can currently:**
+
+- retrieve market context for the asset when the market data provider is reachable
+- retrieve event and catalyst information when an events provider is configured
+- analyse the thesis against whatever evidence was actually retrieved
+- separate supporting evidence from contradicting evidence
+- identify missing information
+- identify invalidation conditions when there is enough data to derive them
+- explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
+
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran.
+
+---
+
+## Current development status
+
+| Phase | Scope | Status |
+| ----- | ----- | ------ |
+| Phase 1 — Foundation | React/Vite frontend, Express backend, app shell, navigation, Trade Idea screen | ✅ Complete |
+| Phase 2 — Investigation Flow | Investigation screen, stage model, progress states | ✅ Complete |
+| Phase 3 — Market & Event Research | Live market context, event/catalyst research, honest unavailability states | ✅ Complete |
+| Phase 4 — Devil's Advocate / Thesis Attack | Thesis extraction, supporting vs contradicting evidence, risks, invalidation conditions | ✅ Complete |
+| Phase 5 — Historical Stress Test | Historical retrieval, similarity logic, comparable setups | ⏳ Planned |
+| Phase 6 — Risk Engine | Deterministic max loss / max profit / breakeven / sizing / exposure | ⏳ Planned |
+| Phase 7 — Trade Structuring | Defined-risk trade proposals where supported | ⏳ Planned |
+| Phase 8 — Final Trade Report | One consolidated decision-ready report | ⏳ Planned |
+| Phase 9 — Human Decision | Execute / Modify / Pass with decision recording | ⏳ Planned |
+| Phase 10 — Paper Execution | Paper order submission, execution status, trade record | ⏳ Planned |
+| Phase 11 — Trade Memory | Persistent trade journal | ⏳ Planned |
+| Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
+| Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
+
+Phases 5–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and the investigation UI labels those stages as arriving in a later phase.
+
+---
+
+## Phase 4 — Devil's Advocate
+
+The thesis attack is the defining feature of TradeGuard. Given your thesis and the research retrieved in Phase 3, it produces:
+
+- a **supporting evidence** list and a separate **contradicting evidence** list
+- **key risks**
+- **invalidation conditions** — what would indicate the thesis has failed, expressed against real levels when market data allows
+- **missing information** — what could not be assessed, and why
+- the **strongest argument against the trade**, stated as the single most important challenge
+
+It holds to a few rules that matter more than the feature list:
+
+- **It does not manufacture bearish evidence.** If nothing in the data contradicts the thesis, it says so rather than inventing a counter-argument.
+- **It distinguishes "absence of evidence" from "evidence against the trade."** With no usable data, the honest conclusion is that the thesis is *unconfirmed* — not that it is supported, and not that it is refuted.
+- **Insufficient evidence is never treated as confirmation.** When there is nothing to classify, the evidence-strength label degrades to `insufficient evidence` and the strongest counter-argument states that the thesis cannot currently be validated.
+- **It emits no trade instruction.** There is no BUY, SELL, or PASS anywhere in the analysis output, and no arbitrary confidence score.
+- **It never executes anything.** TradeGuard has no execution path at all.
+
+Evidence strength is reported as one of four evidence-derived labels — `supported`, `mixed`, `weak`, or `insufficient evidence` — each with a stated basis. It is not a probability and not a model score.
+
+**Implementation note:** the current thesis attack is a **deterministic, evidence-derived analysis engine**. It does not call an LLM provider, and it does not require one to run. See [Analysis architecture](#analysis-architecture).
+
+---
+
+## Data & integrations
+
+### Market research
+
+Live market context comes from the **Bitget Spot API v2** public endpoints (no API key required). Recognised rToken assets are resolved to their Bitget USDT pair — for example `rNVDA` → `RNVDAUSDT`.
+
+Derived from ticker and candle data:
+
+- current price
+- 24h change (and change since UTC open)
+- trend over the sampled window
+- realised volatility
+- 24h high / 24h low
+- quote volume
+
+### Events & catalysts
+
+Event research uses a **Financial Modeling Prep**-style earnings calendar, gated entirely by environment configuration. Without `TRADEGUARD_EVENTS_API_BASE` and `TRADEGUARD_EVENTS_API_KEY`, event research reports **Data unavailable** with an explanation rather than guessing.
+
+### Provider availability
+
+External provider availability directly affects live research, and TradeGuard is built to be honest about that. If Bitget is unreachable from the network the backend is running on — a restricted sandbox, a corporate proxy, an outage — market context reports **Data unavailable** with the reason. The integration is real; it simply is not guaranteed to return data on every run, and the UI never pretends otherwise.
+
+There is no caching layer or fallback dataset: no data means an explicit unavailable state, never a substituted or stale number.
+
+---
+
+## Data honesty & safety
+
+These are enforced in the code, not aspirational:
+
+- **No fabricated market numbers.** When the market provider returns nothing usable, no price, change, or volatility field is emitted at all.
+- **No fabricated events.** Unconfigured or failing event providers produce an unavailable state with a reason.
+- **Missing data is explicitly surfaced** in a Missing Information section, naming what could not be assessed.
+- **Insufficient evidence is not confirmation.** The analysis never presents an absence of data as support for a trade.
+- **No manufactured bearish case.** TradeGuard does not invent risks to create artificial balance.
+- **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect.
+- **The human remains responsible for the final decision.**
+- **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
+- **Provider credentials stay server-side.** API keys are read from the backend environment and never reach the browser.
+
+---
+
+## Analysis architecture
+
+The Phase 4 thesis attack runs entirely in the backend as a deterministic pipeline:
+
+```
+TRADE CONTEXT + PHASE 3 RESEARCH
+              ↓
+   EVIDENCE CLASSIFICATION  (market signals, event signals, context)
+              ↓
+   SUPPORTING / CONTRADICTING / RISK / MISSING
+              ↓
+   STRONGEST COUNTER-ARGUMENT + EVIDENCE STRENGTH
+```
+
+Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, so the reasoning is explainable and reproducible.
+
+**Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
+
+This is deliberately a **clean seam**. The evidence classification and the numbers stay deterministic, while an LLM could later be layered on top to *explain* the findings in natural language. Adding that layer would not make the core classification dependent on an external model.
+
+---
+
+## Architecture
+
+```
+TRADEGUARD
+│
+├── src/                          React + Vite frontend
+│   ├── screens/                  Trade Idea, Investigation, placeholder screens for later phases
+│   ├── components/               App shell, sidebar, trade-idea components
+│   ├── lib/                      API client, constants, stage model, validation
+│   └── styles/                   Design tokens and styles
+│
+└── server/                       Express backend
+    ├── index.js                  App wiring, /api/health
+    ├── routes/                   tradeIdeas, research, thesisAttack
+    ├── services/                 marketData, eventData, thesisAttack
+    │   └── providers/            bitget (isolated provider knowledge)
+    ├── lib/                      Trade idea validation
+    └── tests/                    Node test runner suites
+```
+
+**Frontend:** React with Vite. Hash-based navigation across the application screens, with the Trade Idea → Investigation flow wired end to end.
+
+**Backend:** Node.js with Express. One process, no database. The API surface:
+
+| Endpoint | Purpose |
+| -------- | ------- |
+| `GET /api/health` | Service status, including the current build phase |
+| `POST /api/trade-ideas` | Validate and capture a submitted thesis |
+| `POST /api/research` | Market context + event research for the asset |
+| `POST /api/thesis-attack` | The Devil's Advocate analysis |
+
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline.
+
+---
+
+## Tech stack
+
+**Currently in use**
+
+| Layer | Technology |
+| ----- | ---------- |
+| Frontend | React 18, Vite 5, JavaScript / JSX |
+| Backend | Node.js, Express 4 |
+| Market data | Bitget Spot API v2 |
+| Event data | Financial Modeling Prep earnings calendar (env-configured) |
+| Unit / integration tests | Node.js built-in test runner (`node --test`) |
+| Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
+
+**Future work (not currently implemented):** historical market data storage, a deterministic risk-calculation engine, defined-risk options structuring, persistent trade storage, and optional LLM-based explanation of deterministic findings.
+
+---
+
+## Local development
 
 ```bash
+git clone https://github.com/ViolakendallX/TradeGuard.git
+cd TradeGuard
 npm install
 npm run dev
 ```
 
-That starts both processes:
+`npm run dev` starts both processes together:
 
-| Service  | URL                        |
-| -------- | -------------------------- |
-| Frontend | http://localhost:5173      |
-| Backend  | http://localhost:8787      |
+| Service | URL |
+| ------- | --- |
+| Frontend (Vite) | http://localhost:5173 |
+| Backend (Express API) | http://localhost:8787 |
 
-You can also run them separately:
+The Vite dev server proxies `/api` requests to the backend, so the frontend talks to `http://localhost:8787` through `http://localhost:5173`.
+
+Run them individually if you prefer:
 
 ```bash
-npm run dev:web   # Vite dev server only
+npm run dev:web   # Vite frontend only
 npm run dev:api   # Express API only
+npm start         # Express API only, without the Vite dev tooling
 ```
 
-Production build + preview:
+Production build and preview:
 
 ```bash
-npm run build
-npm run preview
+npm run build     # outputs to dist/
+npm run preview   # serve the production build locally
 ```
 
-## Tests
+Copy `.env.example` to `.env` before running if you want event research enabled — see below.
+
+---
+
+## Environment variables
+
+Provider credentials belong in environment variables and are never committed. `.env` is gitignored; `.env.example` is committed so the required variables stay documented.
 
 ```bash
-npm test          # node --test over server/tests
+cp .env.example .env
 ```
 
-## Project structure
+| Variable | Required | Purpose |
+| -------- | -------- | ------- |
+| `TRADEGUARD_MARKET_PROVIDER` | No | Market data provider. Defaults to `bitget` (public API, no key). |
+| `TRADEGUARD_EVENTS_PROVIDER` | No | Event provider. Defaults to `fmp`. |
+| `TRADEGUARD_EVENTS_API_BASE` | For event research | Base URL of the events provider. Empty → event research reports Data unavailable. |
+| `TRADEGUARD_EVENTS_API_KEY` | For event research | API key for the events provider. Empty → event research reports Data unavailable. |
+| `PORT` | No | Backend port. Defaults to `8787`. |
+
+Never commit a real `.env` file or real API keys. The default contract for the events provider is:
 
 ```
-server/
-  index.js                     Express app + /api/health
-  routes/tradeIdeas.js         POST /api/trade-ideas
-  lib/validateTradeIdea.js     Validation + capture response (no analysis)
-  tests/                       Node test runner tests
-src/
-  main.jsx                     React entry
-  App.jsx                      Hash routing + API health polling
-  components/
-    AppShell.jsx               Sidebar + topbar layout
-    Sidebar.jsx                Navigation
-    trade-idea/                Form, live preview, submission result
-  screens/
-    TradeIdeaScreen.jsx        Phase 1 screen
-    PlaceholderScreen.jsx      Later-phase screens (not built)
-  lib/                         Constants, API client, form validation
-  styles/global.css            Design tokens + styles
+GET {TRADEGUARD_EVENTS_API_BASE}/earnings_calendar?symbol=<EQUITY>&apikey=<KEY>
 ```
 
-## API
+---
 
-### `GET /api/health`
+## Testing
 
-```json
-{ "status": "ok", "service": "tradeguard-api", "phase": 1 }
+```bash
+npm test        # unit + integration tests
+npm run build   # production build
 ```
 
-### `POST /api/trade-ideas`
+**Verified state of the Phase 4 build:**
 
-Request:
+- **51/51 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, and the frontend stage model.
+- **Production build successful** — Vite build completes and emits to `dist/`.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state, confirming that unavailable data is reported honestly and that no evidence is fabricated.
 
-```json
-{
-  "asset": "rNVDA",
-  "direction": "bullish",
-  "thesis": "NVDA should move higher after earnings because results beat expectations.",
-  "timeframe": "earnings-event",
-  "entryPrice": "182.40",
-  "riskAmount": "500",
-  "confidence": 7,
-  "existingPosition": "none"
-}
-```
+Test suites live in `server/tests/` and alongside the frontend library code in `src/lib/`. The unit tests do not require network access or a live AI provider — provider interactions are tested against fixtures through injectable `fetch` implementations.
 
-Required: `asset`, `direction`, `thesis`.
-Optional: `timeframe`, `entryPrice`, `riskAmount`, `confidence` (1–10), `existingPosition`.
+---
 
-Responses:
+## Project documentation
 
-- `201` — validated and captured (echoes the normalised idea)
-- `400` — `{ status: "invalid", errors: { field: "message" } }`
+- **`README.md`** (this file) — public-facing project documentation: what TradeGuard is, what works today, how to run it.
+- **[`TradeGuard.md`](./TradeGuard.md)** — the detailed product requirements document (PRD): product definition, target user, screen-by-screen specification, AI module responsibilities, and the full phased development plan.
 
-The response deliberately contains **no analysis, score or probability** — those belong to
-later phases.
+This README summarises the product; `TradeGuard.md` is the source of truth for specification and scope.
+
+---
+
+## Roadmap
+
+Phases 5–13, in order. All are planned and none are implemented:
+
+- **Phase 5 — Historical Stress Test.** Find comparable historical setups, explain why each is considered similar, and report how they resolved — or explicitly report insufficient historical data rather than fabricating a comparison.
+- **Phase 6 — Risk Engine.** Deterministic calculation of maximum loss, maximum profit, breakeven, position size, risk percentage, reward/risk, and exposure. The application calculates; the AI explains.
+- **Phase 7 — Trade Structuring.** Propose defined-risk structures where sufficient market data exists, as research output rather than an instruction.
+- **Phase 8 — Final Trade Report.** Consolidate thesis, research, attack, historical test, risk, and structure into one decision-ready report.
+- **Phase 9 — Human Decision.** Execute / Modify / Pass, with the decision recorded. No trade can proceed without explicit human approval.
+- **Phase 10 — Paper Execution.** Simulated order submission, execution status, and trade record.
+- **Phase 11 — Trade Memory.** Persist the full decision context — what you believed, why, what TradeGuard warned about, what you decided, and what happened.
+- **Phase 12 — Post-Trade Review.** Before/after comparison, the original warnings, the outcome, and the lesson.
+- **Phase 13 — Trader Review & Polish.** Recurring pattern detection from your own trade history, plus error states, loading states, responsive UI, and the end-to-end demo flow.
+
+---
+
+## Hackathon context
+
+TradeGuard is being built for the **Bitget AI Hackathon S2**, under the **AI Trading Desk** direction. The focus of that direction is AI-assisted research and decision stress-testing with the human trader kept in control — which is what the product is designed around, rather than a demo built for the event.
+
+---
+
+## Product principles
+
+1. **Evidence before opinion.** Conclusions connect to observable data, or they are labelled as missing.
+2. **Challenge the thesis.** The system is built to look for what could make the trade wrong.
+3. **No fabricated data.** Missing market or event data is surfaced as missing, never filled in.
+4. **Human in the loop.** The trader makes the decision; TradeGuard never makes it for them.
+5. **Deterministic risk controls.** Critical calculations and classifications do not depend on a language model.
+6. **Transparent uncertainty.** Supported, mixed, weak, and insufficient evidence are distinct, stated outcomes.
+7. **No autonomous live trading.** TradeGuard has no execution capability in the current product.
+
+---
+
+## Repository
+
+**https://github.com/ViolakendallX/TradeGuard**
+
+Research output, not a trading instruction. TradeGuard does not predict outcomes and does not place trades — the decision remains yours.

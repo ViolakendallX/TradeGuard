@@ -13,9 +13,17 @@ import {
   completedStageCountFromResearch,
   lockedStageCount,
 } from '../lib/investigation.js';
-import { fetchResearch } from '../lib/api.js';
+import { fetchResearch, fetchThesisAttack } from '../lib/api.js';
 
 const TONE_CLASS = { bullish: 'chip--up', bearish: 'chip--down', neutral: 'chip--neutral' };
+
+/**
+ * Fallback copy for the interpretation block. The analysis normally supplies its
+ * own `interpretationNote`; this keeps the "your thesis, not market evidence"
+ * framing visible even if the API response predates that field.
+ */
+const INTERPRETATION_NOTE =
+  "This is TradeGuard's reading of the reasoning you stated in your own thesis — an interpretation of your argument, not verified market or event evidence, and not a statement about what the market will do.";
 
 function fmt(n) {
   if (n === null || n === undefined || n === '') return '—';
@@ -117,8 +125,148 @@ function EventsDetail({ research }) {
   );
 }
 
-function StageItem({ stage, research }) {
-  const runtime = stageRuntimeState(stage, research);
+function EvidenceSection({ title, tone, items, empty, emptyDataLimited, dataLimited, ordered }) {
+  const list = Array.isArray(items) ? items : [];
+  // With no usable data the empty state must say the evidence could not be
+  // ASSESSED — never that it was assessed and came back clean.
+  const emptyText = list.length === 0 && dataLimited && emptyDataLimited ? emptyDataLimited : empty;
+  return (
+    <div className={`da__section da__section--${tone}`}>
+      <div className="da__section-title">
+        {title}
+        <span className="da__count">{list.length}</span>
+      </div>
+      {list.length === 0 ? (
+        <p className="da__empty">{emptyText}</p>
+      ) : (
+        <ul className="da__list">
+          {list.map((it, i) => (
+            <li key={it.id || `${tone}-${i}`} className="da__item">
+              <div className="da__item-title">
+                {ordered && <span className="da__item-index">{i + 1}</span>}
+                {it.title}
+              </div>
+              <p className="da__item-detail">{it.detail}</p>
+              {it.source && <div className="da__item-src">Source: {it.source}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DevilsAdvocateDetail({ attack }) {
+  if (!attack) return null;
+
+  if (attack.available === false) {
+    return (
+      <div className="stage__detail stage__detail--unavailable">
+        ⚠ Analysis unavailable{attack.reason ? ` — ${attack.reason}` : '.'}
+      </div>
+    );
+  }
+
+  const strength = attack.evidenceStrength || { label: 'insufficient evidence', basis: '' };
+  const strengthClass = String(strength.label || '').toLowerCase().replace(/\s+/g, '-');
+  const counter = attack.strongestCounterargument;
+
+  return (
+    <div className="stage__detail da">
+      <div className="da__strength">
+        <span className={`da__badge da__badge--${strengthClass}`}>{strength.label}</span>
+        <span className="da__basis">Evidence strength — {strength.basis}</span>
+      </div>
+
+      {attack.summary && <p className="da__summary">{attack.summary}</p>}
+
+      {attack.dataLimited && (
+        <div className="da__notice">
+          TradeGuard could not retrieve usable market/event data, so this pass is data-limited. The
+          sections below report what is missing rather than inventing evidence.
+        </div>
+      )}
+
+      {counter && (
+        <div className="da__callout">
+          <div className="da__callout-label">Strongest argument against the trade</div>
+          <div className="da__callout-title">{counter.title}</div>
+          {counter.basis === 'insufficient-evidence' && (
+            <div className="da__callout-basis">
+              Basis: no usable evidence either way — the thesis is unconfirmed, not supported
+            </div>
+          )}
+          <p className="da__callout-detail">{counter.detail}</p>
+        </div>
+      )}
+
+      <div className="da__grid">
+        <EvidenceSection
+          title="Supporting evidence"
+          tone="support"
+          items={attack.supporting}
+          empty="No supporting market or event signal was found in the available data."
+          emptyDataLimited="Supporting evidence could not be assessed — no usable market or event data was available. This is not a supporting signal."
+          dataLimited={attack.dataLimited}
+        />
+        <EvidenceSection
+          title="Contradicting evidence"
+          tone="contradict"
+          items={attack.contradicting}
+          empty="No material contradicting evidence was found in the available data."
+          emptyDataLimited="Contradicting evidence could not be assessed — no usable market or event data was available, and none has been invented to fill the gap."
+          dataLimited={attack.dataLimited}
+        />
+        <EvidenceSection
+          title="Key risks"
+          tone="risk"
+          items={attack.keyRisks}
+          empty="No specific risks could be derived from the available data."
+          emptyDataLimited="No specific risks could be derived — no usable market or event data was available."
+          dataLimited={attack.dataLimited}
+        />
+        <EvidenceSection
+          title="Invalidation conditions"
+          tone="invalidation"
+          items={attack.invalidationConditions}
+          empty="No invalidation conditions could be derived from the available data."
+          ordered
+        />
+        <EvidenceSection
+          title="Missing information"
+          tone="missing"
+          items={attack.missingInformation}
+          empty="None — all expected inputs were available."
+        />
+      </div>
+
+      {(attack.interpretation || (attack.assumptions && attack.assumptions.length > 0)) && (
+        <div className="da__interpretation">
+          <div className="section-label">How TradeGuard read your thesis</div>
+          <div className="da__interpretation-note">
+            {attack.interpretationNote || INTERPRETATION_NOTE}
+          </div>
+          {attack.interpretation && <p className="da__interpretation-text">{attack.interpretation}</p>}
+          {attack.assumptions && attack.assumptions.length > 0 && (
+            <>
+              <div className="da__assumptions-label">Assumptions your thesis depends on</div>
+              <ul className="da__assumptions">
+                {attack.assumptions.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
+      {attack.disclaimer && <div className="stage__meta da__disclaimer">{attack.disclaimer}</div>}
+    </div>
+  );
+}
+
+function StageItem({ stage, research, attack }) {
+  const runtime = stageRuntimeState(stage, research, attack);
   const isComplete = runtime === STAGE_RUNTIME.COMPLETE;
   const isPartial = runtime === STAGE_RUNTIME.PARTIAL;
   const isUnavailable = runtime === STAGE_RUNTIME.UNAVAILABLE;
@@ -157,6 +305,9 @@ function StageItem({ stage, research }) {
         <p className="stage__desc">{stage.description}</p>
         {stage.id === 'market-context' && runtime !== STAGE_RUNTIME.LOADING && <MarketDetail research={research} />}
         {stage.id === 'events-catalysts' && runtime !== STAGE_RUNTIME.LOADING && <EventsDetail research={research} />}
+        {stage.id === 'contradicting-evidence' && runtime !== STAGE_RUNTIME.LOADING && (
+          <DevilsAdvocateDetail attack={attack} />
+        )}
       </div>
     </li>
   );
@@ -184,18 +335,10 @@ function EmptyInvestigation({ onEdit }) {
 
 export default function InvestigationScreen({ submission, onEdit }) {
   const [research, setResearch] = useState(null);
+  const [attack, setAttack] = useState(null);
 
   useEffect(() => {
     if (!submission || !submission.idea) return undefined;
-
-    // Backend unreachable: research cannot be fetched — show honest unavailable.
-    if (submission.offline) {
-      setResearch({
-        market: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
-        events: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
-      });
-      return undefined;
-    }
 
     const idea = submission.idea;
     const context = {
@@ -209,18 +352,38 @@ export default function InvestigationScreen({ submission, onEdit }) {
       existingPosition: idea.existingPosition,
     };
 
+    // Backend unreachable: neither research nor the thesis attack can run.
+    if (submission.offline) {
+      setResearch({
+        market: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
+        events: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
+      });
+      setAttack({ available: false, reason: 'Backend offline — the thesis attack requires the TradeGuard API.' });
+      return undefined;
+    }
+
     let cancelled = false;
+
     fetchResearch(context)
       .then((r) => {
-        if (cancelled) return;
-        if (r.ok) {
-          setResearch(r.data);
-        } else {
-          setResearch({
-            market: { available: false, reason: r.message },
-            events: { available: false, reason: r.message },
+        if (cancelled) return undefined;
+        const researchData = r.ok
+          ? r.data
+          : {
+              market: { available: false, reason: r.message },
+              events: { available: false, reason: r.message },
+            };
+        setResearch(researchData);
+
+        // Chain the Devil's Advocate pass on the research we just retrieved.
+        return fetchThesisAttack(context, { market: researchData.market, events: researchData.events })
+          .then((a) => {
+            if (cancelled) return;
+            setAttack(a.ok ? a.data.analysis : { available: false, reason: a.message });
+          })
+          .catch((e) => {
+            if (!cancelled) setAttack({ available: false, reason: String(e?.message || e) });
           });
-        }
       })
       .catch((e) => {
         if (cancelled) return;
@@ -229,6 +392,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           market: { available: false, reason: message },
           events: { available: false, reason: message },
         });
+        setAttack({ available: false, reason: message });
       });
 
     return () => {
@@ -242,7 +406,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
 
   const idea = submission.idea;
   const direction = DIRECTIONS.find((d) => d.value === idea.direction);
-  const completed = completedStageCountFromResearch(research);
+  const completed = completedStageCountFromResearch(research, attack);
 
   return (
     <>
@@ -250,8 +414,9 @@ export default function InvestigationScreen({ submission, onEdit }) {
         <div className="page-head__eyebrow">Step 2 — Investigation</div>
         <h1 className="page-head__title">Investigating your trade</h1>
         <p className="page-head__lede">
-          TradeGuard is now gathering live market and event research for this trade before you risk
-          capital. Where a data source is unavailable, it says so honestly rather than guessing.
+          TradeGuard gathers live market and event research for this trade, then runs the Devil's
+          Advocate: a deliberate search for evidence that could make your thesis wrong. Where a data
+          source is unavailable, it says so honestly rather than guessing.
         </p>
       </div>
 
@@ -324,7 +489,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           <div className="card__body">
             <ul className="invest-stages">
               {INVESTIGATION_STAGES.map((stage) => (
-                <StageItem key={stage.id} stage={stage} research={research} />
+                <StageItem key={stage.id} stage={stage} research={research} attack={attack} />
               ))}
             </ul>
           </div>

@@ -19,6 +19,10 @@ const MARKET_UNAVAIL = { available: false, reason: 'no data' };
 const EVENTS_OK = { available: true, source: 'fmp', items: [{ title: 'Earnings', date: '2026-01-01', description: 'd' }] };
 const EVENTS_UNAVAIL = { available: false, reason: 'none' };
 
+const ATTACK_OK = { available: true, dataLimited: false, supporting: [{ id: 's' }], contradicting: [] };
+const ATTACK_LIMITED = { available: true, dataLimited: true, supporting: [], contradicting: [] };
+const ATTACK_UNAVAIL = { available: false, reason: 'analysis failed' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -53,30 +57,45 @@ test('events-catalysts stage reflects real data availability', () => {
   assert.equal(stageRuntimeState(events, { market: MARKET_UNAVAIL, events: EVENTS_OK }), STAGE_RUNTIME.COMPLETE);
 });
 
-test('Phase 4/5/6 stages remain locked and point to later phases', () => {
-  for (const id of ['contradicting-evidence', 'historical-comparisons', 'risk-assessment']) {
-    const stage = byId(id);
-    assert.equal(stage.available, false);
-    assert.ok(stage.phase >= 4);
-    assert.equal(stageRuntimeState(stage, { market: MARKET_OK, events: EVENTS_OK }), STAGE_RUNTIME.LOCKED);
-  }
-  assert.equal(lockedStageCount(), 3);
-  assert.equal(builtStageCount(), 3);
+test("Devil's Advocate is now built (phase 4) and reflects the attack runtime state", () => {
+  const da = byId('contradicting-evidence');
+  assert.equal(da.available, true);
+  assert.equal(da.phase, 4);
+  // No analysis yet -> loading (NOT complete).
+  assert.equal(stageRuntimeState(da, { market: MARKET_OK, events: EVENTS_OK }, null), STAGE_RUNTIME.LOADING);
+  // Analysis failed -> unavailable (honest), never complete.
+  assert.equal(stageRuntimeState(da, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_UNAVAIL), STAGE_RUNTIME.UNAVAILABLE);
+  // Ran but data-limited -> partial, never complete.
+  assert.equal(stageRuntimeState(da, { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL }, ATTACK_LIMITED), STAGE_RUNTIME.PARTIAL);
+  // Ran with usable evidence -> complete.
+  assert.equal(stageRuntimeState(da, { market: MARKET_OK, events: EVENTS_UNAVAIL }, ATTACK_OK), STAGE_RUNTIME.COMPLETE);
 });
 
-test('no fabricated completion: unavailable market/events are never marked complete', () => {
+test('Phase 5/6 stages remain locked and point to later phases', () => {
+  for (const id of ['historical-comparisons', 'risk-assessment']) {
+    const stage = byId(id);
+    assert.equal(stage.available, false);
+    assert.ok(stage.phase >= 5);
+    assert.equal(stageRuntimeState(stage, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK), STAGE_RUNTIME.LOCKED);
+  }
+  assert.equal(lockedStageCount(), 2);
+  assert.equal(builtStageCount(), 4);
+});
+
+test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
   const research = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
-  assert.equal(completedStageCountFromResearch(research), 1); // only thesis-captured
+  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL), 1); // only thesis-captured
+  assert.equal(completedStageCountFromResearch(research, ATTACK_LIMITED), 1); // limited attack is partial, not complete
 });
 
 test('partial data is reported as partial, not complete', () => {
   const research = { market: MARKET_PARTIAL, events: EVENTS_UNAVAIL };
   assert.equal(stageRuntimeState(byId('market-context'), research), STAGE_RUNTIME.PARTIAL);
-  assert.equal(completedStageCountFromResearch(research), 1);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL), 1);
 });
 
-test('a fully researched trade marks market + events complete', () => {
+test('a fully researched trade with a full attack marks four stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
-  assert.equal(completedStageCountFromResearch(research), 3);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK), 4);
   assert.equal(INVESTIGATION_STAGE_COUNT, 6);
 });

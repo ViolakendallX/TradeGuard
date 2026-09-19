@@ -1,12 +1,13 @@
 /**
  * TradeGuard investigation stages.
  *
- * Phase 2 declared the stages. Phase 3 makes two of them REAL: market-context
- * and events-catalysts can now attempt to gather data, so their completion no
- * longer depends on a static flag — it depends on whether the research actually
- * returned valid data. A stage is marked complete ONLY when its research came
- * back available and valid; otherwise it is partial, unavailable, or still
- * loading. This prevents the UI from ever claiming research that did not happen.
+ * Phase 2 declared the stages. Phase 3 made market-context and events-catalysts
+ * REAL, and Phase 4 makes the Devil's Advocate stage REAL. A stage's completion
+ * never depends on a static flag — it depends on whether the underlying work
+ * actually produced valid output. A stage is marked complete ONLY when its data
+ * or analysis came back available and usable; otherwise it is partial,
+ * unavailable, or still loading. This prevents the UI from ever claiming work
+ * that did not happen.
  */
 
 export const STAGE_RUNTIME = {
@@ -46,9 +47,9 @@ export const INVESTIGATION_STAGES = [
     id: 'contradicting-evidence',
     label: "Devil's Advocate",
     phase: 4,
-    available: false,
+    available: true,
     description:
-      "The Devil's Advocate pass: evidence that could break the thesis, not just support it. (Phase 4)",
+      "The Devil's Advocate pass: it actively searches for evidence that could break the thesis, separating supporting evidence from contradicting evidence, key risks and invalidation conditions.",
   },
   {
     id: 'historical-comparisons',
@@ -79,12 +80,28 @@ function eventsState(events) {
 }
 
 /**
- * Runtime status of a stage given the live research result.
- * `research` is the backend research response (or null while loading / not yet fetched).
+ * Devil's Advocate stage state.
+ *   - no analysis yet            -> loading
+ *   - analysis failed to run     -> unavailable (honest)
+ *   - ran, but no usable data    -> partial (data-limited, not complete)
+ *   - ran with usable evidence   -> complete
  */
-export function stageRuntimeState(stage, research) {
+function attackState(attack) {
+  if (!attack) return STAGE_RUNTIME.LOADING;
+  if (attack.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  if (attack.dataLimited) return STAGE_RUNTIME.PARTIAL;
+  return STAGE_RUNTIME.COMPLETE;
+}
+
+/**
+ * Runtime status of a stage given the live research + thesis-attack results.
+ * `research` is the Phase 3 backend response; `attack` is the Phase 4 analysis
+ * (both null while loading / not yet fetched).
+ */
+export function stageRuntimeState(stage, research, attack) {
   if (!stage.available) return STAGE_RUNTIME.LOCKED;
   if (stage.id === 'thesis-captured') return STAGE_RUNTIME.COMPLETE;
+  if (stage.id === 'contradicting-evidence') return attackState(attack);
   if (!research) return STAGE_RUNTIME.LOADING;
   if (stage.id === 'market-context') return marketState(research.market);
   if (stage.id === 'events-catalysts') return eventsState(research.events);
@@ -103,8 +120,8 @@ export function lockedStageCount() {
   return INVESTIGATION_STAGES.filter((stage) => !stage.available).length;
 }
 
-export function completedStageCountFromResearch(research) {
+export function completedStageCountFromResearch(research, attack) {
   return INVESTIGATION_STAGES.filter(
-    (stage) => stageRuntimeState(stage, research) === STAGE_RUNTIME.COMPLETE
+    (stage) => stageRuntimeState(stage, research, attack) === STAGE_RUNTIME.COMPLETE
   ).length;
 }
