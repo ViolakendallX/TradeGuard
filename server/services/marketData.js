@@ -31,7 +31,12 @@ function pick(obj, keys) {
 
 const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : null);
 
-function toCandleRow(raw) {
+/**
+ * Normalise one raw provider candle into `{ ts, open, high, low, close, ... }`.
+ * Exported so later phases (Phase 5 historical stress test) reuse the EXACT same
+ * candle contract instead of growing a second, divergent parser.
+ */
+export function toCandleRow(raw) {
   if (Array.isArray(raw)) {
     return {
       ts: num(raw[0]),

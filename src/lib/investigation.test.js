@@ -23,6 +23,11 @@ const ATTACK_OK = { available: true, dataLimited: false, supporting: [{ id: 's' 
 const ATTACK_LIMITED = { available: true, dataLimited: true, supporting: [], contradicting: [] };
 const ATTACK_UNAVAIL = { available: false, reason: 'analysis failed' };
 
+const HISTORY_OK = { available: true, dataLimited: false, status: 'ok', matchedCount: 4 };
+const HISTORY_PARTIAL = { available: true, dataLimited: true, status: 'partial', matchedCount: 1 };
+const HISTORY_NO_MATCHES = { available: true, dataLimited: true, status: 'no-matches', matchedCount: 0 };
+const HISTORY_UNAVAIL = { available: false, dataLimited: true, status: 'unavailable', reason: 'provider down' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -71,31 +76,72 @@ test("Devil's Advocate is now built (phase 4) and reflects the attack runtime st
   assert.equal(stageRuntimeState(da, { market: MARKET_OK, events: EVENTS_UNAVAIL }, ATTACK_OK), STAGE_RUNTIME.COMPLETE);
 });
 
-test('Phase 5/6 stages remain locked and point to later phases', () => {
-  for (const id of ['historical-comparisons', 'risk-assessment']) {
-    const stage = byId(id);
-    assert.equal(stage.available, false);
-    assert.ok(stage.phase >= 5);
-    assert.equal(stageRuntimeState(stage, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK), STAGE_RUNTIME.LOCKED);
+test('historical stress test is now built (phase 5) and reflects the history runtime state', () => {
+  const hist = byId('historical-comparisons');
+  assert.equal(hist.available, true);
+  assert.equal(hist.phase, 5);
+  assert.equal(hist.label, 'Historical stress test');
+  // No result yet -> loading (NOT complete).
+  assert.equal(stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, null), STAGE_RUNTIME.LOADING);
+  // Provider failure -> unavailable (explicit HISTORICAL DATA UNAVAILABLE), never complete.
+  assert.equal(
+    stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_UNAVAIL),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+  // Ran but partial or with no matches -> partial, never complete.
+  assert.equal(
+    stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_PARTIAL),
+    STAGE_RUNTIME.PARTIAL
+  );
+  assert.equal(
+    stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_NO_MATCHES),
+    STAGE_RUNTIME.PARTIAL
+  );
+  // Ran with a usable sample -> complete.
+  assert.equal(
+    stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_OK),
+    STAGE_RUNTIME.COMPLETE
+  );
+});
+
+test('the historical stage never claims completion without a usable sample', () => {
+  const hist = byId('historical-comparisons');
+  for (const history of [null, HISTORY_UNAVAIL, HISTORY_PARTIAL, HISTORY_NO_MATCHES]) {
+    assert.notEqual(
+      stageRuntimeState(hist, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, history),
+      STAGE_RUNTIME.COMPLETE
+    );
   }
-  assert.equal(lockedStageCount(), 2);
-  assert.equal(builtStageCount(), 4);
+});
+
+test('Phase 6 remains locked and points to a later phase', () => {
+  const risk = byId('risk-assessment');
+  assert.equal(risk.available, false);
+  assert.equal(risk.phase, 6);
+  assert.equal(
+    stageRuntimeState(risk, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_OK),
+    STAGE_RUNTIME.LOCKED
+  );
+  assert.equal(lockedStageCount(), 1);
+  assert.equal(builtStageCount(), 5);
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
   const research = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
-  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL), 1); // only thesis-captured
-  assert.equal(completedStageCountFromResearch(research, ATTACK_LIMITED), 1); // limited attack is partial, not complete
+  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1); // only thesis-captured
+  assert.equal(completedStageCountFromResearch(research, ATTACK_LIMITED, HISTORY_PARTIAL), 1); // limited = partial
 });
 
 test('partial data is reported as partial, not complete', () => {
   const research = { market: MARKET_PARTIAL, events: EVENTS_UNAVAIL };
   assert.equal(stageRuntimeState(byId('market-context'), research), STAGE_RUNTIME.PARTIAL);
-  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL), 1);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1);
 });
 
-test('a fully researched trade with a full attack marks four stages complete', () => {
+test('a fully researched trade with a full attack and a usable sample marks five stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
-  assert.equal(completedStageCountFromResearch(research, ATTACK_OK), 4);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
   assert.equal(INVESTIGATION_STAGE_COUNT, 6);
+  // Phase 1-4 stages are unaffected by the Phase 5 addition.
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, null), 4);
 });

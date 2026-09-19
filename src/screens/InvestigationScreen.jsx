@@ -13,7 +13,7 @@ import {
   completedStageCountFromResearch,
   lockedStageCount,
 } from '../lib/investigation.js';
-import { fetchResearch, fetchThesisAttack } from '../lib/api.js';
+import { fetchResearch, fetchThesisAttack, fetchHistoricalStressTest } from '../lib/api.js';
 
 const TONE_CLASS = { bullish: 'chip--up', bearish: 'chip--down', neutral: 'chip--neutral' };
 
@@ -265,8 +265,241 @@ function DevilsAdvocateDetail({ attack }) {
   );
 }
 
-function StageItem({ stage, research, attack }) {
-  const runtime = stageRuntimeState(stage, research, attack);
+const BUCKET_LABELS = {
+  up: 'Up',
+  down: 'Down',
+  flat: 'Flat',
+  modest: 'Modest',
+  extended: 'Extended',
+  low: 'Low',
+  normal: 'Normal',
+  elevated: 'Elevated',
+  'near-high': 'Near the recent high',
+  'near-low': 'Near the recent low',
+  mid: 'Mid-range',
+  unknown: 'Not assessable',
+};
+
+function bucketLabel(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return BUCKET_LABELS[value] || String(value);
+}
+
+function HistoricalStressTestDetail({ history }) {
+  if (!history) return null;
+
+  const missing = Array.isArray(history.missingInformation) ? history.missingInformation : [];
+  const limitations = Array.isArray(history.limitations) ? history.limitations : [];
+
+  // --- explicit, honest unavailable state ---------------------------------
+  if (history.available === false) {
+    return (
+      <div className="stage__detail hs">
+        <div className="hs__status">
+          <span className="hs__badge hs__badge--unavailable">
+            {history.statusLabel || 'HISTORICAL DATA UNAVAILABLE'}
+          </span>
+        </div>
+        <p className="hs__reason">{history.reason || 'Historical data could not be retrieved for this asset.'}</p>
+        <p className="hs__honesty">
+          No historical comparison is shown, because none could be computed from real data. TradeGuard does not
+          substitute fabricated examples, generic market statistics, made-up win rates or assumed outcomes.
+        </p>
+        {missing.length > 0 && (
+          <ul className="hs__missing">
+            {missing.map((m) => (
+              <li key={m.id || m.title}>
+                <strong>{m.title}</strong>
+                {m.detail ? ` — ${m.detail}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+        {limitations.length > 0 && (
+          <>
+            <div className="hs__section-title">Important limitations</div>
+            <ul className="hs__limits">
+              {limitations.map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  const cs = history.currentSetup || {};
+  const s = history.outcomeSummary;
+  const statusClass = String(history.status || '').toLowerCase().replace(/[^a-z]+/g, '-');
+  const horizonLabel = `${history.profile?.horizonBars ?? '—'} × ${history.profile?.granularityLabel || '—'}`;
+  const dirWord =
+    history.direction === 'bearish' ? 'bearish' : history.direction === 'bullish' ? 'bullish' : 'neutral';
+
+  return (
+    <div className="stage__detail hs">
+      <div className="hs__status">
+        <span className={`hs__badge hs__badge--${statusClass}`}>{history.statusLabel}</span>
+        <span className="hs__status-note">
+          {history.matchedCount > 0
+            ? `${history.matchedCount} matched setup${history.matchedCount === 1 ? '' : 's'} out of ${history.eligibleCandidates} eligible historical windows.`
+            : `No match out of ${history.eligibleCandidates} eligible historical windows.`}
+        </span>
+      </div>
+
+      {history.dataLimited && (
+        <div className="hs__notice">
+          This result is data-limited, so it should be read with care rather than as a pattern.
+          {history.timeframeAssumed
+            ? ' No timeframe was supplied, so a default sampling profile was assumed — the outcome horizon may not match your holding period.'
+            : ''}
+        </div>
+      )}
+
+      <div className="hs__grid">
+        <section className="hs__section">
+          <div className="hs__section-title">Historical sample</div>
+          <div className="data-grid">
+            <DataRow label="Provider" value={history.source || '—'} />
+            <DataRow label="Candle size" value={history.profile?.granularityLabel || '—'} />
+            <DataRow label="Bars examined" value={fmt(history.sampleSize)} />
+            <DataRow label="Sample from" value={history.sampleFrom || '—'} />
+            <DataRow label="Sample to" value={history.sampleTo || '—'} />
+            <DataRow label="Setup window" value={`${history.profile?.windowBars ?? '—'} bars`} />
+            <DataRow label="Outcome horizon" value={`${horizonLabel} bars`} />
+          </div>
+        </section>
+
+        <section className="hs__section">
+          <div className="hs__section-title">Current setup</div>
+          <div className="data-grid">
+            <DataRow label="Trend" value={pct(cs.trendPct)} tone={changeTone(cs.trendPct)} />
+            <DataRow label="Trend direction" value={bucketLabel(cs.trendDirection)} />
+            <DataRow label="Recent move" value={bucketLabel(cs.moveBucket)} />
+            <DataRow label="Volatility regime" value={bucketLabel(cs.volRegime)} />
+            <DataRow label="Position in range" value={bucketLabel(cs.extremeBucket)} />
+            <DataRow label="Realized vol" value={cs.volPct != null ? `${cs.volPct}%` : '—'} />
+          </div>
+        </section>
+      </div>
+
+      {s ? (
+        <section className="hs__section hs__section--outcome">
+          <div className="hs__section-title">Observed outcomes</div>
+          <p className="hs__outcome-text">
+            Historical observations in this sample showed a median move of {pct(s.medianMovePct)} over the
+            following {horizonLabel} bars: {s.alignedCount} of {s.count} moved in the direction of your {dirWord}{' '}
+            thesis, {s.againstCount} moved against it, and {s.flatCount} stayed inside the flat band.
+          </p>
+          <div className="data-grid">
+            <DataRow label="Matched setups" value={fmt(s.count)} />
+            <DataRow label="Moved with the thesis" value={fmt(s.alignedCount)} />
+            <DataRow label="Moved against it" value={fmt(s.againstCount)} />
+            <DataRow label="Stayed flat" value={fmt(s.flatCount)} />
+            <DataRow label="Median move" value={pct(s.medianMovePct)} />
+            <DataRow label="Best / worst move" value={`${pct(s.bestMovePct)} / ${pct(s.worstMovePct)}`} />
+            <DataRow label="Median adverse excursion" value={pct(s.medianAdverseExcursionPct)} />
+            <DataRow label="Median favourable excursion" value={pct(s.medianFavourableExcursionPct)} />
+          </div>
+          <p className="hs__caveat">
+            These are measurements of what already happened after similar setups — not a forecast, and not a claim
+            that this trade will behave the same way.
+          </p>
+        </section>
+      ) : (
+        <section className="hs__section hs__section--outcome">
+          <div className="hs__section-title">Observed outcomes</div>
+          <p className="hs__empty">
+            No comparable historical setups were found, so there are no outcomes to report. Nothing has been
+            substituted in their place.
+          </p>
+        </section>
+      )}
+
+      {history.observations.length > 0 && (
+        <section className="hs__section">
+          <div className="hs__section-title">
+            Matched historical setups
+            <span className="hs__count">{history.observations.length}</span>
+          </div>
+          <ul className="hs__list">
+            {history.observations.map((o) => (
+              <li key={o.id} className="hs__item">
+                <div className="hs__item-top">
+                  <span className="hs__item-date">{o.setupEndTs || '—'}</span>
+                  <span
+                    className={`hs__item-flag hs__item-flag--${
+                      o.flat ? 'flat' : o.aligned ? 'with' : 'against'
+                    }`}
+                  >
+                    {o.flat ? 'stayed flat' : o.aligned ? 'with thesis' : 'against thesis'}
+                  </span>
+                </div>
+                <div className="hs__item-detail">
+                  {fmt(o.entryPrice)} → {fmt(o.exitPrice)} · horizon move {pct(o.movePct)} · worst point{' '}
+                  {pct(o.adverseExcursionPct)} · best point {pct(o.favourableExcursionPct)}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {history.matchedCount > history.observations.length && (
+            <div className="hs__more">
+              Showing the {history.observations.length} most recent of {history.matchedCount} matched setups.
+            </div>
+          )}
+        </section>
+      )}
+
+      {history.matching && (
+        <section className="hs__section">
+          <div className="hs__section-title">Matching methodology</div>
+          <p className="hs__method">{history.matching.note}</p>
+          <ul className="hs__criteria">
+            {(history.matching.criteria || []).map((c) => (
+              <li key={c.key}>
+                <span className="hs__criterion-label">{c.label}</span>
+                <span className="hs__criterion-value">{bucketLabel(c.currentValue)}</span>
+                <span className="hs__criterion-values">match requires: {c.values}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="hs__meta">
+            Historical windows are compared against the current one across the same candle series. Windows that
+            overlap the current setup are excluded, and matches are spaced at least{' '}
+            {history.matching.minSpacingBars} bars apart so a single move is not counted several times.
+            {history.matchFrequencyPct != null &&
+              ` This setup matched ${history.matchFrequencyPct}% of the ${history.eligibleCandidates} eligible historical windows. ${history.matchFrequencyNote}`}
+          </div>
+        </section>
+      )}
+
+      {limitations.length > 0 && (
+        <section className="hs__section hs__section--limits">
+          <div className="hs__section-title">Important limitations</div>
+          <ul className="hs__limits">
+            {limitations.map((l, i) => (
+              <li key={i}>{l}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {missing.length > 0 && (
+        <EvidenceSection
+          title="Missing information"
+          tone="missing"
+          items={missing}
+          empty="None — the historical inputs were available."
+        />
+      )}
+
+      {history.disclaimer && <div className="stage__meta hs__disclaimer">{history.disclaimer}</div>}
+    </div>
+  );
+}
+
+function StageItem({ stage, research, attack, history }) {
+  const runtime = stageRuntimeState(stage, research, attack, history);
   const isComplete = runtime === STAGE_RUNTIME.COMPLETE;
   const isPartial = runtime === STAGE_RUNTIME.PARTIAL;
   const isUnavailable = runtime === STAGE_RUNTIME.UNAVAILABLE;
@@ -308,6 +541,9 @@ function StageItem({ stage, research, attack }) {
         {stage.id === 'contradicting-evidence' && runtime !== STAGE_RUNTIME.LOADING && (
           <DevilsAdvocateDetail attack={attack} />
         )}
+        {stage.id === 'historical-comparisons' && runtime !== STAGE_RUNTIME.LOADING && (
+          <HistoricalStressTestDetail history={history} />
+        )}
       </div>
     </li>
   );
@@ -336,6 +572,7 @@ function EmptyInvestigation({ onEdit }) {
 export default function InvestigationScreen({ submission, onEdit }) {
   const [research, setResearch] = useState(null);
   const [attack, setAttack] = useState(null);
+  const [history, setHistory] = useState(null);
 
   useEffect(() => {
     if (!submission || !submission.idea) return undefined;
@@ -352,13 +589,18 @@ export default function InvestigationScreen({ submission, onEdit }) {
       existingPosition: idea.existingPosition,
     };
 
-    // Backend unreachable: neither research nor the thesis attack can run.
+    // Backend unreachable: none of the research, attack or historical passes can run.
     if (submission.offline) {
       setResearch({
         market: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
         events: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
       });
       setAttack({ available: false, reason: 'Backend offline — the thesis attack requires the TradeGuard API.' });
+      setHistory({
+        available: false,
+        statusLabel: 'HISTORICAL DATA UNAVAILABLE',
+        reason: 'Backend offline — the historical stress test requires the TradeGuard API.',
+      });
       return undefined;
     }
 
@@ -378,11 +620,27 @@ export default function InvestigationScreen({ submission, onEdit }) {
         // Chain the Devil's Advocate pass on the research we just retrieved.
         return fetchThesisAttack(context, { market: researchData.market, events: researchData.events })
           .then((a) => {
-            if (cancelled) return;
+            if (cancelled) return undefined;
             setAttack(a.ok ? a.data.analysis : { available: false, reason: a.message });
+
+            // Phase 5 runs after the attack, reusing the same research context.
+            return fetchHistoricalStressTest(context, {
+              market: researchData.market,
+              events: researchData.events,
+            })
+              .then((h) => {
+                if (cancelled) return;
+                setHistory(h.ok ? h.data.history : { available: false, reason: h.message });
+              })
+              .catch((e) => {
+                if (!cancelled) setHistory({ available: false, reason: String(e?.message || e) });
+              });
           })
           .catch((e) => {
-            if (!cancelled) setAttack({ available: false, reason: String(e?.message || e) });
+            if (!cancelled) {
+              setAttack({ available: false, reason: String(e?.message || e) });
+              setHistory({ available: false, reason: String(e?.message || e) });
+            }
           });
       })
       .catch((e) => {
@@ -393,6 +651,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           events: { available: false, reason: message },
         });
         setAttack({ available: false, reason: message });
+        setHistory({ available: false, reason: message });
       });
 
     return () => {
@@ -406,7 +665,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
 
   const idea = submission.idea;
   const direction = DIRECTIONS.find((d) => d.value === idea.direction);
-  const completed = completedStageCountFromResearch(research, attack);
+  const completed = completedStageCountFromResearch(research, attack, history);
 
   return (
     <>
@@ -414,9 +673,9 @@ export default function InvestigationScreen({ submission, onEdit }) {
         <div className="page-head__eyebrow">Step 2 — Investigation</div>
         <h1 className="page-head__title">Investigating your trade</h1>
         <p className="page-head__lede">
-          TradeGuard gathers live market and event research for this trade, then runs the Devil's
-          Advocate: a deliberate search for evidence that could make your thesis wrong. Where a data
-          source is unavailable, it says so honestly rather than guessing.
+          TradeGuard gathers live market and event research for this trade, runs the Devil's Advocate — a
+          deliberate search for evidence that could make your thesis wrong — then looks for similar past setups and
+          what happened afterwards. Where a data source is unavailable, it says so honestly rather than guessing.
         </p>
       </div>
 
@@ -489,7 +748,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           <div className="card__body">
             <ul className="invest-stages">
               {INVESTIGATION_STAGES.map((stage) => (
-                <StageItem key={stage.id} stage={stage} research={research} attack={attack} />
+                <StageItem key={stage.id} stage={stage} research={research} attack={attack} history={history} />
               ))}
             </ul>
           </div>

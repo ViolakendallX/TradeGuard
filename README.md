@@ -4,9 +4,9 @@
 
 **Stress-test your trade thesis before you risk capital.**
 
-TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, and tells you what could make it wrong — then leaves the decision to you.
+TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, and tells you what could make it wrong — then leaves the decision to you.
 
-**Status:** Phases 1–4 complete · Phases 5–13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–5 complete · Phases 6–13 planned. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,11 +14,12 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does four things:
+It does five things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
 - **Separates supporting from contradicting evidence** — you see both sides classified, not blended into a single opinion.
+- **Stress-tests the idea against history** — it retrieves real historical candles for the asset and reports what followed comparable past setups, or says plainly that historical data is unavailable.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -47,10 +48,10 @@ THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
        →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE.
-**Still on the roadmap:** STRESS TEST (historical analogues), RISK CHECK, HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST.
+**Still on the roadmap:** RISK CHECK, HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
 
-Later stages are planned, not built. Nothing after Phase 4 is presented as working.
+Later stages are planned, not built. Nothing after Phase 5 is presented as working.
 
 ---
 
@@ -62,6 +63,7 @@ The implemented flow runs end to end in the browser:
 Trade Idea  →  Investigation  →  Market Context
                               →  Events & Catalysts
                               →  Devil's Advocate / Thesis Attack
+                              →  Historical Stress Test
 ```
 
 **You submit:** asset, direction, thesis, timeframe, entry price, risk amount, confidence, and existing position.
@@ -72,6 +74,8 @@ Trade Idea  →  Investigation  →  Market Context
 - retrieve event and catalyst information when an events provider is configured
 - analyse the thesis against whatever evidence was actually retrieved
 - separate supporting evidence from contradicting evidence
+- retrieve real historical candles for the asset and match comparable past setups using published rules
+- report what followed those comparable setups, as observed historical outcomes rather than predictions
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
@@ -88,7 +92,7 @@ Each stage reports its own runtime state — complete, partial, or unavailable �
 | Phase 2 — Investigation Flow | Investigation screen, stage model, progress states | ✅ Complete |
 | Phase 3 — Market & Event Research | Live market context, event/catalyst research, honest unavailability states | ✅ Complete |
 | Phase 4 — Devil's Advocate / Thesis Attack | Thesis extraction, supporting vs contradicting evidence, risks, invalidation conditions | ✅ Complete |
-| Phase 5 — Historical Stress Test | Historical retrieval, similarity logic, comparable setups | ⏳ Planned |
+| Phase 5 — Historical Stress Test | Real historical candle retrieval, deterministic setup matching, observed outcomes, explicit unavailable/partial states | ✅ Complete |
 | Phase 6 — Risk Engine | Deterministic max loss / max profit / breakeven / sizing / exposure | ⏳ Planned |
 | Phase 7 — Trade Structuring | Defined-risk trade proposals where supported | ⏳ Planned |
 | Phase 8 — Final Trade Report | One consolidated decision-ready report | ⏳ Planned |
@@ -98,7 +102,7 @@ Each stage reports its own runtime state — complete, partial, or unavailable �
 | Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
 | Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
 
-Phases 5–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and the investigation UI labels those stages as arriving in a later phase.
+Phases 6–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and the investigation UI labels those stages as arriving in a later phase — the Risk Assessment stage remains locked.
 
 ---
 
@@ -126,6 +130,45 @@ Evidence strength is reported as one of four evidence-derived labels — `suppor
 
 ---
 
+## Phase 5 — Historical Stress Test
+
+Phase 5 answers one question: **"Have similar market setups happened before, and what happened afterwards?"** It extends the same investigation, for the same asset, without pretending historical evidence exists when it does not.
+
+### Retrieving real historical data
+
+Historical data comes from the **same Phase 3 market-data architecture** — the Bitget Spot API v2 candle endpoint, through the same isolated provider module and the same normalised candle contract. There is no second, parallel integration and no bundled historical dataset. The sampling granularity and window length follow the timeframe you submitted (intraday, earnings-event, macro-event, swing, short-term, or position), with swing as the default when no timeframe is given.
+
+### Matching comparable setups
+
+Matching is **explicit and deterministic**. Every historical window is reduced to four bucketed features, and a window matches **only when every criterion is equal** to the current setup:
+
+| Criterion | Values |
+| --------- | ------ |
+| Trend direction | up / down / flat |
+| Recent move magnitude | flat / modest / extended |
+| Volatility regime | low / normal / elevated |
+| Position within the recent range | near-high / near-low / mid |
+
+The bucket thresholds are deliberately the **same constants the Phase 4 attack uses**, so both engines classify the market identically. Candidate windows that overlap the current setup are excluded (no look-ahead), and retained matches must be spaced apart so the sample is not made of the same move counted several times. There is no similarity score and no arbitrary weighting — a setup either satisfies all four rules or it does not, and the rules are published with every response.
+
+### Reporting observed outcomes
+
+For each matched setup the analysis reports what actually happened over a defined horizon after that setup: the move, whether it aligned with or opposed the direction you are considering, and the favourable and adverse excursion relative to entry. Outcomes are worded as *"Historical observations in this sample showed…"* — never as *"this trade is likely to…"*. The share of eligible windows that matched is reported with an explicit note that it is **not a probability, a win rate, or an edge**.
+
+### Handling unavailable or insufficient data
+
+The stage has four honest outcomes: a usable result, no matches found, a **partial** result, or an explicit `HISTORICAL DATA UNAVAILABLE` state. A result is downgraded to partial when the timeframe had to be assumed, when the sampled series is too short, or when there are too few independent matches to describe a distribution. When the provider fails or returns nothing usable, the stage says exactly what is missing and why. Partial data is never presented with more confidence than it supports, and the UI reflects the same distinction — the stage is marked complete only when the underlying analysis actually produced a usable sample.
+
+### What it never does
+
+- **It never fabricates historical examples.** No invented setups, no placeholder rows, no synthetic series.
+- **It never invents a win rate, a probability, or a hit rate.** Match frequency is labelled for what it is.
+- **It never claims a match when data is unavailable.** An empty result stays empty.
+- **It never predicts.** Historical observations describe the sample they came from.
+- **It never recommends a trade.** There is no BUY, SELL, or PASS, and no position sizing — that is Phase 6 and later.
+
+---
+
 ## Data & integrations
 
 ### Market research
@@ -140,6 +183,10 @@ Derived from ticker and candle data:
 - realised volatility
 - 24h high / 24h low
 - quote volume
+
+### Historical data
+
+The historical stress test reads the **same Bitget Spot API v2 candle endpoint** as market research, with a larger page size, normalised through the identical candle contract. There is no separate historical provider and no stored dataset. When candles cannot be retrieved, the stage reports `HISTORICAL DATA UNAVAILABLE` with the reason rather than substituting anything.
 
 ### Events & catalysts
 
@@ -162,6 +209,7 @@ These are enforced in the code, not aspirational:
 - **Missing data is explicitly surfaced** in a Missing Information section, naming what could not be assessed.
 - **Insufficient evidence is not confirmation.** The analysis never presents an absence of data as support for a trade.
 - **No manufactured bearish case.** TradeGuard does not invent risks to create artificial balance.
+- **No fabricated historical observations.** When historical data is unavailable, too short, or matched by nothing, the stress test reports exactly that — it does not invent setups, win rates, probabilities, or outcomes to fill the gap.
 - **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect.
 - **The human remains responsible for the final decision.**
 - **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
@@ -171,7 +219,7 @@ These are enforced in the code, not aspirational:
 
 ## Analysis architecture
 
-The Phase 4 thesis attack runs entirely in the backend as a deterministic pipeline:
+The Phase 4 thesis attack and the Phase 5 historical stress test both run entirely in the backend as deterministic pipelines. The thesis attack:
 
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
@@ -183,7 +231,19 @@ TRADE CONTEXT + PHASE 3 RESEARCH
    STRONGEST COUNTER-ARGUMENT + EVIDENCE STRENGTH
 ```
 
-Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, so the reasoning is explainable and reproducible.
+The historical stress test:
+
+```
+TRADE CONTEXT  →  HISTORICAL CANDLES (Bitget Spot API v2)
+                        ↓
+        FEATURE BUCKETING PER WINDOW  (trend, move, volatility, range position)
+                        ↓
+        ALL-CRITERIA-EQUAL MATCHING  (no look-ahead, non-overlapping)
+                        ↓
+        OBSERVED OUTCOMES OVER A DEFINED HORIZON  (+ sample limitations)
+```
+
+Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
 
@@ -204,8 +264,8 @@ TRADEGUARD
 │
 └── server/                       Express backend
     ├── index.js                  App wiring, /api/health
-    ├── routes/                   tradeIdeas, research, thesisAttack
-    ├── services/                 marketData, eventData, thesisAttack
+    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest
+    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest
     │   └── providers/            bitget (isolated provider knowledge)
     ├── lib/                      Trade idea validation
     └── tests/                    Node test runner suites
@@ -221,6 +281,7 @@ TRADEGUARD
 | `POST /api/trade-ideas` | Validate and capture a submitted thesis |
 | `POST /api/research` | Market context + event research for the asset |
 | `POST /api/thesis-attack` | The Devil's Advocate analysis |
+| `POST /api/historical-stress-test` | Historical setup matching and observed outcomes for the asset |
 
 Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline.
 
@@ -235,6 +296,7 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Frontend | React 18, Vite 5, JavaScript / JSX |
 | Backend | Node.js, Express 4 |
 | Market data | Bitget Spot API v2 |
+| Historical data | Bitget Spot API v2 candles — same provider module and candle contract as market data |
 | Event data | Financial Modeling Prep earnings calendar (env-configured) |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
 | Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
@@ -311,11 +373,13 @@ npm test        # unit + integration tests
 npm run build   # production build
 ```
 
-**Verified state of the Phase 4 build:**
+**Verified state of the Phase 5 build:**
 
-- **51/51 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, and the frontend stage model.
+- **72/72 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
-- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state, confirming that unavailable data is reported honestly and that no evidence is fabricated.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state and the historical stress test in both its available and `HISTORICAL DATA UNAVAILABLE` forms, confirming that unavailable data is reported honestly and that no evidence or historical observation is fabricated.
+
+The historical stress test has dedicated coverage across its required scenarios: real retrieval, matching, no matches, provider failure, malformed responses, a missing asset, short samples, an assumed timeframe, an explicit timeframe, bullish and bearish interpretation of the same series, non-predictive wording, no fabricated observations when history is unavailable, absence of any trade instruction or score, the shared candle contract, the shared Phase 4 thresholds, and traceability of the research context.
 
 Test suites live in `server/tests/` and alongside the frontend library code in `src/lib/`. The unit tests do not require network access or a live AI provider — provider interactions are tested against fixtures through injectable `fetch` implementations.
 
@@ -332,9 +396,8 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phases 5–13, in order. All are planned and none are implemented:
+Phases 6–13, in order. All are planned and none are implemented:
 
-- **Phase 5 — Historical Stress Test.** Find comparable historical setups, explain why each is considered similar, and report how they resolved — or explicitly report insufficient historical data rather than fabricating a comparison.
 - **Phase 6 — Risk Engine.** Deterministic calculation of maximum loss, maximum profit, breakeven, position size, risk percentage, reward/risk, and exposure. The application calculates; the AI explains.
 - **Phase 7 — Trade Structuring.** Propose defined-risk structures where sufficient market data exists, as research output rather than an instruction.
 - **Phase 8 — Final Trade Report.** Consolidate thesis, research, attack, historical test, risk, and structure into one decision-ready report.
@@ -348,7 +411,7 @@ Phases 5–13, in order. All are planned and none are implemented:
 
 ## Hackathon context
 
-TradeGuard is being built for the **Bitget AI Hackathon S2**, under the **AI Trading Desk** direction. The focus of that direction is AI-assisted research and decision stress-testing with the human trader kept in control — which is what the product is designed around, rather than a demo built for the event.
+TradeGuard is being built for the **Bitget AI Hackathon S2**, under the **AI Trading Desk** track — the AI research workbench direction, where AI processes information and presents analysis while the human trader makes the final call. The **Decision Stress-Testing** sub-theme is the direct inspiration for Phase 5: given a trade idea, retrieve historically similar setups and show what followed. That focus — AI-assisted research and decision stress-testing with the human kept in control — is what the product is designed around, rather than a demo built for the event.
 
 ---
 
@@ -356,7 +419,7 @@ TradeGuard is being built for the **Bitget AI Hackathon S2**, under the **AI Tra
 
 1. **Evidence before opinion.** Conclusions connect to observable data, or they are labelled as missing.
 2. **Challenge the thesis.** The system is built to look for what could make the trade wrong.
-3. **No fabricated data.** Missing market or event data is surfaced as missing, never filled in.
+3. **No fabricated data.** Missing market, event, or historical data is surfaced as missing, never filled in.
 4. **Human in the loop.** The trader makes the decision; TradeGuard never makes it for them.
 5. **Deterministic risk controls.** Critical calculations and classifications do not depend on a language model.
 6. **Transparent uncertainty.** Supported, mixed, weak, and insufficient evidence are distinct, stated outcomes.

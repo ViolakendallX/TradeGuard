@@ -113,3 +113,39 @@ export async function fetchThesisAttack(context, research) {
 
   return { ok: true, data: payload };
 }
+
+/**
+ * Phase 5: request the historical stress test for the submitted trade context.
+ * The research we already fetched is passed along for traceability only — the
+ * historical analysis is derived from the historical candle series.
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchHistoricalStressTest(context, research) {
+  const response = await fetch(`${API_BASE}/historical-stress-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context, research }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400 && payload?.errors) {
+    return { ok: false, kind: 'validation', errors: payload.errors, message: payload.message };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Historical stress test request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}

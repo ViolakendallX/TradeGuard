@@ -2,7 +2,7 @@ import { NAV_ITEMS } from '../lib/constants.js';
 
 // Phases that are actually built. Everything at or below this is interactive;
 // later phases remain disabled until their phase lands.
-const CURRENT_PHASE = 4;
+const CURRENT_PHASE = 5;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
   return (
@@ -44,7 +44,8 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 4 — Thesis attack. The Devil's Advocate challenges your thesis; history and risk arrive in later phases.
+          Phase 5 — Historical stress test. The Devil's Advocate challenges your thesis; history shows what
+          followed similar past setups. Risk arrives in a later phase.
         </div>
       </div>
     </aside>

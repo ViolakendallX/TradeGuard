@@ -16,7 +16,7 @@ export default function AppShell({ activeId, onNavigate, apiOnline, title, subti
               <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
               {apiOnline ? 'API online' : 'API offline'}
             </span>
-            <span className="pill">Phase 4 · Thesis attack</span>
+            <span className="pill">Phase 5 · Historical stress test</span>
           </div>
         </header>
 
