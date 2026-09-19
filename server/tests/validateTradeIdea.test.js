@@ -93,10 +93,11 @@ test('the capture response reports the built phases as available', () => {
   const response = buildCaptureResponse(validateTradeIdea(baseIdea).value);
   const byStep = Object.fromEntries(response.nextSteps.map((s) => [s.step, s]));
 
-  for (const step of ['Research', 'Thesis attack', 'Historical stress test', 'Risk engine']) {
+  for (const step of ['Research', 'Thesis attack', 'Historical stress test', 'Risk engine', 'Trade structure']) {
     assert.equal(byStep[step].available, true, `${step} should be reported as available`);
   }
-  assert.equal(byStep['Trade structure'].available, false, 'Phase 7 is still not built');
+  // Phase 8 and later are still not built, so nothing beyond Phase 7 is listed.
+  assert.equal(response.nextSteps.filter((s) => !s.available).length, 0);
 
   // The Phase 1 wording claimed the built phases were disabled — that was true
   // then and is false now, so it must not come back.

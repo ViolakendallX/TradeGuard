@@ -7,9 +7,14 @@ import {
   THESIS_MAX_LENGTH,
 } from '../../lib/constants.js';
 
+/**
+ * Selected-option colours for the direction selector. These read from the
+ * direction tokens, not from --up/--down (which are the market-magnitude and
+ * form-error tokens): bullish green, bearish red.
+ */
 const TONE_VARS = {
-  up: { '--dir-color': 'var(--up)', '--dir-soft': 'var(--up-soft)' },
-  down: { '--dir-color': 'var(--down)', '--dir-soft': 'var(--down-soft)' },
+  up: { '--dir-color': 'var(--dir-bullish)', '--dir-soft': 'var(--dir-bullish-soft)' },
+  down: { '--dir-color': 'var(--dir-bearish)', '--dir-soft': 'var(--dir-bearish-soft)' },
   neutral: { '--dir-color': 'var(--neutral)', '--dir-soft': 'var(--neutral-soft)' },
 };
 

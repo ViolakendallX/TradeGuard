@@ -29,6 +29,7 @@ import {
   fetchThesisAttack,
   fetchHistoricalStressTest,
   fetchRiskAssessment,
+  fetchTradeStructure,
 } from '../lib/api.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import InvestigationNav from '../components/investigation/InvestigationNav.jsx';
@@ -59,6 +60,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
   const [attack, setAttack] = useState(null);
   const [history, setHistory] = useState(null);
   const [risk, setRisk] = useState(null);
+  const [structure, setStructure] = useState(null);
   const [activeId, setActiveId] = useState(DEFAULT_SECTION_ID);
 
   // The trade header is sticky, so the navigation rail needs to know how tall it
@@ -106,10 +108,36 @@ export default function InvestigationScreen({ submission, onEdit }) {
         statusLabel: 'RISK ASSESSMENT UNAVAILABLE',
         statusDetail: 'Backend offline — the risk engine runs server-side and requires the TradeGuard API.',
       });
+      setStructure({
+        available: false,
+        statusLabel: 'TRADE STRUCTURE UNAVAILABLE',
+        statusDetail: 'Backend offline — the trade structure is assembled server-side and requires the TradeGuard API.',
+      });
       return undefined;
     }
 
     let cancelled = false;
+
+    // Phase 7 needs BOTH the risk result (Phase 6) and the attack (Phase 4), but
+    // it must not re-derive either: the risk figures are reused verbatim and the
+    // conditions come straight from the Devil's Advocate. So we hold whichever
+    // settles first and fire the structure call as soon as both are in.
+    let riskResult = null;
+    let attackResult = null;
+    let structureRequested = false;
+
+    const requestStructure = () => {
+      if (cancelled || structureRequested || !riskResult || !attackResult) return;
+      structureRequested = true;
+
+      fetchTradeStructure(context, { risk: riskResult, attack: attackResult })
+        .then((s) => {
+          if (!cancelled) setStructure(s.ok ? s.data.structure : { available: false, statusDetail: s.message });
+        })
+        .catch((e) => {
+          if (!cancelled) setStructure({ available: false, statusDetail: String(e?.message || e) });
+        });
+    };
 
     // Phase 6 is deliberately fetched OUTSIDE the market-data chain below. The
     // risk engine is pure arithmetic on the trader's own levels, so it must
@@ -118,10 +146,15 @@ export default function InvestigationScreen({ submission, onEdit }) {
     fetchRiskAssessment(context)
       .then((r) => {
         if (cancelled) return;
-        setRisk(r.ok ? r.data.risk : { available: false, statusDetail: r.message });
+        riskResult = r.ok ? r.data.risk : { available: false, statusDetail: r.message };
+        setRisk(riskResult);
+        requestStructure();
       })
       .catch((e) => {
-        if (!cancelled) setRisk({ available: false, statusDetail: String(e?.message || e) });
+        if (cancelled) return;
+        riskResult = { available: false, statusDetail: String(e?.message || e) };
+        setRisk(riskResult);
+        requestStructure();
       });
 
     fetchResearch(context)
@@ -139,7 +172,9 @@ export default function InvestigationScreen({ submission, onEdit }) {
         return fetchThesisAttack(context, { market: researchData.market, events: researchData.events })
           .then((a) => {
             if (cancelled) return undefined;
-            setAttack(a.ok ? a.data.analysis : { available: false, reason: a.message });
+            attackResult = a.ok ? a.data.analysis : { available: false, reason: a.message };
+            setAttack(attackResult);
+            requestStructure();
 
             // Phase 5 runs after the attack, reusing the same research context.
             return fetchHistoricalStressTest(context, {
@@ -156,8 +191,10 @@ export default function InvestigationScreen({ submission, onEdit }) {
           })
           .catch((e) => {
             if (!cancelled) {
-              setAttack({ available: false, reason: String(e?.message || e) });
+              attackResult = { available: false, reason: String(e?.message || e) };
+              setAttack(attackResult);
               setHistory({ available: false, reason: String(e?.message || e) });
+              requestStructure();
             }
           });
       })
@@ -168,8 +205,10 @@ export default function InvestigationScreen({ submission, onEdit }) {
           market: { available: false, reason: message },
           events: { available: false, reason: message },
         });
-        setAttack({ available: false, reason: message });
+        attackResult = { available: false, reason: message };
+        setAttack(attackResult);
         setHistory({ available: false, reason: message });
+        requestStructure();
       });
 
     return () => {
@@ -188,11 +227,11 @@ export default function InvestigationScreen({ submission, onEdit }) {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [submission, research, attack, history, risk]);
+  }, [submission, research, attack, history, risk, structure]);
 
   const sections = useMemo(
-    () => buildSectionNav(research, attack, history, risk),
-    [research, attack, history, risk]
+    () => buildSectionNav(research, attack, history, risk, structure),
+    [research, attack, history, risk, structure]
   );
 
   if (!submission || !submission.idea) {
@@ -201,7 +240,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
 
   const idea = submission.idea;
   const activeSection = sections.find((section) => section.id === activeId) || sections[0];
-  const completed = completedStageCountFromResearch(research, attack, history, risk);
+  const completed = completedStageCountFromResearch(research, attack, history, risk, structure);
 
   return (
     <>
@@ -212,8 +251,8 @@ export default function InvestigationScreen({ submission, onEdit }) {
           TradeGuard gathers live market and event research for this trade, runs the Devil's Advocate — a
           deliberate search for evidence that could make your thesis wrong — then looks for similar past
           setups and what happened afterwards. Finally it calculates the defined risk from your entry,
-          invalidation and risk budget. Where a data source is unavailable, it says so honestly rather
-          than guessing.
+          invalidation and risk budget, and brings the whole trade together into one structure. Where a
+          data source is unavailable, it says so honestly rather than guessing.
         </p>
       </div>
 
@@ -240,6 +279,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           attack={attack}
           history={history}
           risk={risk}
+          structure={structure}
           idea={idea}
           onEdit={onEdit}
         />

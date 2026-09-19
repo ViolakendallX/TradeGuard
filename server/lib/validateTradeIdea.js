@@ -169,11 +169,12 @@ export function buildCaptureResponse(value) {
       { step: 'Thesis attack', phase: 4, available: true },
       { step: 'Historical stress test', phase: 5, available: true },
       { step: 'Risk engine', phase: 6, available: true },
-      { step: 'Trade structure', phase: 7, available: false },
+      { step: 'Trade structure', phase: 7, available: true },
     ],
     message:
       'Thesis captured. TradeGuard has recorded what you believe and why. ' +
       'The investigation will research this asset, challenge the thesis, look for comparable historical ' +
-      'setups and calculate the defined risk from your entry, invalidation and risk budget.',
+      'setups, calculate the defined risk from your entry, invalidation and risk budget, and bring the ' +
+      'whole trade together into one structured plan.',
   };
 }

@@ -186,3 +186,43 @@ export async function fetchHistoricalStressTest(context, research) {
 
   return { ok: true, data: payload };
 }
+
+/**
+ * Phase 7: request the structured trade plan.
+ *
+ * The Phase 6 risk result and the Phase 4 attack we already hold are sent along
+ * so the backend can reuse them rather than re-derive them. Like the risk
+ * assessment, this endpoint reads no market data — it is a synthesis of the
+ * trader's own parameters and the findings the earlier stages already produced,
+ * so it still resolves when the market-data provider is unreachable.
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchTradeStructure(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/trade-structure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context, risk: extras.risk || null, attack: extras.attack || null }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400 && payload?.errors) {
+    return { ok: false, kind: 'validation', errors: payload.errors, message: payload.message };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Trade structure request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}

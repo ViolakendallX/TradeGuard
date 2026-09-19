@@ -34,6 +34,11 @@ const RISK_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'I
 const RISK_INVALID = { available: true, status: 'invalid', statusLabel: 'INVALID TRADE CONSTRUCTION' };
 const RISK_UNAVAIL = { available: false, statusDetail: 'backend offline' };
 
+// Phase 7 fixtures — mirror the trade-structure service's own statuses.
+const STRUCTURE_COMPLETE = { available: true, status: 'complete', statusLabel: 'STRUCTURE COMPLETE' };
+const STRUCTURE_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'STRUCTURE INCOMPLETE' };
+const STRUCTURE_UNAVAIL = { available: false, statusDetail: 'backend offline' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -43,6 +48,7 @@ test('declares the expected investigation stages in order', () => {
     'contradicting-evidence',
     'historical-comparisons',
     'risk-assessment',
+    'trade-structure',
   ]);
 });
 
@@ -184,18 +190,79 @@ test('the risk stage does not depend on market data being reachable', () => {
   );
 });
 
-test('every declared stage is now built; nothing in the investigation is locked', () => {
-  assert.equal(builtStageCount(), 6);
-  assert.equal(lockedStageCount(), 0);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 6);
+test('trade structure is now built (phase 7) and reflects the structure runtime state', () => {
+  const structure = byId('trade-structure');
+  assert.equal(structure.available, true);
+  assert.equal(structure.phase, 7);
+  assert.equal(structure.label, 'Trade structure');
+
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  // No result yet -> loading (NOT complete).
+  assert.equal(
+    stageRuntimeState(structure, research, ATTACK_OK, HISTORY_OK, RISK_READY, null),
+    STAGE_RUNTIME.LOADING
+  );
+
+  // The structure could not be produced at all -> unavailable, never complete.
+  assert.equal(
+    stageRuntimeState(structure, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_UNAVAIL),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+
+  // Ran, but the structure is incomplete -> partial, never complete.
+  assert.equal(
+    stageRuntimeState(structure, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // Ran with a complete structure -> complete.
+  assert.equal(
+    stageRuntimeState(structure, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE),
+    STAGE_RUNTIME.COMPLETE
+  );
 });
 
-test('Phase 7+ screens remain planned and are not reachable', async () => {
+test('the structure stage never claims completion without a complete structure', () => {
+  const structure = byId('trade-structure');
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  for (const value of [null, STRUCTURE_UNAVAIL, STRUCTURE_INCOMPLETE]) {
+    assert.notEqual(
+      stageRuntimeState(structure, research, ATTACK_OK, HISTORY_OK, RISK_READY, value),
+      STAGE_RUNTIME.COMPLETE
+    );
+  }
+});
+
+test('the structure stage does not depend on market data being reachable', () => {
+  const structure = byId('trade-structure');
+  // The market-data chain failed entirely, but the structure is a synthesis of
+  // the trader's own parameters and the earlier findings, so it still resolves.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+
+  assert.equal(
+    stageRuntimeState(structure, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_COMPLETE),
+    STAGE_RUNTIME.COMPLETE
+  );
+  assert.equal(
+    stageRuntimeState(structure, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+});
+
+test('every declared stage is now built; nothing in the investigation is locked', () => {
+  assert.equal(builtStageCount(), 7);
+  assert.equal(lockedStageCount(), 0);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 7);
+});
+
+test('Phase 8+ screens remain planned and are not reachable', async () => {
   const { NAV_ITEMS } = await import('./constants.js');
-  const future = NAV_ITEMS.filter((item) => item.phase > 6);
+  const future = NAV_ITEMS.filter((item) => item.phase > 7);
 
   // The trade report, decision, review and trader review screens are still
-  // placeholders — Phase 6 did not activate any of them.
+  // placeholders — Phase 7 did not activate any of them.
   assert.ok(future.length >= 4);
   assert.deepEqual(
     future.map((item) => item.id),
@@ -215,15 +282,45 @@ test('partial data is reported as partial, not complete', () => {
   assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1);
 });
 
-test('a fully researched trade with a full attack, a usable sample and a defined risk marks six stages complete', () => {
+test('a fully researched trade with a full attack, a usable sample, a defined risk and a complete structure marks seven stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
-  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY), 6);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 6);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE), 7);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 7);
 
-  // Phase 1-5 stages are unaffected by the Phase 6 addition: with no risk
-  // result yet, the risk stage is loading rather than complete.
+  // Phase 1-6 stages are unaffected by the Phase 7 addition: with no structure
+  // result yet, the structure stage is loading rather than complete.
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY), 6);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, null), 4);
+});
+
+test('an incomplete or unavailable structure adds no completion', () => {
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  assert.equal(
+    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_INCOMPLETE),
+    6
+  );
+  assert.equal(
+    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_UNAVAIL),
+    6
+  );
+});
+
+test('a complete structure still cannot complete a trade whose other stages have no data', () => {
+  // A structured plan does not stand in for market context, events, the attack or
+  // history — each stage is complete only on its own evidence.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+  assert.equal(
+    completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_COMPLETE),
+    3
+  );
+
+  // And an incomplete structure adds nothing beyond the risk stage.
+  assert.equal(
+    completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_INCOMPLETE),
+    2
+  );
 });
 
 test('a ready risk assessment still cannot complete a trade whose other stages have no data', () => {

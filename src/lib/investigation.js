@@ -3,7 +3,8 @@
  *
  * Phase 2 declared the stages. Phase 3 made market-context and events-catalysts
  * REAL, Phase 4 makes the Devil's Advocate stage REAL, Phase 5 makes the
- * historical stress test REAL, and Phase 6 makes the risk assessment REAL. A
+ * historical stress test REAL, Phase 6 makes the risk assessment REAL, and
+ * Phase 7 makes the trade structure REAL. A
  * stage's completion
  * never depends on a static flag — it depends on whether the underlying work
  * actually produced valid output. A stage is marked complete ONLY when its data
@@ -69,6 +70,14 @@ export const INVESTIGATION_STAGES = [
     description:
       'Deterministic price risk, calculated position size and defined risk from the entry, invalidation and risk budget you supplied — or an explicit incomplete or invalid-construction state when those inputs are missing or inconsistent.',
   },
+  {
+    id: 'trade-structure',
+    label: 'Trade structure',
+    phase: 7,
+    available: true,
+    description:
+      'The trade you described, brought together with the findings of the earlier stages: the setup, the risk calculated by the risk engine, the thesis with its supporting and contradicting context, and the conditions that would invalidate it — or an explicit incomplete state whenever information is missing.',
+  },
 ];
 
 export const INVESTIGATION_STAGE_COUNT = INVESTIGATION_STAGES.length;
@@ -132,21 +141,45 @@ function riskState(risk) {
 }
 
 /**
- * Runtime status of a stage given the live research + thesis-attack + historical
- * + risk results. `research` is the Phase 3 backend response; `attack` is the
- * Phase 4 analysis; `history` is the Phase 5 analysis; `risk` is the Phase 6
- * analysis (all null while loading).
+ * Trade structure stage state (Phase 7).
+ *   - no result yet                        -> loading
+ *   - the structure could not be produced  -> unavailable (honest)
+ *   - ran, but the structure is incomplete
+ *     (a parameter is missing, or the risk
+ *     leg has no defined risk)             -> partial
+ *   - ran with a complete structure        -> complete
  *
- * The risk stage is resolved BEFORE the research gate below, because the risk
- * engine is pure arithmetic on the trader's own inputs — it does not depend on
- * market data being reachable, so a research failure must not mark it loading.
+ * As with the risk stage, an INCOMPLETE structure is deliberately NOT complete:
+ * the stage ran, but the thing it exists to produce — a whole trade plan — does
+ * not exist yet.
  */
-export function stageRuntimeState(stage, research, attack, history, risk) {
+function structureState(structure) {
+  if (!structure) return STAGE_RUNTIME.LOADING;
+  if (structure.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  if (structure.status === 'complete') return STAGE_RUNTIME.COMPLETE;
+  return STAGE_RUNTIME.PARTIAL;
+}
+
+/**
+ * Runtime status of a stage given the live research + thesis-attack + historical
+ * + risk + structure results. `research` is the Phase 3 backend response;
+ * `attack` is the Phase 4 analysis; `history` is the Phase 5 analysis; `risk` is
+ * the Phase 6 analysis; `structure` is the Phase 7 analysis (all null while
+ * loading).
+ *
+ * The risk and structure stages are resolved BEFORE the research gate below,
+ * because neither depends on market data being reachable: the risk engine is
+ * pure arithmetic on the trader's own inputs, and the structure is a synthesis
+ * of those inputs and the earlier findings. A research failure must not mark
+ * either of them loading.
+ */
+export function stageRuntimeState(stage, research, attack, history, risk, structure) {
   if (!stage.available) return STAGE_RUNTIME.LOCKED;
   if (stage.id === 'thesis-captured') return STAGE_RUNTIME.COMPLETE;
   if (stage.id === 'contradicting-evidence') return attackState(attack);
   if (stage.id === 'historical-comparisons') return historyState(history);
   if (stage.id === 'risk-assessment') return riskState(risk);
+  if (stage.id === 'trade-structure') return structureState(structure);
   if (!research) return STAGE_RUNTIME.LOADING;
   if (stage.id === 'market-context') return marketState(research.market);
   if (stage.id === 'events-catalysts') return eventsState(research.events);
@@ -165,8 +198,8 @@ export function lockedStageCount() {
   return INVESTIGATION_STAGES.filter((stage) => !stage.available).length;
 }
 
-export function completedStageCountFromResearch(research, attack, history, risk) {
+export function completedStageCountFromResearch(research, attack, history, risk, structure) {
   return INVESTIGATION_STAGES.filter(
-    (stage) => stageRuntimeState(stage, research, attack, history, risk) === STAGE_RUNTIME.COMPLETE
+    (stage) => stageRuntimeState(stage, research, attack, history, risk, structure) === STAGE_RUNTIME.COMPLETE
   ).length;
 }

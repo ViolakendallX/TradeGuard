@@ -26,11 +26,24 @@
   --accent-soft: rgba(77, 141, 255, 0.12);
   --accent-ring: rgba(77, 141, 255, 0.35);
 
-  /* Direction — bullish (up) / bearish (down) */
+  /* Market magnitude + error accent.
+     NOTE: --up is the negative/error colour and --down the positive one, and
+     --up doubles as the form-validation colour (.label__req, .field__error,
+     .has-error). These are NOT the trade-direction colours — see --dir-* below. */
   --up: #ff4d5e;
   --up-soft: rgba(255, 77, 94, 0.12);
   --down: #17c98a;
   --down-soft: rgba(23, 201, 138, 0.12);
+
+  /* Trade direction — conventional trading semantics:
+     bullish / long = green, bearish / short = red.
+     Every direction presentation reads from these (trade header badge, thesis
+     preview, submission result, direction selector, trade structure). */
+  --dir-bullish: #17c98a;
+  --dir-bullish-soft: rgba(23, 201, 138, 0.12);
+  --dir-bearish: #ff4d5e;
+  --dir-bearish-soft: rgba(255, 77, 94, 0.12);
+
   --neutral: #8a94a6;
   --neutral-soft: rgba(138, 148, 166, 0.12);
 
@@ -892,16 +905,19 @@ textarea {
   border: 1px solid transparent;
 }
 
+/* Direction chips. `--up` here means the bullish side of the trade, so they read
+   from the direction tokens — bullish green, bearish red — not from the
+   market-magnitude tokens. */
 .chip--up {
-  background: var(--up-soft);
-  border-color: rgba(255, 77, 94, 0.32);
-  color: var(--up);
+  background: var(--dir-bullish-soft);
+  border-color: rgba(23, 201, 138, 0.32);
+  color: var(--dir-bullish);
 }
 
 .chip--down {
-  background: var(--down-soft);
-  border-color: rgba(23, 201, 138, 0.32);
-  color: var(--down);
+  background: var(--dir-bearish-soft);
+  border-color: rgba(255, 77, 94, 0.32);
+  color: var(--dir-bearish);
 }
 
 .chip--neutral {
@@ -1122,6 +1138,13 @@ textarea {
 }
 .data-row dd.is-down {
   color: var(--down);
+}
+/* Trade direction in a data grid: bullish green, bearish red. */
+.data-row dd.is-bullish {
+  color: var(--dir-bullish);
+}
+.data-row dd.is-bearish {
+  color: var(--dir-bearish);
 }
 
 .stage__meta {
@@ -2520,6 +2543,387 @@ textarea {
 
 @media (max-width: 640px) {
   .rk__criterion-label {
+    min-width: 0;
+  }
+}
+
+/* ============================================================
+   Phase 7 — Trade structure
+   Reuses the Phase 6 section/badge/grid language so the panel
+   reads as part of the same workspace rather than a new one.
+   ============================================================ */
+
+.struct {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.struct__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.struct__badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Complete = every parameter present and a defined risk exists. */
+.struct__badge--complete {
+  border-color: rgba(23, 201, 138, 0.4);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+/* Incomplete = something the structure needs is missing or unusable. */
+.struct__badge--incomplete {
+  border-color: rgba(245, 165, 36, 0.4);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.struct__badge--unavailable {
+  border-color: var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+
+.struct__status-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.struct__detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.struct__notice {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Used when a whole section is absent for an honest reason rather than a fault. */
+.struct__notice--muted {
+  border-left-color: var(--border-strong);
+}
+
+/* Non-blocking caveats — what is thin about this particular plan. */
+.struct__caveats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.struct__caveat {
+  position: relative;
+  padding: 8px 11px 8px 25px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.struct__caveat::before {
+  content: '!';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+.struct__honesty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* --- the four numbered sections ----------------------------------------- */
+
+.struct__section {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+/* The setup is what the trade IS, so it leads with the accent edge. */
+.struct__section--setup {
+  border-left-color: var(--accent);
+}
+
+.struct__section--risk {
+  border-left-color: var(--accent);
+}
+
+.struct__section--conditions {
+  border-left-color: var(--warn);
+}
+
+.struct__section--limits {
+  border-left-color: var(--warn);
+}
+
+.struct__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.struct__section-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-muted);
+  font-size: 9.5px;
+  letter-spacing: 0;
+}
+
+.struct__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.struct__footnote {
+  margin: 9px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.struct__empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.struct__method {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* A value the trader never supplied. Styled to read as an absence, not a figure. */
+.struct__absent {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- meta rows ----------------------------------------------------------- */
+
+.struct__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--border);
+}
+
+.struct__meta-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 150px;
+}
+
+.struct__meta-value {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* Trade direction in the structure: long green, short red. */
+.struct__meta-value.is-bullish {
+  color: var(--dir-bullish);
+}
+
+.struct__meta-value.is-bearish {
+  color: var(--dir-bearish);
+}
+
+/* --- section 3: thesis --------------------------------------------------- */
+
+.struct__thesis {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 2px solid var(--accent);
+  background: var(--bg-panel-raised);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.struct__interpretation {
+  margin-top: 11px;
+}
+
+.struct__sub-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.struct__interpretation-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.struct__interpretation-note {
+  margin: 7px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.struct__strength {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 11px;
+}
+
+.struct__strength-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --- section 4: invalidation -------------------------------------------- */
+
+.struct__invalidation {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+}
+
+.struct__invalidation .struct__meta-label {
+  display: block;
+  min-width: 0;
+  margin-bottom: 4px;
+}
+
+.struct__invalidation-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.struct__assumptions {
+  margin-top: 11px;
+}
+
+.struct__assumption-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.struct__assumption-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.struct__assumption-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+/* --- limitations + disclaimer ------------------------------------------- */
+
+.struct__limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.struct__limits li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.struct__limits li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.struct__disclaimer {
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .struct__meta-label {
     min-width: 0;
   }
 }

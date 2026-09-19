@@ -25,6 +25,7 @@ const NAV_LABELS = {
   'contradicting-evidence': "Devil's Advocate",
   'historical-comparisons': 'Historical Stress Test',
   'risk-assessment': 'Risk Assessment',
+  'trade-structure': 'Trade Structure',
 };
 
 export function navLabel(stage) {
@@ -44,16 +45,31 @@ const RISK_NAV_LABELS = {
 };
 
 /**
+ * Short navigation labels for the trade structure's own statuses. Same reasoning
+ * as the risk labels: the canonical 'STRUCTURE COMPLETE' / 'STRUCTURE INCOMPLETE'
+ * wording is used verbatim inside the panel, while the rail needs something that
+ * fits a 252px column.
+ */
+const STRUCTURE_NAV_LABELS = {
+  complete: 'Structure complete',
+  incomplete: 'Structure incomplete',
+};
+
+/**
  * Human-readable status copy for a stage's runtime state.
  *
  * `detail` is the stage's own analysis result, when it has one. The risk stage
  * uses it because its two non-complete outcomes (missing inputs vs a
  * self-contradicting construction) are genuinely different and the generic
- * "Partial" badge would hide that.
+ * "Partial" badge would hide that. The structure stage uses it for the same
+ * reason: "incomplete" is the meaningful word, not "partial".
  */
 export function runtimeLabel(runtime, stage, detail) {
   if (stage?.id === 'risk-assessment' && detail && detail.status) {
     return RISK_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
+  }
+  if (stage?.id === 'trade-structure' && detail && detail.status) {
+    return STRUCTURE_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
   }
 
   switch (runtime) {
@@ -91,13 +107,15 @@ export function runtimeModifier(runtime) {
  * never drift from the stage model. Locked stages stay listed — the user should
  * be able to see what is coming — but they are not selectable.
  *
- * `risk` is the Phase 6 result; it is passed to runtimeLabel so the risk row can
- * report the engine's own status rather than a generic one.
+ * `risk` is the Phase 6 result and `structure` the Phase 7 result; they are
+ * passed to runtimeLabel so those rows can report their own status rather than a
+ * generic one.
  */
-export function buildSectionNav(research, attack, history, risk) {
+export function buildSectionNav(research, attack, history, risk, structure) {
   return INVESTIGATION_STAGES.map((stage) => {
-    const runtime = stageRuntimeState(stage, research, attack, history, risk);
-    const detail = stage.id === 'risk-assessment' ? risk : null;
+    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure);
+    const detail =
+      stage.id === 'risk-assessment' ? risk : stage.id === 'trade-structure' ? structure : null;
     return {
       id: stage.id,
       stage,

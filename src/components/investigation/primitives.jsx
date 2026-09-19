@@ -8,13 +8,19 @@
 
 import { runtimeModifier } from '../../lib/investigationView.js';
 
+/**
+ * Tone -> class. `up`/`down` are the market-magnitude tones; `bullish`/`bearish`
+ * are the trade-direction tones (green / red). They are separate on purpose: a
+ * direction is not a price change, and they read from different tokens.
+ */
+const TONE_CLASSES = { up: 'is-up', down: 'is-down', bullish: 'is-bullish', bearish: 'is-bearish' };
+
 /** One label/value row in a `.data-grid`. */
 export function DataRow({ label, value, tone }) {
-  const cls = tone === 'up' ? 'is-up' : tone === 'down' ? 'is-down' : '';
   return (
     <div className="data-row">
       <dt>{label}</dt>
-      <dd className={cls}>{value}</dd>
+      <dd className={TONE_CLASSES[tone] || ''}>{value}</dd>
     </div>
   );
 }
