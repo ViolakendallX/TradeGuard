@@ -2,7 +2,7 @@ import { NAV_ITEMS } from '../lib/constants.js';
 
 // Phases that are actually built. Everything at or below this is interactive;
 // later phases remain disabled until their phase lands.
-const CURRENT_PHASE = 5;
+const CURRENT_PHASE = 6;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
   return (
@@ -44,8 +44,9 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 5 — Historical stress test. The Devil's Advocate challenges your thesis; history shows what
-          followed similar past setups. Risk arrives in a later phase.
+          Phase 6 — Risk engine. The Devil's Advocate challenges your thesis, history shows what followed
+          similar past setups, and the risk engine calculates the defined risk from your own entry,
+          invalidation and risk budget. Trade structuring arrives in a later phase.
         </div>
       </div>
     </aside>

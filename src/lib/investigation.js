@@ -2,8 +2,9 @@
  * TradeGuard investigation stages.
  *
  * Phase 2 declared the stages. Phase 3 made market-context and events-catalysts
- * REAL, Phase 4 makes the Devil's Advocate stage REAL, and Phase 5 makes the
- * historical stress test REAL. A stage's completion
+ * REAL, Phase 4 makes the Devil's Advocate stage REAL, Phase 5 makes the
+ * historical stress test REAL, and Phase 6 makes the risk assessment REAL. A
+ * stage's completion
  * never depends on a static flag — it depends on whether the underlying work
  * actually produced valid output. A stage is marked complete ONLY when its data
  * or analysis came back available and usable; otherwise it is partial,
@@ -64,8 +65,9 @@ export const INVESTIGATION_STAGES = [
     id: 'risk-assessment',
     label: 'Risk assessment',
     phase: 6,
-    available: false,
-    description: 'Position sizing, downside, reward/risk and exposure from the deterministic risk engine. (Phase 6)',
+    available: true,
+    description:
+      'Deterministic price risk, calculated position size and defined risk from the entry, invalidation and risk budget you supplied — or an explicit incomplete or invalid-construction state when those inputs are missing or inconsistent.',
   },
 ];
 
@@ -110,15 +112,41 @@ function historyState(history) {
 }
 
 /**
- * Runtime status of a stage given the live research + thesis-attack + historical
- * results. `research` is the Phase 3 backend response; `attack` is the Phase 4
- * analysis; `history` is the Phase 5 analysis (all null while loading).
+ * Risk assessment stage state (Phase 6).
+ *   - no result yet                       -> loading
+ *   - engine could not run at all         -> unavailable (honest)
+ *   - ran, but inputs missing or the
+ *     construction contradicts itself     -> partial (there is no defined risk)
+ *   - ran with a coherent construction
+ *     and produced a defined risk         -> complete
+ *
+ * Note that an INCOMPLETE or INVALID construction is deliberately NOT complete:
+ * the stage ran, but the thing it exists to produce — a defined risk — does not
+ * exist. Marking it complete would claim a risk picture that was never built.
  */
-export function stageRuntimeState(stage, research, attack, history) {
+function riskState(risk) {
+  if (!risk) return STAGE_RUNTIME.LOADING;
+  if (risk.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  if (risk.status === 'ready') return STAGE_RUNTIME.COMPLETE;
+  return STAGE_RUNTIME.PARTIAL;
+}
+
+/**
+ * Runtime status of a stage given the live research + thesis-attack + historical
+ * + risk results. `research` is the Phase 3 backend response; `attack` is the
+ * Phase 4 analysis; `history` is the Phase 5 analysis; `risk` is the Phase 6
+ * analysis (all null while loading).
+ *
+ * The risk stage is resolved BEFORE the research gate below, because the risk
+ * engine is pure arithmetic on the trader's own inputs — it does not depend on
+ * market data being reachable, so a research failure must not mark it loading.
+ */
+export function stageRuntimeState(stage, research, attack, history, risk) {
   if (!stage.available) return STAGE_RUNTIME.LOCKED;
   if (stage.id === 'thesis-captured') return STAGE_RUNTIME.COMPLETE;
   if (stage.id === 'contradicting-evidence') return attackState(attack);
   if (stage.id === 'historical-comparisons') return historyState(history);
+  if (stage.id === 'risk-assessment') return riskState(risk);
   if (!research) return STAGE_RUNTIME.LOADING;
   if (stage.id === 'market-context') return marketState(research.market);
   if (stage.id === 'events-catalysts') return eventsState(research.events);
@@ -137,8 +165,8 @@ export function lockedStageCount() {
   return INVESTIGATION_STAGES.filter((stage) => !stage.available).length;
 }
 
-export function completedStageCountFromResearch(research, attack, history) {
+export function completedStageCountFromResearch(research, attack, history, risk) {
   return INVESTIGATION_STAGES.filter(
-    (stage) => stageRuntimeState(stage, research, attack, history) === STAGE_RUNTIME.COMPLETE
+    (stage) => stageRuntimeState(stage, research, attack, history, risk) === STAGE_RUNTIME.COMPLETE
   ).length;
 }

@@ -31,8 +31,31 @@ export function navLabel(stage) {
   return NAV_LABELS[stage.id] || stage.label;
 }
 
-/** Human-readable status copy for a stage's runtime state. */
-export function runtimeLabel(runtime, stage) {
+/**
+ * Short navigation labels for the risk engine's own statuses. The canonical
+ * labels ('RISK READY', 'INCOMPLETE', 'INVALID TRADE CONSTRUCTION') are the
+ * engine's and are used verbatim inside the panel; the rail needs something that
+ * fits a 252px column, so the mapping lives here in the view model.
+ */
+const RISK_NAV_LABELS = {
+  ready: 'Risk ready',
+  incomplete: 'Incomplete',
+  invalid: 'Invalid construction',
+};
+
+/**
+ * Human-readable status copy for a stage's runtime state.
+ *
+ * `detail` is the stage's own analysis result, when it has one. The risk stage
+ * uses it because its two non-complete outcomes (missing inputs vs a
+ * self-contradicting construction) are genuinely different and the generic
+ * "Partial" badge would hide that.
+ */
+export function runtimeLabel(runtime, stage, detail) {
+  if (stage?.id === 'risk-assessment' && detail && detail.status) {
+    return RISK_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
+  }
+
   switch (runtime) {
     case STAGE_RUNTIME.COMPLETE:
       return 'Complete';
@@ -67,16 +90,20 @@ export function runtimeModifier(runtime) {
  * Build the workspace navigation FROM the declared stages, so the navigation can
  * never drift from the stage model. Locked stages stay listed — the user should
  * be able to see what is coming — but they are not selectable.
+ *
+ * `risk` is the Phase 6 result; it is passed to runtimeLabel so the risk row can
+ * report the engine's own status rather than a generic one.
  */
-export function buildSectionNav(research, attack, history) {
+export function buildSectionNav(research, attack, history, risk) {
   return INVESTIGATION_STAGES.map((stage) => {
-    const runtime = stageRuntimeState(stage, research, attack, history);
+    const runtime = stageRuntimeState(stage, research, attack, history, risk);
+    const detail = stage.id === 'risk-assessment' ? risk : null;
     return {
       id: stage.id,
       stage,
       label: navLabel(stage),
       runtime,
-      statusLabel: runtimeLabel(runtime, stage),
+      statusLabel: runtimeLabel(runtime, stage, detail),
       selectable: stage.available,
     };
   });

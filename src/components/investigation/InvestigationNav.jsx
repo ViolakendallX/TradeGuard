@@ -19,7 +19,8 @@ export default function InvestigationNav({ sections, activeId, onSelect, complet
       <div className="inv-nav__head">
         <div className="inv-nav__title">Investigation</div>
         <p className="inv-nav__meta">
-          {completed} of {total} stages with data · {locked} arrive in later phases.
+          {completed} of {total} stages with data
+          {locked > 0 ? ` · ${locked} arrive in later phases.` : '.'}
         </p>
       </div>
 

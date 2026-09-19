@@ -21,6 +21,8 @@ import { TONE_CLASS, formatValue } from '../../lib/investigationView.js';
 export default function TradeHeader({ idea, offline, onEdit, innerRef }) {
   const direction = DIRECTIONS.find((d) => d.value === idea.direction);
   const hasEntry = idea.entryPrice !== null && idea.entryPrice !== undefined && idea.entryPrice !== '';
+  const hasInvalidation =
+    idea.invalidationPrice !== null && idea.invalidationPrice !== undefined && idea.invalidationPrice !== '';
   const hasRisk = idea.riskAmount !== null && idea.riskAmount !== undefined && idea.riskAmount !== '';
   const hasPosition = Boolean(idea.existingPosition);
 
@@ -47,6 +49,13 @@ export default function TradeHeader({ idea, offline, onEdit, innerRef }) {
           <dt>Entry</dt>
           <dd className={hasEntry ? '' : 'is-empty'}>
             {hasEntry ? formatValue(idea.entryPrice) : 'Not specified'}
+          </dd>
+        </div>
+
+        <div className="inv-fact">
+          <dt>Stop</dt>
+          <dd className={hasInvalidation ? '' : 'is-empty'}>
+            {hasInvalidation ? formatValue(idea.invalidationPrice) : 'Not specified'}
           </dd>
         </div>
 

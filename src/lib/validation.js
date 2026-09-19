@@ -37,6 +37,12 @@ export function validateIdeaForm(form) {
   if (entry.invalid) errors.entryPrice = 'Entry price must be a number.';
   else if (entry.value !== null && entry.value <= 0) errors.entryPrice = 'Entry price must be above zero.';
 
+  const invalidation = parseNumber(form.invalidationPrice);
+  if (invalidation.invalid) errors.invalidationPrice = 'Invalidation price must be a number.';
+  else if (invalidation.value !== null && invalidation.value <= 0) {
+    errors.invalidationPrice = 'Invalidation price must be above zero.';
+  }
+
   const risk = parseNumber(form.riskAmount);
   if (risk.invalid) errors.riskAmount = 'Risk amount must be a number.';
   else if (risk.value !== null && risk.value <= 0) errors.riskAmount = 'Risk amount must be above zero.';
@@ -61,6 +67,7 @@ export function toSubmissionPayload(form) {
     thesis: form.thesis.trim(),
     timeframe: form.timeframe || null,
     entryPrice: form.entryPrice.trim() === '' ? null : form.entryPrice.trim(),
+    invalidationPrice: form.invalidationPrice.trim() === '' ? null : form.invalidationPrice.trim(),
     riskAmount: form.riskAmount.trim() === '' ? null : form.riskAmount.trim(),
     confidence: form.confidence,
     existingPosition: form.existingPosition || null,
@@ -74,6 +81,7 @@ export const EMPTY_FORM = {
   thesis: '',
   timeframe: '',
   entryPrice: '',
+  invalidationPrice: '',
   riskAmount: '',
   confidence: 5,
   existingPosition: '',

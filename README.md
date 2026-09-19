@@ -4,9 +4,9 @@
 
 **Stress-test your trade thesis before you risk capital.**
 
-TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, and tells you what could make it wrong — then leaves the decision to you.
+TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined — then leaves the decision to you.
 
-**Status:** Phases 1–5 complete · Phases 6–13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–6 complete · Phases 7–13 planned. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,12 +14,13 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does five things:
+It does six things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
 - **Separates supporting from contradicting evidence** — you see both sides classified, not blended into a single opinion.
 - **Stress-tests the idea against history** — it retrieves real historical candles for the asset and reports what followed comparable past setups, or says plainly that historical data is unavailable.
+- **Calculates the risk you defined** — from your own entry, invalidation and risk budget it derives the price risk per unit, the position size that keeps your loss at that budget, and the defined risk — or says plainly that an input is missing or the construction contradicts itself.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -48,10 +49,10 @@ THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
        →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST.
-**Still on the roadmap:** RISK CHECK, HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK.
+**Still on the roadmap:** HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
 
-Later stages are planned, not built. Nothing after Phase 5 is presented as working.
+Later stages are planned, not built. Nothing after Phase 6 is presented as working.
 
 ---
 
@@ -64,9 +65,10 @@ Trade Idea  →  Investigation  →  Market Context
                               →  Events & Catalysts
                               →  Devil's Advocate / Thesis Attack
                               →  Historical Stress Test
+                              →  Risk Assessment
 ```
 
-**You submit:** asset, direction, thesis, timeframe, entry price, risk amount, confidence, and existing position.
+**You submit:** asset, direction, thesis, timeframe, entry price, invalidation / stop price, risk amount, confidence, and existing position.
 
 **The investigation can currently:**
 
@@ -76,13 +78,15 @@ Trade Idea  →  Investigation  →  Market Context
 - separate supporting evidence from contradicting evidence
 - retrieve real historical candles for the asset and match comparable past setups using published rules
 - report what followed those comparable setups, as observed historical outcomes rather than predictions
+- calculate price risk per unit, position size and defined risk from the entry, invalidation and risk budget you supplied
+- report an incomplete risk assessment when a required input is missing, or an invalid trade construction when the inputs contradict each other
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
 
-Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran.
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist.
 
-The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
+The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, stop, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
 
 ---
 
@@ -95,7 +99,7 @@ The Investigation screen presents all of this as a single workspace rather than 
 | Phase 3 — Market & Event Research | Live market context, event/catalyst research, honest unavailability states | ✅ Complete |
 | Phase 4 — Devil's Advocate / Thesis Attack | Thesis extraction, supporting vs contradicting evidence, risks, invalidation conditions | ✅ Complete |
 | Phase 5 — Historical Stress Test | Real historical candle retrieval, deterministic setup matching, observed outcomes, explicit unavailable/partial states | ✅ Complete |
-| Phase 6 — Risk Engine | Deterministic max loss / max profit / breakeven / sizing / exposure | ⏳ Planned |
+| Phase 6 — Risk Engine / Risk Assessment | Deterministic price risk, position sizing and defined risk from the trader's own entry, invalidation and risk budget, with explicit RISK READY / INCOMPLETE / INVALID TRADE CONSTRUCTION states | ✅ Complete |
 | Phase 7 — Trade Structuring | Defined-risk trade proposals where supported | ⏳ Planned |
 | Phase 8 — Final Trade Report | One consolidated decision-ready report | ⏳ Planned |
 | Phase 9 — Human Decision | Execute / Modify / Pass with decision recording | ⏳ Planned |
@@ -104,7 +108,7 @@ The Investigation screen presents all of this as a single workspace rather than 
 | Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
 | Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
 
-Phases 6–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and the investigation UI labels those stages as arriving in a later phase — the Risk Assessment stage remains locked.
+Phases 7–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All six investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test and Risk Assessment — are now active; nothing in the investigation is locked.
 
 ---
 
@@ -167,7 +171,82 @@ The stage has four honest outcomes: a usable result, no matches found, a **parti
 - **It never invents a win rate, a probability, or a hit rate.** Match frequency is labelled for what it is.
 - **It never claims a match when data is unavailable.** An empty result stays empty.
 - **It never predicts.** Historical observations describe the sample they came from.
-- **It never recommends a trade.** There is no BUY, SELL, or PASS, and no position sizing — that is Phase 6 and later.
+- **It never recommends a trade.** There is no BUY, SELL, or PASS. The historical stage reports what happened; the risk stage reports what you defined (see [Phase 6](#phase-6--risk-assessment)). Neither of them tells you what to do.
+
+---
+
+## Phase 6 — Risk Assessment
+
+Phase 6 answers one question: **"Given the way this trade is constructed, what is the defined risk, and what important risk information is missing or inconsistent?"**
+
+It is a **deterministic risk engine**. Code calculates; the UI explains. No number in this stage is estimated, inferred, or generated by a model.
+
+### Required inputs
+
+| Input | Where it comes from |
+| ----- | ------------------- |
+| Direction | Your submitted thesis (bullish → long, bearish → short) |
+| Entry price | You supply it |
+| Invalidation / stop price | You supply it |
+| Risk budget | You supply it |
+
+Entry, invalidation and risk budget are captured on the Trade Idea screen and are **the trader's own levels**. TradeGuard does not read the current market price and never substitutes one for your entry. If you do not supply an invalidation, TradeGuard does not invent one — it reports the assessment as incomplete.
+
+### Calculation methodology
+
+For a long (bullish) trade:
+
+```
+price risk per unit = entry price − invalidation price
+```
+
+For a short (bearish) trade:
+
+```
+price risk per unit = invalidation price − entry price
+```
+
+Then, for either side:
+
+```
+position size = risk budget ÷ price risk per unit
+defined risk  = position size × price risk per unit
+```
+
+The price risk per unit must be **strictly positive**. The stage also reports the risk budget as supplied, the price risk as a percentage of entry, the notional value at entry, and the formula used, and it shows the arithmetic step by step:
+
+```
+Entry:        100
+Invalidation: 95
+Risk budget:  50
+
+Price risk per unit:        100 − 95 = 5
+Calculated position size:   50 ÷ 5   = 10 units
+Defined risk:               10 × 5   = 50
+```
+
+Position size is not rounded before the defined risk is derived, so the defined risk matches the budget you supplied. The engine measures price risk at a single invalidation level only; it does not model portfolio exposure, correlated positions, or drawdown across trades.
+
+### The three states
+
+| State | Meaning |
+| ----- | ------- |
+| **RISK READY** | Every input the calculation needs is present and the construction is coherent, so the defined risk was calculated. |
+| **INCOMPLETE** | An input the calculation needs is missing — no entry, no invalidation, no risk budget, or no directional side. The stage names exactly what is missing. |
+| **INVALID TRADE CONSTRUCTION** | The inputs contradict each other: entry equal to invalidation (zero price risk), a bullish trade with its invalidation at or above the entry, a bearish trade with its invalidation at or below the entry, or a non-positive / non-numeric value. |
+
+There is deliberately **no fourth state**. The engine never emits a verdict: no BUY, no SELL, no PASS, no score, no "this trade is good", no "this trade is safe", and no statement about whether the trade is worth taking.
+
+### What it never does
+
+- **It never uses a market price.** Entry and invalidation are the levels you supplied, taken as given. The engine makes no network call at all, which is also why the risk stage still resolves when every market-data provider is unreachable.
+- **It never invents an input.** No assumed stop, no default entry, no estimated account size, no made-up position size.
+- **It never calculates around a bad input.** A missing input produces INCOMPLETE; a contradictory construction produces INVALID TRADE CONSTRUCTION. Neither produces a number.
+- **It never recommends a trade.** There is no BUY, SELL, or PASS, and no probability, win rate, expected return, or reward/risk ratio.
+- **It never claims the defined risk is the realised loss.** Slippage, fees, financing, gaps through the invalidation and liquidity are disclosed as limitations on every response, alongside the fact that the levels were not verified against the market and that a fractional size may not be executable on a whole-unit venue.
+- **It never hides the missing information.** Every response carries its limitations and disclaimer; the UI cannot render the panel without them.
+
+**Not in this phase:** maximum profit, breakeven, reward/risk, risk percentage of an account, and exposure are **not** calculated. TradeGuard does not know your account size. Those remain future work.
 
 ---
 
@@ -194,6 +273,10 @@ The historical stress test reads the **same Bitget Spot API v2 candle endpoint**
 
 Event research uses a **Financial Modeling Prep**-style earnings calendar, gated entirely by environment configuration. Without `TRADEGUARD_EVENTS_API_BASE` and `TRADEGUARD_EVENTS_API_KEY`, event research reports **Data unavailable** with an explanation rather than guessing.
 
+### Risk calculation
+
+The risk assessment uses **no external data source at all**. It is arithmetic on the entry, invalidation and risk budget the trader submitted, computed by a pure function in the backend. There is no provider, no symbol lookup and no market price, so it cannot fail for data reasons — the risk stage resolves even when Bitget and the events provider are both unreachable. Its only two non-ready outcomes are missing inputs and a self-contradicting construction.
+
 ### Provider availability
 
 External provider availability directly affects live research, and TradeGuard is built to be honest about that. If Bitget is unreachable from the network the backend is running on — a restricted sandbox, a corporate proxy, an outage — market context reports **Data unavailable** with the reason. The integration is real; it simply is not guaranteed to return data on every run, and the UI never pretends otherwise.
@@ -212,6 +295,10 @@ These are enforced in the code, not aspirational:
 - **Insufficient evidence is not confirmation.** The analysis never presents an absence of data as support for a trade.
 - **No manufactured bearish case.** TradeGuard does not invent risks to create artificial balance.
 - **No fabricated historical observations.** When historical data is unavailable, too short, or matched by nothing, the stress test reports exactly that — it does not invent setups, win rates, probabilities, or outcomes to fill the gap.
+- **No fabricated risk numbers.** The risk engine only ever emits numbers it derived from the trader's own inputs, and only when every input is present and coherent. A missing input produces an INCOMPLETE assessment naming what is missing; a contradictory construction produces an INVALID TRADE CONSTRUCTION with no calculation at all. Nothing is assumed in the gap.
+- **No market price is substituted for your entry.** The risk engine reads no market data. Entry and invalidation are the trader's levels, and the response states that they were not verified against the market.
+- **The defined risk is not presented as the realised loss.** Slippage, fees, financing, gaps and liquidity are disclosed as limitations on every risk response.
+- **No trade verdict.** There is no BUY, SELL, or PASS anywhere in the product — not in the risk stage, not in any other stage.
 - **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect.
 - **The human remains responsible for the final decision.**
 - **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
@@ -221,7 +308,7 @@ These are enforced in the code, not aspirational:
 
 ## Analysis architecture
 
-The Phase 4 thesis attack and the Phase 5 historical stress test both run entirely in the backend as deterministic pipelines. The thesis attack:
+The Phase 4 thesis attack, the Phase 5 historical stress test and the Phase 6 risk engine all run entirely in the backend as deterministic pipelines. The thesis attack:
 
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
@@ -245,6 +332,22 @@ TRADE CONTEXT  →  HISTORICAL CANDLES (Bitget Spot API v2)
         OBSERVED OUTCOMES OVER A DEFINED HORIZON  (+ sample limitations)
 ```
 
+The risk engine:
+
+```
+TRADE CONTEXT  (direction, entry, invalidation, risk budget — trader supplied)
+                        ↓
+        INPUT VALIDATION  (present? numeric? positive? side known?)
+                        ↓
+        COHERENCE CHECK  (is the price risk per unit strictly positive?)
+                        ↓
+   RISK READY  /  INCOMPLETE  /  INVALID TRADE CONSTRUCTION
+                        ↓
+        PRICE RISK PER UNIT · POSITION SIZE · DEFINED RISK
+```
+
+The risk engine has no provider and no model in the path — it is pure arithmetic, which is what makes its output reproducible and testable without a network. It reads the trader's levels and nothing else; there is no branch anywhere in it that could reach for a market price.
+
 Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
@@ -267,8 +370,8 @@ TRADEGUARD
 │
 └── server/                       Express backend
     ├── index.js                  App wiring, /api/health
-    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest
-    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest
+    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment
+    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine
     │   └── providers/            bitget (isolated provider knowledge)
     ├── lib/                      Trade idea validation
     └── tests/                    Node test runner suites
@@ -285,8 +388,9 @@ TRADEGUARD
 | `POST /api/research` | Market context + event research for the asset |
 | `POST /api/thesis-attack` | The Devil's Advocate analysis |
 | `POST /api/historical-stress-test` | Historical setup matching and observed outcomes for the asset |
+| `POST /api/risk-assessment` | Deterministic price risk, position size and defined risk from the trader's own levels |
 
-Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline.
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate.
 
 ---
 
@@ -301,10 +405,11 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Market data | Bitget Spot API v2 |
 | Historical data | Bitget Spot API v2 candles — same provider module and candle contract as market data |
 | Event data | Financial Modeling Prep earnings calendar (env-configured) |
+| Risk calculation | TradeGuard's own deterministic risk engine — no provider, no model, no market data |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
 | Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
 
-**Future work (not currently implemented):** historical market data storage, a deterministic risk-calculation engine, defined-risk options structuring, persistent trade storage, and optional LLM-based explanation of deterministic findings.
+**Future work (not currently implemented):** historical market data storage, defined-risk options structuring, persistent trade storage, and optional LLM-based explanation of deterministic findings.
 
 ---
 
@@ -376,11 +481,13 @@ npm test        # unit + integration tests
 npm run build   # production build
 ```
 
-**Verified state of the Phase 5 build:**
+**Verified state of the Phase 6 build:**
 
-- **72/72 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, and the frontend stage model.
+- **118/118 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
-- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state and the historical stress test in both its available and `HISTORICAL DATA UNAVAILABLE` forms, confirming that unavailable data is reported honestly and that no evidence or historical observation is fabricated.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state, the historical stress test in both its available and `HISTORICAL DATA UNAVAILABLE` forms, and the risk assessment in its RISK READY, INCOMPLETE and INVALID TRADE CONSTRUCTION states, confirming that unavailable data is reported honestly and that no evidence, historical observation or risk number is fabricated.
+
+The risk engine has dedicated coverage across its required scenarios: a valid long trade, a valid short trade, zero price risk, negative price risk, each missing input reported together, malformed and non-positive numeric values, an unusable risk budget, position-size derivation, defined risk matching the declared budget, boundary conditions (a very tight and a very wide invalidation, currency-formatted input, out-of-range values), a neutral thesis with no directional side, and explicit guards that the engine contains no provider import, no network call, no market price, no verdict, and no fabricated number when it is not ready.
 
 The historical stress test has dedicated coverage across its required scenarios: real retrieval, matching, no matches, provider failure, malformed responses, a missing asset, short samples, an assumed timeframe, an explicit timeframe, bullish and bearish interpretation of the same series, non-predictive wording, no fabricated observations when history is unavailable, absence of any trade instruction or score, the shared candle contract, the shared Phase 4 thresholds, and traceability of the research context.
 
@@ -399,9 +506,8 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phases 6–13, in order. All are planned and none are implemented:
+Phases 7–13, in order. All are planned and none are implemented:
 
-- **Phase 6 — Risk Engine.** Deterministic calculation of maximum loss, maximum profit, breakeven, position size, risk percentage, reward/risk, and exposure. The application calculates; the AI explains.
 - **Phase 7 — Trade Structuring.** Propose defined-risk structures where sufficient market data exists, as research output rather than an instruction.
 - **Phase 8 — Final Trade Report.** Consolidate thesis, research, attack, historical test, risk, and structure into one decision-ready report.
 - **Phase 9 — Human Decision.** Execute / Modify / Pass, with the decision recorded. No trade can proceed without explicit human approval.

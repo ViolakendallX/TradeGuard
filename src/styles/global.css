@@ -446,6 +446,18 @@ textarea {
   gap: 14px;
 }
 
+/* Phase 6: the three inputs the risk engine consumes (entry, invalidation,
+   risk budget) read as one group rather than splitting across two rows. */
+.field__row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .field__row--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .field__row {
     grid-template-columns: minmax(0, 1fr);
@@ -2180,5 +2192,334 @@ textarea {
 
   .inv-head__actions .btn {
     width: 100%;
+  }
+}
+
+/* ============================================================
+   Phase 6 — Risk assessment
+   Reuses the Phase 5 section/grid/badge language so the panel
+   reads as part of the same workspace rather than a new one.
+   ============================================================ */
+
+.rk {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rk__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rk__badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Ready = the defined risk exists. */
+.rk__badge--ready {
+  border-color: rgba(23, 201, 138, 0.4);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+/* Incomplete = the engine ran but an input is missing. */
+.rk__badge--incomplete {
+  border-color: rgba(245, 165, 36, 0.4);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+/* Invalid = the construction contradicts itself. */
+.rk__badge--invalid {
+  border-color: rgba(255, 84, 112, 0.42);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.rk__badge--unavailable {
+  border-color: var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+
+.rk__status-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.rk__detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.rk__notice {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.rk__honesty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.rk__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.rk__section {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+/* The calculation is the point of the panel, so it gets the accent edge. */
+.rk__section--calc {
+  border-left-color: var(--accent);
+}
+
+.rk__section--read {
+  border-left-color: var(--accent);
+}
+
+.rk__section--warnings {
+  border-left-color: var(--danger);
+}
+
+.rk__section--limits {
+  border-left-color: var(--warn);
+}
+
+.rk__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rk__count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 1px 7px;
+}
+
+.rk__footnote {
+  margin: 9px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* --- transparent step-by-step arithmetic -------------------------------- */
+
+.rk__working {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.rk__working-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+
+.rk__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rk__steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.rk__step-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.rk__step-calc {
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.rk__empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* --- interpretation ------------------------------------------------------ */
+
+.rk__interpretation {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.rk__caveat {
+  margin: 9px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* --- validation warnings ------------------------------------------------- */
+
+.rk__warnings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.rk__warning {
+  padding-left: 10px;
+  border-left: 2px solid var(--danger);
+}
+
+.rk__warning-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rk__warning-detail {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* --- methodology --------------------------------------------------------- */
+
+.rk__method {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.rk__criteria {
+  list-style: none;
+  margin: 9px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rk__criteria li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+}
+
+.rk__criterion-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 150px;
+}
+
+.rk__criterion-value {
+  flex: 1 1 240px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.rk__meta {
+  margin: 9px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* --- limitations + disclaimer ------------------------------------------- */
+
+.rk__limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rk__limits li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.rk__limits li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.rk__disclaimer {
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .rk__criterion-label {
+    min-width: 0;
   }
 }

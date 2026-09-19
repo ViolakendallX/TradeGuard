@@ -28,6 +28,12 @@ const HISTORY_PARTIAL = { available: true, dataLimited: true, status: 'partial',
 const HISTORY_NO_MATCHES = { available: true, dataLimited: true, status: 'no-matches', matchedCount: 0 };
 const HISTORY_UNAVAIL = { available: false, dataLimited: true, status: 'unavailable', reason: 'provider down' };
 
+// Phase 6 fixtures — mirror the risk engine's own statuses.
+const RISK_READY = { available: true, status: 'ready', statusLabel: 'RISK READY' };
+const RISK_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'INCOMPLETE' };
+const RISK_INVALID = { available: true, status: 'invalid', statusLabel: 'INVALID TRADE CONSTRUCTION' };
+const RISK_UNAVAIL = { available: false, statusDetail: 'backend offline' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -114,16 +120,87 @@ test('the historical stage never claims completion without a usable sample', () 
   }
 });
 
-test('Phase 6 remains locked and points to a later phase', () => {
+test('risk assessment is now built (phase 6) and reflects the risk runtime state', () => {
   const risk = byId('risk-assessment');
-  assert.equal(risk.available, false);
+  assert.equal(risk.available, true);
   assert.equal(risk.phase, 6);
+  assert.equal(risk.label, 'Risk assessment');
+
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  // No result yet -> loading (NOT complete).
+  assert.equal(stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, null), STAGE_RUNTIME.LOADING);
+
+  // The engine could not run at all -> unavailable, never complete.
   assert.equal(
-    stageRuntimeState(risk, { market: MARKET_OK, events: EVENTS_OK }, ATTACK_OK, HISTORY_OK),
-    STAGE_RUNTIME.LOCKED
+    stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, RISK_UNAVAIL),
+    STAGE_RUNTIME.UNAVAILABLE
   );
-  assert.equal(lockedStageCount(), 1);
-  assert.equal(builtStageCount(), 5);
+
+  // Ran, but inputs are missing -> partial: there is no defined risk.
+  assert.equal(
+    stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, RISK_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // Ran, but the construction contradicts itself -> partial, never complete.
+  assert.equal(
+    stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, RISK_INVALID),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // Ran with a coherent construction -> complete.
+  assert.equal(
+    stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, RISK_READY),
+    STAGE_RUNTIME.COMPLETE
+  );
+});
+
+test('the risk stage never claims completion without a defined risk', () => {
+  const risk = byId('risk-assessment');
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  for (const value of [null, RISK_UNAVAIL, RISK_INCOMPLETE, RISK_INVALID]) {
+    assert.notEqual(
+      stageRuntimeState(risk, research, ATTACK_OK, HISTORY_OK, value),
+      STAGE_RUNTIME.COMPLETE
+    );
+  }
+});
+
+test('the risk stage does not depend on market data being reachable', () => {
+  const risk = byId('risk-assessment');
+  // Research failed entirely, but the risk engine is pure arithmetic on the
+  // trader's own levels, so it still resolves rather than sitting on "loading".
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+
+  assert.equal(
+    stageRuntimeState(risk, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY),
+    STAGE_RUNTIME.COMPLETE
+  );
+  assert.equal(
+    stageRuntimeState(risk, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+});
+
+test('every declared stage is now built; nothing in the investigation is locked', () => {
+  assert.equal(builtStageCount(), 6);
+  assert.equal(lockedStageCount(), 0);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 6);
+});
+
+test('Phase 7+ screens remain planned and are not reachable', async () => {
+  const { NAV_ITEMS } = await import('./constants.js');
+  const future = NAV_ITEMS.filter((item) => item.phase > 6);
+
+  // The trade report, decision, review and trader review screens are still
+  // placeholders — Phase 6 did not activate any of them.
+  assert.ok(future.length >= 4);
+  assert.deepEqual(
+    future.map((item) => item.id),
+    ['trade-report', 'decision', 'trade-review', 'trader-review']
+  );
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
@@ -138,10 +215,24 @@ test('partial data is reported as partial, not complete', () => {
   assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1);
 });
 
-test('a fully researched trade with a full attack and a usable sample marks five stages complete', () => {
+test('a fully researched trade with a full attack, a usable sample and a defined risk marks six stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
-  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY), 6);
   assert.equal(INVESTIGATION_STAGE_COUNT, 6);
-  // Phase 1-4 stages are unaffected by the Phase 5 addition.
+
+  // Phase 1-5 stages are unaffected by the Phase 6 addition: with no risk
+  // result yet, the risk stage is loading rather than complete.
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, null), 4);
+});
+
+test('a ready risk assessment still cannot complete a trade whose other stages have no data', () => {
+  // A defined risk does not stand in for market context, events, the attack or
+  // history — each stage is complete only on its own evidence.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+  assert.equal(completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY), 2);
+
+  // And an incomplete or invalid risk assessment adds nothing.
+  assert.equal(completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_INCOMPLETE), 1);
+  assert.equal(completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_INVALID), 1);
 });

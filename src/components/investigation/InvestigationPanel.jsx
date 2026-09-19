@@ -17,8 +17,9 @@ import MarketPanel from './MarketPanel.jsx';
 import EventsPanel from './EventsPanel.jsx';
 import DevilsAdvocatePanel from './DevilsAdvocatePanel.jsx';
 import HistoricalPanel from './HistoricalPanel.jsx';
+import RiskPanel from './RiskPanel.jsx';
 
-function SectionBody({ section, research, attack, history, idea, onEdit }) {
+function SectionBody({ section, research, attack, history, risk, idea, onEdit }) {
   switch (section.id) {
     case 'thesis-captured':
       return <ThesisPanel idea={idea} onEdit={onEdit} />;
@@ -30,12 +31,14 @@ function SectionBody({ section, research, attack, history, idea, onEdit }) {
       return <DevilsAdvocatePanel attack={attack} />;
     case 'historical-comparisons':
       return <HistoricalPanel history={history} />;
+    case 'risk-assessment':
+      return <RiskPanel risk={risk} />;
     default:
       return null;
   }
 }
 
-export default function InvestigationPanel({ section, research, attack, history, idea, onEdit }) {
+export default function InvestigationPanel({ section, research, attack, history, risk, idea, onEdit }) {
   if (!section) return null;
 
   const isLoading = section.runtime === STAGE_RUNTIME.LOADING;
@@ -62,6 +65,7 @@ export default function InvestigationPanel({ section, research, attack, history,
             research={research}
             attack={attack}
             history={history}
+            risk={risk}
             idea={idea}
             onEdit={onEdit}
           />

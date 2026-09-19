@@ -1,10 +1,11 @@
 /**
  * TradeGuard backend.
  *
- * Phases 1–5 are built: thesis capture, the investigation flow, market/event
- * research, the Devil's Advocate thesis attack, and the historical stress test.
- * Still one Express process, no database, and no LLM provider — the analysis is
- * deterministic. Provider access is isolated in server/services/providers/.
+ * Phases 1–6 are built: thesis capture, the investigation flow, market/event
+ * research, the Devil's Advocate thesis attack, the historical stress test, and
+ * the deterministic risk engine. Still one Express process, no database, and no
+ * LLM provider — the analysis is deterministic. Provider access is isolated in
+ * server/services/providers/.
  */
 
 import express from 'express';
@@ -13,6 +14,7 @@ import tradeIdeasRouter from './routes/tradeIdeas.js';
 import researchRouter from './routes/research.js';
 import thesisAttackRouter from './routes/thesisAttack.js';
 import historicalStressTestRouter from './routes/historicalStressTest.js';
+import riskAssessmentRouter from './routes/riskAssessment.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -25,7 +27,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 5,
+    phase: 6,
     time: new Date().toISOString(),
   });
 });
@@ -34,6 +36,7 @@ app.use('/api', tradeIdeasRouter);
 app.use('/api', researchRouter);
 app.use('/api', thesisAttackRouter);
 app.use('/api', historicalStressTestRouter);
+app.use('/api', riskAssessmentRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ status: 'error', message: 'Unknown API route.' });

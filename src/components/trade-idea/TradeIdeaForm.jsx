@@ -163,7 +163,7 @@ export default function TradeIdeaForm({ form, errors, submitting, onChange, onSu
           </div>
         </div>
 
-        <div className="field__row">
+        <div className="field__row field__row--3">
           <div className="field">
             <label className="label" htmlFor="entryPrice">
               Entry price <span className="label__opt">optional</span>
@@ -179,6 +179,28 @@ export default function TradeIdeaForm({ form, errors, submitting, onChange, onSu
               onChange={setField('entryPrice')}
             />
             {errors.entryPrice && <div className="field__error">{errors.entryPrice}</div>}
+          </div>
+
+          <div className="field">
+            <label className="label" htmlFor="invalidationPrice">
+              Invalidation / stop <span className="label__opt">optional</span>
+            </label>
+            <input
+              id="invalidationPrice"
+              name="invalidationPrice"
+              className={`input${errors.invalidationPrice ? ' has-error' : ''}`}
+              placeholder="0.00"
+              inputMode="decimal"
+              autoComplete="off"
+              value={form.invalidationPrice}
+              onChange={setField('invalidationPrice')}
+            />
+            {errors.invalidationPrice && (
+              <div className="field__error">{errors.invalidationPrice}</div>
+            )}
+            <div className="field__meta">
+              <span>The price at which your thesis would be wrong. You set it — TradeGuard never guesses it.</span>
+            </div>
           </div>
 
           <div className="field">

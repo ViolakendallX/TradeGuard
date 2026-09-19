@@ -46,6 +46,11 @@ export default function ThesisPreview({ form }) {
             {form.entryPrice.trim() || '—'}
           </dd>
 
+          <dt>Invalidation</dt>
+          <dd className={form.invalidationPrice.trim() ? '' : 'is-empty'}>
+            {form.invalidationPrice.trim() || '—'}
+          </dd>
+
           <dt>Risk</dt>
           <dd className={form.riskAmount.trim() ? '' : 'is-empty'}>
             {form.riskAmount.trim() || '—'}

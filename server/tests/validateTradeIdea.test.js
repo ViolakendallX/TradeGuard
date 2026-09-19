@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateTradeIdea } from '../lib/validateTradeIdea.js';
+import { validateTradeIdea, buildCaptureResponse } from '../lib/validateTradeIdea.js';
 
 const baseIdea = {
   asset: 'rNVDA',
@@ -62,4 +62,44 @@ test('rejects confidence outside 1-10', () => {
   const result = validateTradeIdea({ ...baseIdea, confidence: 42 });
   assert.equal(result.valid, false);
   assert.ok(result.errors.confidence);
+});
+
+// --- Phase 6: the invalidation / stop level --------------------------------
+
+test('captures the trader-supplied invalidation price', () => {
+  const result = validateTradeIdea({ ...baseIdea, entryPrice: 100, invalidationPrice: '95.5', riskAmount: 50 });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.value.invalidationPrice, 95.5);
+  // Captured, never derived.
+  assert.equal(validateTradeIdea(baseIdea).value.invalidationPrice, null);
+});
+
+test('rejects an invalid or non-positive invalidation price', () => {
+  const negative = validateTradeIdea({ ...baseIdea, invalidationPrice: '-5' });
+  assert.equal(negative.valid, false);
+  assert.ok(negative.errors.invalidationPrice);
+
+  const zero = validateTradeIdea({ ...baseIdea, invalidationPrice: 0 });
+  assert.equal(zero.valid, false);
+  assert.ok(zero.errors.invalidationPrice);
+
+  const nan = validateTradeIdea({ ...baseIdea, invalidationPrice: 'abc' });
+  assert.equal(nan.valid, false);
+  assert.ok(nan.errors.invalidationPrice);
+});
+
+test('the capture response reports the built phases as available', () => {
+  const response = buildCaptureResponse(validateTradeIdea(baseIdea).value);
+  const byStep = Object.fromEntries(response.nextSteps.map((s) => [s.step, s]));
+
+  for (const step of ['Research', 'Thesis attack', 'Historical stress test', 'Risk engine']) {
+    assert.equal(byStep[step].available, true, `${step} should be reported as available`);
+  }
+  assert.equal(byStep['Trade structure'].available, false, 'Phase 7 is still not built');
+
+  // The Phase 1 wording claimed the built phases were disabled — that was true
+  // then and is false now, so it must not come back.
+  assert.ok(!/not enabled in this build/i.test(response.message));
+  assert.ok(!/\b(BUY|SELL|PASS|HOLD)\b/i.test(response.message), 'the capture message carries no verdict');
 });

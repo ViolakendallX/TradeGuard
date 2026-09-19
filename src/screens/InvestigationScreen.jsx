@@ -24,7 +24,12 @@ import {
   lockedStageCount,
 } from '../lib/investigation.js';
 import { buildSectionNav, DEFAULT_SECTION_ID } from '../lib/investigationView.js';
-import { fetchResearch, fetchThesisAttack, fetchHistoricalStressTest } from '../lib/api.js';
+import {
+  fetchResearch,
+  fetchThesisAttack,
+  fetchHistoricalStressTest,
+  fetchRiskAssessment,
+} from '../lib/api.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import InvestigationNav from '../components/investigation/InvestigationNav.jsx';
 import InvestigationPanel from '../components/investigation/InvestigationPanel.jsx';
@@ -53,6 +58,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
   const [research, setResearch] = useState(null);
   const [attack, setAttack] = useState(null);
   const [history, setHistory] = useState(null);
+  const [risk, setRisk] = useState(null);
   const [activeId, setActiveId] = useState(DEFAULT_SECTION_ID);
 
   // The trade header is sticky, so the navigation rail needs to know how tall it
@@ -76,12 +82,14 @@ export default function InvestigationScreen({ submission, onEdit }) {
       thesis: idea.thesis,
       timeframe: idea.timeframe,
       entryPrice: idea.entryPrice,
+      invalidationPrice: idea.invalidationPrice,
       riskAmount: idea.riskAmount,
       confidence: idea.confidence,
       existingPosition: idea.existingPosition,
     };
 
-    // Backend unreachable: none of the research, attack or historical passes can run.
+    // Backend unreachable: none of the research, attack, historical or risk
+    // passes can run.
     if (submission.offline) {
       setResearch({
         market: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
@@ -93,10 +101,28 @@ export default function InvestigationScreen({ submission, onEdit }) {
         statusLabel: 'HISTORICAL DATA UNAVAILABLE',
         reason: 'Backend offline — the historical stress test requires the TradeGuard API.',
       });
+      setRisk({
+        available: false,
+        statusLabel: 'RISK ASSESSMENT UNAVAILABLE',
+        statusDetail: 'Backend offline — the risk engine runs server-side and requires the TradeGuard API.',
+      });
       return undefined;
     }
 
     let cancelled = false;
+
+    // Phase 6 is deliberately fetched OUTSIDE the market-data chain below. The
+    // risk engine is pure arithmetic on the trader's own levels, so it must
+    // still produce a result when the provider chain fails — and it must not
+    // wait behind three network calls to do so.
+    fetchRiskAssessment(context)
+      .then((r) => {
+        if (cancelled) return;
+        setRisk(r.ok ? r.data.risk : { available: false, statusDetail: r.message });
+      })
+      .catch((e) => {
+        if (!cancelled) setRisk({ available: false, statusDetail: String(e?.message || e) });
+      });
 
     fetchResearch(context)
       .then((r) => {
@@ -162,11 +188,11 @@ export default function InvestigationScreen({ submission, onEdit }) {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [submission, research, attack, history]);
+  }, [submission, research, attack, history, risk]);
 
   const sections = useMemo(
-    () => buildSectionNav(research, attack, history),
-    [research, attack, history]
+    () => buildSectionNav(research, attack, history, risk),
+    [research, attack, history, risk]
   );
 
   if (!submission || !submission.idea) {
@@ -175,7 +201,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
 
   const idea = submission.idea;
   const activeSection = sections.find((section) => section.id === activeId) || sections[0];
-  const completed = completedStageCountFromResearch(research, attack, history);
+  const completed = completedStageCountFromResearch(research, attack, history, risk);
 
   return (
     <>
@@ -185,8 +211,9 @@ export default function InvestigationScreen({ submission, onEdit }) {
         <p className="page-head__lede">
           TradeGuard gathers live market and event research for this trade, runs the Devil's Advocate — a
           deliberate search for evidence that could make your thesis wrong — then looks for similar past
-          setups and what happened afterwards. Where a data source is unavailable, it says so honestly
-          rather than guessing.
+          setups and what happened afterwards. Finally it calculates the defined risk from your entry,
+          invalidation and risk budget. Where a data source is unavailable, it says so honestly rather
+          than guessing.
         </p>
       </div>
 
@@ -212,6 +239,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           research={research}
           attack={attack}
           history={history}
+          risk={risk}
           idea={idea}
           onEdit={onEdit}
         />

@@ -2,8 +2,14 @@
  * Trade idea validation — Phase 1 (Foundation).
  *
  * Scope: validate + normalise what the trader submits.
- * Out of scope (later phases): market data, news, AI research, thesis attack,
- * historical stress testing, risk engine, trade structuring, persistence.
+ * Out of scope here: market data, news, AI research, thesis attack, historical
+ * stress testing, risk calculation, trade structuring and persistence. Each of
+ * those lives in its own module — this file only decides whether the submitted
+ * idea is well-formed and normalises it.
+ *
+ * Phase 6 added one captured field, `invalidationPrice` (the trader's own stop
+ * level). It is validated and carried through like the other optional numbers;
+ * it is never derived from market data.
  */
 
 export const DIRECTIONS = ['bullish', 'bearish', 'neutral'];
@@ -96,6 +102,14 @@ export function validateTradeIdea(payload) {
   if (riskAmount.error) errors.riskAmount = riskAmount.error;
   else if (riskAmount.value === 0) errors.riskAmount = 'Risk amount must be greater than zero.';
 
+  // Phase 6: the trader's own invalidation / stop level. It is captured, never
+  // derived — TradeGuard does not infer a stop from market data.
+  const invalidationPrice = parseOptionalNumber(input.invalidationPrice, 'Invalidation price');
+  if (invalidationPrice.error) errors.invalidationPrice = invalidationPrice.error;
+  else if (invalidationPrice.value === 0) {
+    errors.invalidationPrice = 'Invalidation price must be greater than zero.';
+  }
+
   let confidence = null;
   if (!isBlank(input.confidence)) {
     const parsed = Number(input.confidence);
@@ -129,6 +143,7 @@ export function validateTradeIdea(payload) {
       thesis,
       timeframe: timeframe || null,
       entryPrice: entryPrice.value,
+      invalidationPrice: invalidationPrice.value,
       riskAmount: riskAmount.value,
       confidence,
       existingPosition: existingPosition || null,
@@ -137,25 +152,28 @@ export function validateTradeIdea(payload) {
 }
 
 /**
- * Basic sanity response for Phase 1.
- * Deliberately contains no analysis, no scores and no probabilities.
+ * Capture response.
+ *
+ * Deliberately contains no analysis, no scores and no probabilities — it only
+ * echoes what was captured and says which investigation stages exist. The
+ * availability flags describe what is actually BUILT (Phases 1–6); they are not
+ * a prediction of what the current run will produce.
  */
 export function buildCaptureResponse(value) {
   return {
     status: 'captured',
     receivedAt: new Date().toISOString(),
     idea: value,
-    // Phase 1 only validates and captures the thesis. Everything below is
-    // intentionally NOT built yet and must not be faked.
     nextSteps: [
-      { step: 'Research', phase: 2, available: false },
-      { step: 'Thesis attack', phase: 4, available: false },
-      { step: 'Historical stress test', phase: 5, available: false },
-      { step: 'Risk engine', phase: 6, available: false },
+      { step: 'Research', phase: 2, available: true },
+      { step: 'Thesis attack', phase: 4, available: true },
+      { step: 'Historical stress test', phase: 5, available: true },
+      { step: 'Risk engine', phase: 6, available: true },
       { step: 'Trade structure', phase: 7, available: false },
     ],
     message:
       'Thesis captured. TradeGuard has recorded what you believe and why. ' +
-      'Research, thesis attack and stress testing are not enabled in this build.',
+      'The investigation will research this asset, challenge the thesis, look for comparable historical ' +
+      'setups and calculate the defined risk from your entry, invalidation and risk budget.',
   };
 }
