@@ -2,7 +2,7 @@ import { NAV_ITEMS } from '../lib/constants.js';
 
 // Phases that are actually built. Everything at or below this is interactive;
 // later phases remain disabled until their phase lands.
-const CURRENT_PHASE = 2;
+const CURRENT_PHASE = 3;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
   return (
@@ -44,7 +44,7 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 2 — Investigation. Live market/event research arrives in Phase 3.
+          Phase 3 — Market & event research. Thesis challenge, history and risk arrive in later phases.
         </div>
       </div>
     </aside>

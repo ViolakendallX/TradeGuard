@@ -8,6 +8,7 @@
 import express from 'express';
 import cors from 'cors';
 import tradeIdeasRouter from './routes/tradeIdeas.js';
+import researchRouter from './routes/research.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -20,12 +21,13 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 1,
+    phase: 3,
     time: new Date().toISOString(),
   });
 });
 
 app.use('/api', tradeIdeasRouter);
+app.use('/api', researchRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ status: 'error', message: 'Unknown API route.' });

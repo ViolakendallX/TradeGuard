@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   DIRECTIONS,
   TIMEFRAME_LABELS,
@@ -6,22 +7,159 @@ import {
 } from '../lib/constants.js';
 import {
   INVESTIGATION_STAGES,
-  stageStatus,
-  completedStageCount,
   INVESTIGATION_STAGE_COUNT,
+  STAGE_RUNTIME,
+  stageRuntimeState,
+  completedStageCountFromResearch,
+  lockedStageCount,
 } from '../lib/investigation.js';
+import { fetchResearch } from '../lib/api.js';
 
 const TONE_CLASS = { bullish: 'chip--up', bearish: 'chip--down', neutral: 'chip--neutral' };
 
-function money(value) {
-  if (typeof value !== 'number') return null;
-  return value.toLocaleString('en-US', { maximumFractionDigits: 4 });
+function fmt(n) {
+  if (n === null || n === undefined || n === '') return '—';
+  if (typeof n !== 'number' || !Number.isFinite(n)) return String(n);
+  const maxFrac = Math.abs(n) >= 1 ? 2 : 4;
+  return n.toLocaleString('en-US', { maximumFractionDigits: maxFrac });
+}
+
+function pct(n) {
+  if (n === null || n === undefined || n === '') return '—';
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '—';
+  return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+}
+
+function changeTone(v) {
+  if (v === null || v === undefined) return '';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  return n > 0 ? 'up' : n < 0 ? 'down' : '';
 }
 
 function formatValue(value) {
   if (value === null || value === undefined || value === '') return 'Not specified';
-  if (typeof value === 'number') return money(value) ?? String(value);
+  if (typeof value === 'number') return fmt(value);
   return String(value);
+}
+
+function DataRow({ label, value, tone }) {
+  const cls = tone === 'up' ? 'is-up' : tone === 'down' ? 'is-down' : '';
+  return (
+    <div className="data-row">
+      <dt>{label}</dt>
+      <dd className={cls}>{value}</dd>
+    </div>
+  );
+}
+
+function MarketDetail({ research }) {
+  const m = research?.market;
+  if (!m || m.available === false) {
+    return (
+      <div className="stage__detail stage__detail--unavailable">
+        ⚠ Data unavailable{m?.reason ? ` — ${m.reason}` : '.'}
+      </div>
+    );
+  }
+  return (
+    <div className="stage__detail">
+      <div className="data-grid">
+        <DataRow label="Symbol" value={m.symbol} />
+        <DataRow label="Price" value={m.price != null ? `${fmt(m.price)} ${m.currency || 'USDT'}` : '—'} />
+        <DataRow
+          label="Change (UTC open)"
+          value={pct(m.changeSinceOpenPct)}
+          tone={changeTone(m.changeSinceOpenPct)}
+        />
+        <DataRow label="24h change" value={pct(m.change24hPct)} tone={changeTone(m.change24hPct)} />
+        <DataRow label="24h high" value={fmt(m.high24h)} />
+        <DataRow label="24h low" value={fmt(m.low24h)} />
+        <DataRow label="Volume (quote)" value={fmt(m.quoteVolume)} />
+        <DataRow label="Realized vol (1h)" value={m.volatilityPct != null ? `${m.volatilityPct}%` : '—'} />
+        <DataRow label="Trend (window)" value={pct(m.trendPercent)} tone={changeTone(m.trendPercent)} />
+        <DataRow label="Trend bias" value={m.trendDirection ? m.trendDirection.toUpperCase() : '—'} />
+      </div>
+      <div className="stage__meta">
+        Source: {m.source} · {m.timestamp ? `Updated ${m.timestamp}` : 'timestamp unavailable'}
+        {m.partial ? ' · partial data' : ''}
+      </div>
+    </div>
+  );
+}
+
+function EventsDetail({ research }) {
+  const e = research?.events;
+  if (!e || e.available === false) {
+    return (
+      <div className="stage__detail stage__detail--unavailable">
+        ⚠ Data unavailable{e?.reason ? ` — ${e.reason}` : '.'}
+      </div>
+    );
+  }
+  return (
+    <div className="stage__detail">
+      <ul className="event-list">
+        {e.items.map((it, i) => (
+          <li key={i} className="event-item">
+            <div className="event-item__top">
+              <span className="event-item__title">{it.title}</span>
+              {it.date && <span className="event-item__date">{it.date}</span>}
+            </div>
+            <p className="event-item__desc">{it.description}</p>
+            {it.source && <div className="event-item__src">Source: {it.source}</div>}
+          </li>
+        ))}
+      </ul>
+      <div className="stage__meta">Source: {e.source}{e.partial ? ' · partial data' : ''}</div>
+    </div>
+  );
+}
+
+function StageItem({ stage, research }) {
+  const runtime = stageRuntimeState(stage, research);
+  const isComplete = runtime === STAGE_RUNTIME.COMPLETE;
+  const isPartial = runtime === STAGE_RUNTIME.PARTIAL;
+  const isUnavailable = runtime === STAGE_RUNTIME.UNAVAILABLE;
+  const isLocked = runtime === STAGE_RUNTIME.LOCKED;
+  const isLoading = runtime === STAGE_RUNTIME.LOADING;
+
+  const cls = isComplete
+    ? 'stage--complete'
+    : isPartial
+    ? 'stage--partial'
+    : isUnavailable
+    ? 'stage--unavailable'
+    : isLocked
+    ? 'stage--locked'
+    : 'stage--loading';
+
+  let badge;
+  if (isComplete) badge = <span className="stage__status stage__status--done">Complete</span>;
+  else if (isPartial) badge = <span className="stage__status stage__status--partial">Partial</span>;
+  else if (isUnavailable) badge = <span className="stage__status stage__status--soon">Data unavailable</span>;
+  else if (isLocked) badge = <span className="stage__status stage__status--soon">Coming in Phase {stage.phase}</span>;
+  else badge = <span className="stage__status stage__status--loading">Loading…</span>;
+
+  const icon = isComplete || isPartial ? '✓' : isLoading ? <span className="spinner" aria-hidden="true" /> : '○';
+
+  return (
+    <li className={`stage ${cls}`}>
+      <span className="stage__icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div className="stage__body">
+        <div className="stage__top">
+          <span className="stage__label">{stage.label}</span>
+          {badge}
+        </div>
+        <p className="stage__desc">{stage.description}</p>
+        {stage.id === 'market-context' && runtime !== STAGE_RUNTIME.LOADING && <MarketDetail research={research} />}
+        {stage.id === 'events-catalysts' && runtime !== STAGE_RUNTIME.LOADING && <EventsDetail research={research} />}
+      </div>
+    </li>
+  );
 }
 
 function EmptyInvestigation({ onEdit }) {
@@ -45,13 +183,66 @@ function EmptyInvestigation({ onEdit }) {
 }
 
 export default function InvestigationScreen({ submission, onEdit }) {
+  const [research, setResearch] = useState(null);
+
+  useEffect(() => {
+    if (!submission || !submission.idea) return undefined;
+
+    // Backend unreachable: research cannot be fetched — show honest unavailable.
+    if (submission.offline) {
+      setResearch({
+        market: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
+        events: { available: false, reason: 'Backend offline — research requires the TradeGuard API.' },
+      });
+      return undefined;
+    }
+
+    const idea = submission.idea;
+    const context = {
+      asset: idea.asset,
+      direction: idea.direction,
+      thesis: idea.thesis,
+      timeframe: idea.timeframe,
+      entryPrice: idea.entryPrice,
+      riskAmount: idea.riskAmount,
+      confidence: idea.confidence,
+      existingPosition: idea.existingPosition,
+    };
+
+    let cancelled = false;
+    fetchResearch(context)
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) {
+          setResearch(r.data);
+        } else {
+          setResearch({
+            market: { available: false, reason: r.message },
+            events: { available: false, reason: r.message },
+          });
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        const message = String(e?.message || e);
+        setResearch({
+          market: { available: false, reason: message },
+          events: { available: false, reason: message },
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [submission]);
+
   if (!submission || !submission.idea) {
     return <EmptyInvestigation onEdit={onEdit} />;
   }
 
   const idea = submission.idea;
   const direction = DIRECTIONS.find((d) => d.value === idea.direction);
-  const completed = completedStageCount();
+  const completed = completedStageCountFromResearch(research);
 
   return (
     <>
@@ -59,9 +250,8 @@ export default function InvestigationScreen({ submission, onEdit }) {
         <div className="page-head__eyebrow">Step 2 — Investigation</div>
         <h1 className="page-head__title">Investigating your trade</h1>
         <p className="page-head__lede">
-          TradeGuard is now preparing to examine this trade before you risk capital. Live market
-          and event research is not available until Phase 3 — below is exactly what TradeGuard has
-          already captured and what it will investigate next.
+          TradeGuard is now gathering live market and event research for this trade before you risk
+          capital. Where a data source is unavailable, it says so honestly rather than guessing.
         </p>
       </div>
 
@@ -126,39 +316,16 @@ export default function InvestigationScreen({ submission, onEdit }) {
             <div>
               <div className="card__title">Investigation progress</div>
               <div className="card__hint">
-                {completed} of {INVESTIGATION_STAGE_COUNT} stages ready — the rest arrive in later
-                phases.
+                {completed} of {INVESTIGATION_STAGE_COUNT} stages with data · {lockedStageCount()} arrive in
+                later phases.
               </div>
             </div>
           </div>
           <div className="card__body">
             <ul className="invest-stages">
-              {INVESTIGATION_STAGES.map((stage) => {
-                const isComplete = stageStatus(stage) === 'complete';
-                return (
-                  <li
-                    key={stage.id}
-                    className={`stage${isComplete ? ' stage--complete' : ' stage--locked'}`}
-                  >
-                    <span className="stage__icon" aria-hidden="true">
-                      {isComplete ? '✓' : '○'}
-                    </span>
-                    <div className="stage__body">
-                      <div className="stage__top">
-                        <span className="stage__label">{stage.label}</span>
-                        {isComplete ? (
-                          <span className="stage__status stage__status--done">Captured</span>
-                        ) : (
-                          <span className="stage__status stage__status--soon">
-                            Coming in Phase {stage.phase}
-                          </span>
-                        )}
-                      </div>
-                      <p className="stage__desc">{stage.description}</p>
-                    </div>
-                  </li>
-                );
-              })}
+              {INVESTIGATION_STAGES.map((stage) => (
+                <StageItem key={stage.id} stage={stage} research={research} />
+              ))}
             </ul>
           </div>
         </section>

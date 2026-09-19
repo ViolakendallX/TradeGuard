@@ -44,3 +44,37 @@ export async function checkHealth() {
     return false;
   }
 }
+
+/**
+ * Phase 3: request market + event research for the submitted trade context.
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchResearch(context) {
+  const response = await fetch(`${API_BASE}/research`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(context),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400 && payload?.errors) {
+    return { ok: false, kind: 'validation', errors: payload.errors, message: payload.message };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Research request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}
