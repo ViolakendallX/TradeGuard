@@ -82,6 +82,8 @@ Trade Idea  →  Investigation  →  Market Context
 
 Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran.
 
+The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
+
 ---
 
 ## Current development status
@@ -259,7 +261,8 @@ TRADEGUARD
 ├── src/                          React + Vite frontend
 │   ├── screens/                  Trade Idea, Investigation, placeholder screens for later phases
 │   ├── components/               App shell, sidebar, trade-idea components
-│   ├── lib/                      API client, constants, stage model, validation
+│   │   └── investigation/        Investigation workspace: trade header, section nav, analysis panels
+│   ├── lib/                      API client, constants, stage model, investigation view model, validation
 │   └── styles/                   Design tokens and styles
 │
 └── server/                       Express backend
