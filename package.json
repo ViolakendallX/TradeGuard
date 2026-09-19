@@ -2,7 +2,7 @@
   "name": "tradeguard",
   "private": true,
   "version": "0.1.0",
-  "description": "TradeGuard - Your trade has to survive the AI before you execute it.",
+  "description": "An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.",
   "type": "module",
   "engines": {
     "node": ">=18"

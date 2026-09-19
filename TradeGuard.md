@@ -1,6 +1,6 @@
 ## TradeGuard
 
-Your trade has to survive the AI before you execute it.
+An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.
 
 Product: AI Trading Desk
 
@@ -10,7 +10,7 @@ Primary purpose: Stress-test a trader’s proposed trade before capital is riske
 
 ## 1. Product Overview
 
-TradeGuard is an AI-powered trading desk that evaluates a trader’s proposed trade before execution.
+An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.
 
 The trader provides a thesis. TradeGuard researches it, challenges it, looks for contradictory evidence, compares it with historical situations, evaluates the risk, and produces a decision- ready trading brief.
 
@@ -1295,7 +1295,7 @@ The product demonstrates AI-assisted research and decision stress testing while 
 
 ## TradeGuard
 
-Your trade has to survive the AI before you execute it.
+An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.
 
 ## Input
 

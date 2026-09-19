@@ -9,7 +9,7 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
         <div className="brand__mark">TG</div>
         <div>
           <div className="brand__name">TradeGuard</div>
-          <div className="brand__tag">AI trading desk</div>
+          <div className="brand__tag">Trading decision desk</div>
         </div>
       </div>
 

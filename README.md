@@ -1,6 +1,6 @@
 # TradeGuard
 
-> Your trade has to survive the AI before you execute it.
+> An AI-powered trading decision desk that challenges, researches, and stress-tests your trade thesis before you risk capital.
 
 ## Phase 1 — Foundation (current build)
 
