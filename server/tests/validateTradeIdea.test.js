@@ -93,14 +93,18 @@ test('the capture response reports the built phases as available', () => {
   const response = buildCaptureResponse(validateTradeIdea(baseIdea).value);
   const byStep = Object.fromEntries(response.nextSteps.map((s) => [s.step, s]));
 
-  for (const step of ['Research', 'Thesis attack', 'Historical stress test', 'Risk engine', 'Trade structure', 'Final report', 'Human decision']) {
+  for (const step of ['Research', 'Thesis attack', 'Historical stress test', 'Risk engine', 'Trade structure', 'Final report', 'Human decision', 'Paper execution']) {
     assert.equal(byStep[step].available, true, `${step} should be reported as available`);
   }
-  // Phase 10 and later are still not built, so nothing beyond Phase 9 is listed.
+  // Phase 10 is now built, so nothing listed is disabled. Phase 11 and later are
+  // still not built and are therefore not listed at all.
   assert.equal(response.nextSteps.filter((s) => !s.available).length, 0);
+  assert.equal(byStep['Paper execution'].phase, 10);
 
   // The Phase 1 wording claimed the built phases were disabled — that was true
   // then and is false now, so it must not come back.
   assert.ok(!/not enabled in this build/i.test(response.message));
   assert.ok(!/\b(BUY|SELL|PASS|HOLD)\b/i.test(response.message), 'the capture message carries no verdict');
+  // Paper execution must be described as demo-only in the capture copy.
+  assert.ok(/demo/i.test(response.message), 'the capture message states paper execution uses the demo environment');
 });

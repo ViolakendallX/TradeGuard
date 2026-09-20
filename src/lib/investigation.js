@@ -5,9 +5,10 @@
  * REAL, Phase 4 makes the Devil's Advocate stage REAL, Phase 5 makes the
  * historical stress test REAL, Phase 6 makes the risk assessment REAL,
  * Phase 7 makes the trade structure REAL, Phase 8 makes the final trade report
- * REAL, and Phase 9 makes the human decision REAL — the stage where the trader
- * records their own choice. Phases 10 and later remain locked. A
- * stage's completion
+ * REAL, Phase 9 makes the human decision REAL — the stage where the trader
+ * records their own choice — and Phase 10 makes paper execution REAL, which is
+ * reachable only after the trader has explicitly decided to TAKE. Phases 11 and
+ * later remain locked. A stage's completion
  * never depends on a static flag — it depends on whether the underlying work
  * actually produced valid output. A stage is marked complete ONLY when its data
  * or analysis came back available and usable; otherwise it is partial,
@@ -96,6 +97,14 @@ export const INVESTIGATION_STAGES = [
     description:
       'Where you record the decision you are making — TAKE, WAIT or SKIP — together with your own reason and the time you recorded it. TradeGuard records the decision; it does not make it, does not suggest one and does not score the trade.',
   },
+  {
+    id: 'paper-execution',
+    label: 'Paper execution',
+    phase: 10,
+    available: true,
+    description:
+      'Sends the trade you decided to TAKE to the Bitget Demo environment using virtual funds. It stays locked until you have recorded TAKE, and even then nothing is sent until you explicitly confirm. No live-money order is ever placed.',
+  },
 ];
 
 export const INVESTIGATION_STAGE_COUNT = INVESTIGATION_STAGES.length;
@@ -112,6 +121,21 @@ export const INVESTIGATION_STAGE_COUNT = INVESTIGATION_STAGES.length;
 export const DECISION_STATUS = {
   REQUIRED: 'required',
   RECORDED: 'recorded',
+};
+
+/**
+ * Phase 10 execution states, mirroring the backend's `EXECUTION_STATUS`.
+ *
+ * Note what is deliberately absent: nothing here says the trade is good,
+ * approved or advisable. These describe WHAT HAPPENED — locked, ready,
+ * submitted, failed — never whether the trade was a good decision.
+ */
+export const EXECUTION_STATUS = {
+  LOCKED: 'locked',
+  READY: 'ready',
+  UNAVAILABLE: 'unavailable',
+  SUBMITTED: 'submitted',
+  FAILED: 'failed',
 };
 
 function marketState(market) {
@@ -216,10 +240,19 @@ export function reportState(report) {
 
 /**
  * Human decision stage state (Phase 9).
- *   - no decision record and none requested -> loading (the stage has not run yet)
- *   - the record could not be reached       -> unavailable (honest)
- *   - nothing recorded yet                  -> unavailable
- *   - the trader recorded a decision        -> complete
+ *   - no decision record (and none is fetched in the workspace) -> unavailable
+ *   - the record could not be reached                          -> unavailable (honest)
+ *   - nothing recorded yet                                     -> unavailable
+ *   - the trader recorded a decision                          -> complete
+ *
+ * IMPORTANT: a missing decision record is NOT a "loading" state. Loading implies
+ * a request is in flight, but the human decision is never fetched on the
+ * investigation workspace — it is recorded by the trader on the Decision screen
+ * and reaches this stage as a prop. Returning LOADING here made the workspace
+ * show a permanent "Retrieving…" spinner and a "Loading…" badge for a stage that
+ * was simply not decided yet, which is misleading and blocked the user from
+ * seeing the decision panel. A null decision is therefore treated exactly like
+ * the PENDING record below: unavailable, not loading.
  *
  * The `available === false` check comes first, exactly as it does for the risk,
  * structure and report stages: a service that could not be reached must never
@@ -232,9 +265,37 @@ export function reportState(report) {
  * to do is to capture the human decision, not to grade it.
  */
 export function decisionState(decision) {
-  if (!decision) return STAGE_RUNTIME.LOADING;
-  if (decision.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  // No record yet — and nothing is ever fetched here — is the honest "not
+  // decided yet" state, identical to the PENDING record. Never LOADING.
+  if (!decision || decision.available === false) return STAGE_RUNTIME.UNAVAILABLE;
   if (decision.status === DECISION_STATUS.RECORDED) return STAGE_RUNTIME.COMPLETE;
+  return STAGE_RUNTIME.UNAVAILABLE;
+}
+
+/**
+ * Paper execution stage state (Phase 10).
+ *   - no execution record yet              -> loading
+ *   - the service could not be reached     -> unavailable (honest)
+ *   - EXECUTION LOCKED                     -> unavailable (the gate is not met)
+ *   - PAPER EXECUTION UNAVAILABLE          -> unavailable
+ *   - READY FOR PAPER EXECUTION            -> partial (eligible, nothing sent yet)
+ *   - PAPER ORDER FAILED                   -> partial (an attempt was made)
+ *   - PAPER ORDER SUBMITTED                -> complete (a demo order exists)
+ *
+ * "Complete" here means exactly one thing: a demo order was submitted and the
+ * venue returned an order ID. It deliberately does NOT mean the trade is good,
+ * profitable, or correctly sized — the outcome is unknown at submission time,
+ * and this stage never grades the trade.
+ *
+ * READY is partial rather than complete because the stage exists to submit an
+ * order, and while it is merely eligible nothing has been sent yet.
+ */
+export function executionState(execution) {
+  if (!execution) return STAGE_RUNTIME.LOADING;
+  if (execution.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  if (execution.status === EXECUTION_STATUS.SUBMITTED) return STAGE_RUNTIME.COMPLETE;
+  if (execution.status === EXECUTION_STATUS.READY) return STAGE_RUNTIME.PARTIAL;
+  if (execution.status === EXECUTION_STATUS.FAILED) return STAGE_RUNTIME.PARTIAL;
   return STAGE_RUNTIME.UNAVAILABLE;
 }
 
@@ -243,15 +304,16 @@ export function decisionState(decision) {
  * + risk + structure + report + decision results. `research` is the Phase 3
  * backend response; `attack` is the Phase 4 analysis; `history` is the Phase 5
  * analysis; `risk` is the Phase 6 analysis; `structure` is the Phase 7 analysis;
- * `report` is the Phase 8 analysis; `decision` is the Phase 9 record (all null
- * while loading).
+ * `report` is the Phase 8 analysis; `decision` is the Phase 9 record;
+ * `execution` is the Phase 10 record (all null while loading).
  *
- * The risk, structure, report and decision stages are resolved BEFORE the
- * research gate below, because none of them depends on market data being
- * reachable: the risk engine is pure arithmetic on the trader's own inputs, the
- * structure is a synthesis of those inputs and the earlier findings, the report
- * is a synthesis of everything, and the decision is the trader's own record. A
- * research failure must not mark any of them loading.
+ * The risk, structure, report, decision and execution stages are resolved
+ * BEFORE the research gate below, because none of them depends on market data
+ * being reachable: the risk engine is pure arithmetic on the trader's own
+ * inputs, the structure is a synthesis of those inputs and the earlier
+ * findings, the report is a synthesis of everything, the decision is the
+ * trader's own record, and paper execution is gated on that decision rather
+ * than on any provider. A research failure must not mark any of them loading.
  */
 export function stageRuntimeState(
   stage,
@@ -261,7 +323,8 @@ export function stageRuntimeState(
   risk,
   structure,
   report,
-  decision
+  decision,
+  execution
 ) {
   if (!stage.available) return STAGE_RUNTIME.LOCKED;
   if (stage.id === 'thesis-captured') return STAGE_RUNTIME.COMPLETE;
@@ -271,6 +334,7 @@ export function stageRuntimeState(
   if (stage.id === 'trade-structure') return structureState(structure);
   if (stage.id === 'final-report') return reportState(report);
   if (stage.id === 'human-decision') return decisionState(decision);
+  if (stage.id === 'paper-execution') return executionState(execution);
   if (!research) return STAGE_RUNTIME.LOADING;
   if (stage.id === 'market-context') return marketState(research.market);
   if (stage.id === 'events-catalysts') return eventsState(research.events);
@@ -296,11 +360,12 @@ export function completedStageCountFromResearch(
   risk,
   structure,
   report,
-  decision
+  decision,
+  execution
 ) {
   return INVESTIGATION_STAGES.filter(
     (stage) =>
-      stageRuntimeState(stage, research, attack, history, risk, structure, report, decision) ===
+      stageRuntimeState(stage, research, attack, history, risk, structure, report, decision, execution) ===
       STAGE_RUNTIME.COMPLETE
   ).length;
 }

@@ -12,6 +12,8 @@ import {
   reportState,
   decisionState,
   DECISION_STATUS,
+  executionState,
+  EXECUTION_STATUS,
 } from './investigation.js';
 
 const byId = (id) => stageById(id);
@@ -55,6 +57,24 @@ const REPORT_UNAVAIL = { available: false, statusDetail: 'backend offline' };
 const DECISION_RECORDED = { available: true, status: 'recorded', statusLabel: 'DECISION RECORDED' };
 const DECISION_REQUIRED = { available: true, status: 'required', statusLabel: 'DECISION REQUIRED' };
 
+/**
+ * Phase 10 execution fixtures — mirror the paper-execution service's statuses.
+ *
+ * Note what is deliberately absent: there is no "executed profitably", no
+ * "good fill", no "recommended". `submitted` means a demo order exists, and
+ * that is all it means — the outcome is unknown at submission time.
+ */
+const EXEC_LOCKED = { available: true, status: 'locked', statusLabel: 'EXECUTION LOCKED' };
+const EXEC_READY = { available: true, status: 'ready', statusLabel: 'READY FOR PAPER EXECUTION' };
+const EXEC_UNAVAILABLE = {
+  available: true,
+  status: 'unavailable',
+  statusLabel: 'PAPER EXECUTION UNAVAILABLE',
+};
+const EXEC_SUBMITTED = { available: true, status: 'submitted', statusLabel: 'PAPER ORDER SUBMITTED' };
+const EXEC_FAILED = { available: true, status: 'failed', statusLabel: 'PAPER ORDER FAILED' };
+const EXEC_SERVICE_UNAVAIL = { available: false, statusDetail: 'backend offline' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -67,6 +87,7 @@ test('declares the expected investigation stages in order', () => {
     'trade-structure',
     'final-report',
     'human-decision',
+    'paper-execution',
   ]);
 });
 
@@ -355,7 +376,10 @@ test('the human decision is now built (phase 9) and reflects the decision runtim
 
   const research = { market: MARKET_OK, events: EVENTS_OK };
 
-  // No record and nothing requested yet -> loading (NOT complete).
+  // No record and nothing requested yet -> unavailable (NOT complete, and NOT
+  // loading: the decision is never fetched on the workspace, so there is no
+  // request to be in flight — a missing decision is the honest "not decided yet"
+  // state, not a spinner).
   assert.equal(
     stageRuntimeState(
       decision,
@@ -367,7 +391,7 @@ test('the human decision is now built (phase 9) and reflects the decision runtim
       REPORT_READY,
       null
     ),
-    STAGE_RUNTIME.LOADING
+    STAGE_RUNTIME.UNAVAILABLE
   );
 
   // The decision has not been recorded yet -> nothing to complete.
@@ -452,7 +476,10 @@ test('the decision stage does not depend on market data being reachable', () => 
 test('decisionState maps only "recorded" onto complete', () => {
   // decisionState is the single point that maps the service's own status onto a
   // runtime state, so guard it directly.
-  assert.equal(decisionState(null), STAGE_RUNTIME.LOADING);
+  // A null decision is the honest "not decided yet" state, NOT loading: nothing
+  // is fetched for the decision on the workspace, so it must never read as if a
+  // request were in flight. It is unavailable, exactly like the PENDING record.
+  assert.equal(decisionState(null), STAGE_RUNTIME.UNAVAILABLE);
   assert.equal(decisionState(DECISION_REQUIRED), STAGE_RUNTIME.UNAVAILABLE);
   assert.equal(decisionState(DECISION_RECORDED), STAGE_RUNTIME.COMPLETE);
   assert.equal(decisionState({ available: true, status: 'required' }), STAGE_RUNTIME.UNAVAILABLE);
@@ -479,28 +506,230 @@ test('there are exactly two decision states and neither is a verdict', () => {
   }
 });
 
-test('every declared stage is now built; nothing in the investigation is locked', () => {
-  assert.equal(builtStageCount(), 9);
-  assert.equal(lockedStageCount(), 0);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 9);
+test('paper execution is now built (phase 10) and reflects the execution runtime state', () => {
+  const exec = byId('paper-execution');
+  assert.equal(exec.available, true);
+  assert.equal(exec.phase, 10);
+  assert.equal(exec.label, 'Paper execution');
+
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  // No record yet -> loading (NOT complete, and not a refusal).
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      null
+    ),
+    STAGE_RUNTIME.LOADING
+  );
+
+  // The gate is not met -> not available, never complete.
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      EXEC_LOCKED
+    ),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+
+  // Eligible, nothing sent yet -> partial. READY is an offer, not an outcome.
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      EXEC_READY
+    ),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // An attempt was made and it did not succeed -> partial, never complete.
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      EXEC_FAILED
+    ),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // A demo order was submitted and the venue returned an ID -> complete.
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      EXEC_SUBMITTED
+    ),
+    STAGE_RUNTIME.COMPLETE
+  );
 });
 
-test('Phase 10+ screens remain planned and are not reachable', async () => {
-  const { NAV_ITEMS } = await import('./constants.js');
-  const future = NAV_ITEMS.filter((item) => item.phase > 9);
+test('the execution stage never claims completion without a submitted order', () => {
+  const exec = byId('paper-execution');
+  const research = { market: MARKET_OK, events: EVENTS_OK };
 
-  // The decision screen is now Phase 9 and reachable; the trade review and
-  // trader review screens are still placeholders.
+  for (const value of [
+    null,
+    EXEC_LOCKED,
+    EXEC_READY,
+    EXEC_UNAVAILABLE,
+    EXEC_FAILED,
+    EXEC_SERVICE_UNAVAIL,
+    { available: true, status: 'ready' }, // no statusLabel
+    { available: true, status: 'pending' }, // an unsupported status
+    { available: false, status: 'submitted' }, // the service could not be reached
+  ]) {
+    assert.notEqual(
+      stageRuntimeState(
+        exec,
+        research,
+        ATTACK_OK,
+        HISTORY_OK,
+        RISK_READY,
+        STRUCTURE_COMPLETE,
+        REPORT_READY,
+        DECISION_RECORDED,
+        value
+      ),
+      STAGE_RUNTIME.COMPLETE
+    );
+  }
+});
+
+test('the execution stage does not depend on market data or a decision record being reachable', () => {
+  const exec = byId('paper-execution');
+  // The whole investigation chain is dead. Paper execution is gated on the
+  // trader's decision and the venue's response — not on a provider — so it
+  // still resolves rather than sitting on "loading" forever.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      null,
+      null,
+      REPORT_UNAVAIL,
+      null,
+      EXEC_SUBMITTED
+    ),
+    STAGE_RUNTIME.COMPLETE
+  );
+  assert.equal(
+    stageRuntimeState(
+      exec,
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      null,
+      null,
+      REPORT_UNAVAIL,
+      null,
+      EXEC_LOCKED
+    ),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+});
+
+test('executionState maps only "submitted" onto complete', () => {
+  assert.equal(executionState(null), STAGE_RUNTIME.LOADING);
+  assert.equal(executionState(EXEC_LOCKED), STAGE_RUNTIME.UNAVAILABLE);
+  assert.equal(executionState(EXEC_UNAVAILABLE), STAGE_RUNTIME.UNAVAILABLE);
+  assert.equal(executionState(EXEC_READY), STAGE_RUNTIME.PARTIAL);
+  assert.equal(executionState(EXEC_FAILED), STAGE_RUNTIME.PARTIAL);
+  assert.equal(executionState(EXEC_SUBMITTED), STAGE_RUNTIME.COMPLETE);
+
+  // An unreachable service is unavailable, never complete — a status string
+  // alone must not be trusted when the record itself was not available.
+  assert.equal(executionState(EXEC_SERVICE_UNAVAIL), STAGE_RUNTIME.UNAVAILABLE);
+  assert.equal(
+    executionState({ available: false, status: 'submitted' }),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+
+  // Any status the service might publish that is not exactly 'submitted' is
+  // treated as not-yet-executed rather than promoted to complete.
+  for (const status of ['ready', 'SUBMITTED', 'locked', '', undefined, null, 'filled', 'open']) {
+    assert.notEqual(executionState({ available: true, status }), STAGE_RUNTIME.COMPLETE);
+  }
+});
+
+test('there are exactly five execution states and none of them is a verdict', () => {
+  assert.deepEqual(Object.values(EXECUTION_STATUS).sort(), [
+    'failed',
+    'locked',
+    'ready',
+    'submitted',
+    'unavailable',
+  ]);
+
+  // These describe WHAT HAPPENED, never whether the trade is good. A submitted
+  // order is not a good trade, and a failed one is not a bad one — one is a
+  // venue response, the other a venue refusal.
+  for (const label of Object.values(EXECUTION_STATUS)) {
+    assert.ok(!/good|bad|profit|loss|approve|recommend|win|best|success/i.test(label), `${label} must not be a verdict`);
+  }
+});
+
+test('every declared stage is now built; nothing in the investigation is locked', () => {
+  assert.equal(builtStageCount(), 10);
+  assert.equal(lockedStageCount(), 0);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 10);
+});
+
+test('Phase 11+ screens remain planned and are not reachable', async () => {
+  const { NAV_ITEMS } = await import('./constants.js');
+  const future = NAV_ITEMS.filter((item) => item.phase > 10);
+
+  // Paper execution is now Phase 10 and reachable; the trade review and trader
+  // review screens are still placeholders.
   assert.ok(future.length >= 2);
   assert.deepEqual(
     future.map((item) => item.id),
     ['trade-review', 'trader-review']
   );
 
-  // Phase 9's own screen, by contrast, is now active.
-  const decision = NAV_ITEMS.find((item) => item.id === 'decision');
-  assert.equal(decision.phase, 9);
-  assert.equal(decision.label, 'Decision');
+  // Phase 10's own screen, by contrast, is now active — and it sits directly
+  // after the decision, which is what unlocks it.
+  const execution = NAV_ITEMS.find((item) => item.id === 'paper-execution');
+  assert.equal(execution.phase, 10);
+  assert.equal(execution.label, 'Paper Execution');
+
+  const ids = NAV_ITEMS.map((item) => item.id);
+  assert.equal(ids.indexOf('paper-execution'), ids.indexOf('decision') + 1);
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
@@ -529,10 +758,25 @@ test('a fully researched trade with a full attack, a usable sample, a defined ri
     ),
     9
   );
-  assert.equal(INVESTIGATION_STAGE_COUNT, 9);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 10);
 
-  // Phase 1-8 stages are unaffected by the Phase 9 addition: with no decision
-  // recorded yet, the decision stage is not complete.
+  // A submitted demo order is the tenth and last stage.
+  assert.equal(
+    completedStageCountFromResearch(
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED,
+      EXEC_SUBMITTED
+    ),
+    10
+  );
+
+  // Phase 1-9 stages are unaffected by the Phase 10 addition: with no decision
+  // recorded yet, neither the decision stage nor execution is complete.
   assert.equal(
     completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_READY),
     8
@@ -597,6 +841,32 @@ test('a recorded decision adds exactly one stage and never covers for a missing 
     ),
     1
   );
+});
+
+test('a submitted demo order adds exactly one stage; being merely eligible adds none', () => {
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+  const base = [
+    research,
+    ATTACK_OK,
+    HISTORY_OK,
+    RISK_READY,
+    STRUCTURE_COMPLETE,
+    REPORT_READY,
+    DECISION_RECORDED,
+  ];
+  const withDecision = completedStageCountFromResearch(...base);
+
+  // A demo order the venue accepted -> the tenth stage.
+  assert.equal(completedStageCountFromResearch(...base, EXEC_SUBMITTED) - withDecision, 1);
+
+  // READY means eligible, not executed. Nothing has been sent, so nothing is claimed.
+  assert.equal(completedStageCountFromResearch(...base, EXEC_READY) - withDecision, 0);
+
+  // A refused or unreachable venue placed no order either.
+  assert.equal(completedStageCountFromResearch(...base, EXEC_FAILED) - withDecision, 0);
+  assert.equal(completedStageCountFromResearch(...base, EXEC_LOCKED) - withDecision, 0);
+  assert.equal(completedStageCountFromResearch(...base, EXEC_UNAVAILABLE) - withDecision, 0);
+  assert.equal(completedStageCountFromResearch(...base, EXEC_SERVICE_UNAVAIL) - withDecision, 0);
 });
 
 test('an incomplete or unavailable report adds no completion', () => {

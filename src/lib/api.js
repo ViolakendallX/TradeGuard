@@ -276,6 +276,102 @@ export async function fetchFinalReport(context, extras = {}) {
 }
 
 /**
+ * Phase 10: evaluate the paper-execution gate and build the pre-execution review.
+ *
+ * This request SENDS NOTHING. It asks the backend whether paper execution is
+ * permitted for this trade and, if so, exactly what would be submitted. The
+ * answer is one of the deterministic execution states; a locked or unavailable
+ * result is a real answer, not an error, so this always resolves.
+ *
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchPaperExecution(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/paper-execution`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idea: context,
+      risk: extras.risk || null,
+      structure: extras.structure || null,
+      report: extras.report || null,
+      decision: extras.decision || null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Paper execution request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
+ * Phase 10: submit the paper order — but only with explicit confirmation.
+ *
+ * Recording TAKE is NOT sufficient on its own, and this function cannot submit
+ * without the confirmation token. A missing or wrong token comes back as a 400
+ * and nothing is sent to the venue.
+ *
+ * Returns { ok, data } on success, or { ok:false, kind, message, execution } on
+ * failure. A venue rejection is a 200 carrying PAPER ORDER FAILED, because the
+ * demo venue refusing an order is a real outcome to report, not a bad request.
+ */
+export async function submitPaperExecution(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/paper-execution/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idea: context,
+      risk: extras.risk || null,
+      structure: extras.structure || null,
+      report: extras.report || null,
+      decision: extras.decision || null,
+      confirmation: extras.confirmation ?? null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400) {
+    return {
+      ok: false,
+      kind: 'confirmation-required',
+      errors: {},
+      message: payload?.message || 'Confirmation is required before anything is submitted.',
+      execution: payload?.execution || null,
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Paper execution submission failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
  * Phase 9: record the trader's OWN decision.
  *
  * This is the one request in TradeGuard that does not ask for analysis — it

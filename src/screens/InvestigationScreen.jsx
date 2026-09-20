@@ -5,6 +5,12 @@
  *
  *   TRADE CONTEXT  →  INVESTIGATION NAVIGATION  →  ANALYSIS CONTENT
  *
+ * Phase 10 adds a tenth rail item, Paper execution. It is shown read-only here —
+ * the gate is evaluated so the rail can say EXECUTION LOCKED or READY honestly
+ * rather than sitting on "Retrieving" — but it is never confirmed from inside
+ * the investigation. Confirmation happens on the Paper Execution screen, so
+ * there is exactly one place in the product where an order can be released.
+ *
  * The screen is now an orchestrator: it owns the data fetching (unchanged) and
  * the selected-section state, and composes three regions:
  *
@@ -18,11 +24,7 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  INVESTIGATION_STAGE_COUNT,
-  completedStageCountFromResearch,
-  lockedStageCount,
-} from '../lib/investigation.js';
+import { STAGE_RUNTIME } from '../lib/investigation.js';
 import { buildSectionNav, DEFAULT_SECTION_ID } from '../lib/investigationView.js';
 import {
   fetchResearch,
@@ -31,6 +33,7 @@ import {
   fetchRiskAssessment,
   fetchTradeStructure,
   fetchFinalReport,
+  fetchPaperExecution,
 } from '../lib/api.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import InvestigationNav from '../components/investigation/InvestigationNav.jsx';
@@ -56,7 +59,7 @@ function EmptyInvestigation({ onEdit }) {
   );
 }
 
-export default function InvestigationScreen({ submission, onEdit, decision }) {
+export default function InvestigationScreen({ submission, onEdit, decision, execution, onNavigate }) {
   const [research, setResearch] = useState(null);
   const [attack, setAttack] = useState(null);
   const [history, setHistory] = useState(null);
@@ -64,6 +67,9 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
   const [structure, setStructure] = useState(null);
   const [report, setReport] = useState(null);
   const [activeId, setActiveId] = useState(DEFAULT_SECTION_ID);
+  // The gate evaluation for the rail. This endpoint sends nothing to any venue;
+  // it only reports whether paper execution is locked, ready or unavailable.
+  const [gateResult, setGateResult] = useState(null);
 
   // The trade header is sticky, so the navigation rail needs to know how tall it
   // is in order to stick directly beneath it. Measured rather than hard-coded so
@@ -71,26 +77,35 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
   const headRef = useRef(null);
   const [headHeight, setHeadHeight] = useState(0);
 
-  // A new submission restarts the investigation from its first section.
+  // A new submission restarts the investigation from its first section, and
+  // invalidates the execution gate evaluated for the previous one.
   useEffect(() => {
     setActiveId(DEFAULT_SECTION_ID);
+    setGateResult(null);
   }, [submission]);
+
+  const idea = submission?.idea || null;
+
+  const context = useMemo(
+    () =>
+      idea
+        ? {
+            asset: idea.asset,
+            direction: idea.direction,
+            thesis: idea.thesis,
+            timeframe: idea.timeframe,
+            entryPrice: idea.entryPrice,
+            invalidationPrice: idea.invalidationPrice,
+            riskAmount: idea.riskAmount,
+            confidence: idea.confidence,
+            existingPosition: idea.existingPosition,
+          }
+        : null,
+    [idea]
+  );
 
   useEffect(() => {
     if (!submission || !submission.idea) return undefined;
-
-    const idea = submission.idea;
-    const context = {
-      asset: idea.asset,
-      direction: idea.direction,
-      thesis: idea.thesis,
-      timeframe: idea.timeframe,
-      entryPrice: idea.entryPrice,
-      invalidationPrice: idea.invalidationPrice,
-      riskAmount: idea.riskAmount,
-      confidence: idea.confidence,
-      existingPosition: idea.existingPosition,
-    };
 
     // Backend unreachable: none of the research, attack, historical or risk
     // passes can run.
@@ -278,6 +293,47 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
     };
   }, [submission]);
 
+  /**
+   * Phase 10 — evaluate the execution gate for the rail.
+   *
+   * This is a read-only evaluation: it reports EXECUTION LOCKED, READY or
+   * UNAVAILABLE and sends nothing to any venue. It is requested here so the
+   * tenth rail item is honest on its own, rather than appearing to load forever
+   * until the trader happens to open the Paper Execution screen.
+   */
+  useEffect(() => {
+    if (!submission || !idea || !context) return undefined;
+
+    if (submission.offline) {
+      setGateResult({
+        available: false,
+        statusDetail:
+          'Backend offline — paper execution is evaluated server-side and requires the TradeGuard API.',
+      });
+      return undefined;
+    }
+
+    // The gate needs the risk result, the structure and the report, exactly as
+    // the Paper Execution screen does.
+    if (!risk || !structure || !report) return undefined;
+
+    let cancelled = false;
+
+    fetchPaperExecution(context, { risk, structure, report, decision })
+      .then((e) => {
+        if (cancelled) return;
+        setGateResult(e.ok ? e.data.execution : { available: false, statusDetail: e.message });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setGateResult({ available: false, statusDetail: String(err?.message || err) });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [submission, idea, context, risk, structure, report, decision]);
+
   useLayoutEffect(() => {
     const el = headRef.current;
     if (!el) return undefined;
@@ -291,18 +347,33 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
     return () => observer.disconnect();
   }, [submission, research, attack, history, risk, structure, report]);
 
+  // A submission result (PAPER ORDER SUBMITTED / FAILED) outranks a fresh gate
+  // evaluation — it is what actually happened. Without one, the rail shows the
+  // gate as it stands right now.
+  const shownExecution = execution ?? gateResult;
+
   const sections = useMemo(
-    () => buildSectionNav(research, attack, history, risk, structure, report),
-    [research, attack, history, risk, structure, report]
+    () =>
+      buildSectionNav(research, attack, history, risk, structure, report, decision, shownExecution),
+    [research, attack, history, risk, structure, report, decision, shownExecution]
   );
 
   if (!submission || !submission.idea) {
     return <EmptyInvestigation onEdit={onEdit} />;
   }
 
-  const idea = submission.idea;
+  // The progress bar shows only the eight analysis stages. Human Decision and
+  // Paper Execution are distinct workflow steps (their own screens), so they
+  // are excluded from the bar and surfaced as a "next step" affordance instead.
+  const analysisSections = useMemo(
+    () => sections.filter((s) => s.id !== 'human-decision' && s.id !== 'paper-execution'),
+    [sections]
+  );
+  const analysisCompleted = analysisSections.filter((s) => s.runtime === STAGE_RUNTIME.COMPLETE).length;
+  const analysisTotal = analysisSections.length;
+  const analysisLocked = analysisSections.filter((s) => s.runtime === STAGE_RUNTIME.LOCKED).length;
+
   const activeSection = sections.find((section) => section.id === activeId) || sections[0];
-  const completed = completedStageCountFromResearch(research, attack, history, risk, structure, report);
 
   return (
     <>
@@ -328,12 +399,15 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
         />
 
         <InvestigationNav
-          sections={sections}
+          sections={analysisSections}
           activeId={activeSection.id}
           onSelect={setActiveId}
-          completed={completed}
-          total={INVESTIGATION_STAGE_COUNT}
-          locked={lockedStageCount()}
+          completed={analysisCompleted}
+          total={analysisTotal}
+          locked={analysisLocked}
+          gate={shownExecution}
+          decision={decision}
+          onNavigate={onNavigate}
         />
 
         <InvestigationPanel
@@ -345,6 +419,7 @@ export default function InvestigationScreen({ submission, onEdit, decision }) {
           structure={structure}
           report={report}
           decision={decision}
+          execution={shownExecution}
           idea={idea}
           onEdit={onEdit}
         />

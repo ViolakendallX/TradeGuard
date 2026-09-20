@@ -3,6 +3,7 @@ export const NAV_ITEMS = [
   { id: 'investigation', label: 'Investigation', phase: 2 },
   { id: 'trade-report', label: 'Trade Report', phase: 8 },
   { id: 'decision', label: 'Decision', phase: 9 },
+  { id: 'paper-execution', label: 'Paper Execution', phase: 10 },
   { id: 'trade-review', label: 'Trade Review', phase: 12 },
   { id: 'trader-review', label: 'Trader Review', phase: 13 },
 ];

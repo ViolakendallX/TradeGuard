@@ -21,8 +21,21 @@ import RiskPanel from './RiskPanel.jsx';
 import TradeStructurePanel from './TradeStructurePanel.jsx';
 import FinalReportPanel from './FinalReportPanel.jsx';
 import DecisionPanel from './DecisionPanel.jsx';
+import PaperExecutionPanel from './PaperExecutionPanel.jsx';
 
-function SectionBody({ section, research, attack, history, risk, structure, report, decision, idea, onEdit }) {
+function SectionBody({
+  section,
+  research,
+  attack,
+  history,
+  risk,
+  structure,
+  report,
+  decision,
+  execution,
+  idea,
+  onEdit,
+}) {
   switch (section.id) {
     case 'thesis-captured':
       return <ThesisPanel idea={idea} onEdit={onEdit} />;
@@ -42,12 +55,29 @@ function SectionBody({ section, research, attack, history, risk, structure, repo
       return <FinalReportPanel report={report} />;
     case 'human-decision':
       return <DecisionPanel decision={decision} idea={idea} />;
+    // Phase 10 lives in the workspace too, but confirms nowhere: this in-workspace
+    // view is read-only and points at the Paper Execution screen, which is where
+    // the trader actually confirms. One confirmation surface, not two.
+    case 'paper-execution':
+      return <PaperExecutionPanel execution={execution} idea={idea} canExecute={false} />;
     default:
       return null;
   }
 }
 
-export default function InvestigationPanel({ section, research, attack, history, risk, structure, report, decision, idea, onEdit }) {
+export default function InvestigationPanel({
+  section,
+  research,
+  attack,
+  history,
+  risk,
+  structure,
+  report,
+  decision,
+  execution,
+  idea,
+  onEdit,
+}) {
   if (!section) return null;
 
   const isLoading = section.runtime === STAGE_RUNTIME.LOADING;
@@ -78,6 +108,7 @@ export default function InvestigationPanel({ section, research, attack, history,
             structure={structure}
             report={report}
             decision={decision}
+            execution={execution}
             idea={idea}
             onEdit={onEdit}
           />

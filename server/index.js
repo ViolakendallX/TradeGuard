@@ -1,14 +1,19 @@
 /**
  * TradeGuard backend.
  *
- * Phases 1–9 are built: thesis capture, the investigation flow, market/event
+ * Phases 1–10 are built: thesis capture, the investigation flow, market/event
  * research, the Devil's Advocate thesis attack, the historical stress test, the
  * deterministic risk engine, the trade structure that synthesises them into one
- * plan, the final trade report that consolidates the whole investigation, and
- * the human decision that records the trader's own choice.
+ * plan, the final trade report that consolidates the whole investigation, the
+ * human decision that records the trader's own choice, and paper execution —
+ * which submits to the Bitget DEMO environment only, and only after an explicit
+ * human confirmation on a trade the trader already decided to TAKE.
  * Still one Express process, no database, and no LLM provider — the analysis is
  * deterministic, and the decision is the trader's. Provider access is isolated
  * in server/services/providers/.
+ *
+ * There is no live-trading path in this application. Paper execution reads demo
+ * credentials only, has no live host, and has no fallback from demo to live.
  */
 
 import express from 'express';
@@ -21,6 +26,7 @@ import riskAssessmentRouter from './routes/riskAssessment.js';
 import tradeStructureRouter from './routes/tradeStructure.js';
 import finalReportRouter from './routes/finalReport.js';
 import humanDecisionRouter from './routes/humanDecision.js';
+import paperExecutionRouter from './routes/paperExecution.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -33,7 +39,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 9,
+    phase: 10,
     time: new Date().toISOString(),
   });
 });
@@ -46,6 +52,7 @@ app.use('/api', riskAssessmentRouter);
 app.use('/api', tradeStructureRouter);
 app.use('/api', finalReportRouter);
 app.use('/api', humanDecisionRouter);
+app.use('/api', paperExecutionRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ status: 'error', message: 'Unknown API route.' });

@@ -28,6 +28,7 @@ const NAV_LABELS = {
   'trade-structure': 'Trade Structure',
   'final-report': 'Final Trade Report',
   'human-decision': 'Human Decision',
+  'paper-execution': 'Paper Execution',
 };
 
 export function navLabel(stage) {
@@ -79,6 +80,19 @@ const DECISION_NAV_LABELS = {
 };
 
 /**
+ * Short navigation labels for paper execution's own statuses. Same reasoning:
+ * "execution locked" is the meaningful phrase in the rail, and none of these
+ * read as an opinion about the trade.
+ */
+const EXECUTION_NAV_LABELS = {
+  locked: 'Execution locked',
+  ready: 'Ready to confirm',
+  unavailable: 'Execution unavailable',
+  submitted: 'Paper order submitted',
+  failed: 'Paper order failed',
+};
+
+/**
  * Human-readable status copy for a stage's runtime state.
  *
  * `detail` is the stage's own analysis result, when it has one. The risk stage
@@ -99,8 +113,15 @@ export function runtimeLabel(runtime, stage, detail) {
   if (stage?.id === 'final-report' && detail && detail.status) {
     return REPORT_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
   }
-  if (stage?.id === 'human-decision' && detail && detail.status) {
-    return DECISION_NAV_LABELS[detail.status] || detail.statusLabel || 'Decision required';
+  if (stage?.id === 'human-decision') {
+    // A null/required decision is "decision required", never "Loading…": the
+    // decision is recorded by the trader, not fetched, so there is no request to
+    // be in flight. Only a genuinely recorded decision shows "Decision recorded".
+    if (detail && detail.status === 'recorded') return DECISION_NAV_LABELS.recorded;
+    return DECISION_NAV_LABELS.required;
+  }
+  if (stage?.id === 'paper-execution' && detail && detail.status) {
+    return EXECUTION_NAV_LABELS[detail.status] || detail.statusLabel || 'Execution locked';
   }
 
   switch (runtime) {
@@ -139,13 +160,23 @@ export function runtimeModifier(runtime) {
  * be able to see what is coming — but they are not selectable.
  *
  * `risk` is the Phase 6 result, `structure` the Phase 7 result, `report` the
- * Phase 8 result and `decision` the Phase 9 record; they are passed to
- * runtimeLabel so those rows can report their own status rather than a generic
- * one.
+ * Phase 8 result, `decision` the Phase 9 record and `execution` the Phase 10
+ * record; they are passed to runtimeLabel so those rows can report their own
+ * status rather than a generic one.
  */
-export function buildSectionNav(research, attack, history, risk, structure, report, decision) {
+export function buildSectionNav(research, attack, history, risk, structure, report, decision, execution) {
   return INVESTIGATION_STAGES.map((stage) => {
-    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure, report, decision);
+    const runtime = stageRuntimeState(
+      stage,
+      research,
+      attack,
+      history,
+      risk,
+      structure,
+      report,
+      decision,
+      execution
+    );
     const detail =
       stage.id === 'risk-assessment'
         ? risk
@@ -155,6 +186,8 @@ export function buildSectionNav(research, attack, history, risk, structure, repo
         ? report
         : stage.id === 'human-decision'
         ? decision
+        : stage.id === 'paper-execution'
+        ? execution
         : null;
     return {
       id: stage.id,

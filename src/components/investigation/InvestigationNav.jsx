@@ -1,72 +1,111 @@
 /**
- * Investigation navigation rail.
+ * Investigation horizontal stage navigation — a compact progress bar.
  *
- * Replaces the old single vertical stack: each investigation stage becomes a
- * selectable section instead of a block appended to one long page, so the user
- * can move straight to a section without scrolling through the ones above it.
+ * The eight analysis stages (thesis → market → events → attack → history →
+ * risk → structure → report) are shown as one horizontal strip that stays
+ * pinned beneath the trade header, so the trader can jump between stages
+ * without ever scrolling past the ones above. Human Decision and Paper
+ * Execution are deliberately NOT part of this bar — they are distinct workflow
+ * steps with their own screens, surfaced here only as a "next step" affordance
+ * (the footer) so they never compete with the analysis stages for space.
  *
- * The items are generated from the declared stages (see buildSectionNav), so the
- * phase logic and the completion rules are unchanged — locked stages are still
- * listed and still report "Coming in Phase N", they are simply not selectable.
+ * Items are generated from buildSectionNav, so the bar can never drift from the
+ * stage model: locked stages are still listed (so the trader can see what is
+ * coming) but remain unselectable.
  */
 
-import { STAGE_RUNTIME } from '../../lib/investigation.js';
-import { StatusBadge } from './primitives.jsx';
+function gateView(gate) {
+  if (!gate) return { label: 'Paper execution: evaluating…', mod: 'loading' };
+  if (gate.available === false) return { label: 'Paper execution: unavailable', mod: 'unavailable' };
+  switch (gate.status) {
+    case 'ready':
+      return { label: 'Paper execution: ready to confirm', mod: 'ready' };
+    case 'submitted':
+      return { label: 'Paper order submitted', mod: 'submitted' };
+    case 'failed':
+      return { label: 'Paper order failed', mod: 'unavailable' };
+    case 'locked':
+    default:
+      return { label: 'Paper execution: locked', mod: 'locked' };
+  }
+}
 
-export default function InvestigationNav({ sections, activeId, onSelect, completed, total, locked }) {
+export default function InvestigationNav({
+  sections,
+  activeId,
+  onSelect,
+  completed,
+  total,
+  locked,
+  gate,
+  decision,
+  onNavigate,
+}) {
+  const gv = gateView(gate);
+  const decisionRecorded = Boolean(decision && decision.status === 'recorded');
+
   return (
-    <nav className="inv-nav" aria-label="Investigation sections">
+    <nav className="inv-nav" aria-label="Investigation stages">
       <div className="inv-nav__head">
-        <div className="inv-nav__title">Investigation</div>
-        <p className="inv-nav__meta">
+        <span className="inv-nav__title">Investigation</span>
+        <span className="inv-nav__meta">
           {completed} of {total} stages with data
-          {locked > 0 ? ` · ${locked} arrive in later phases.` : '.'}
-        </p>
+          {locked > 0 ? ` · ${locked} arrive in later phases` : ''}
+        </span>
       </div>
 
       <ul className="inv-nav__list">
         {sections.map((section, index) => {
           const isActive = section.id === activeId;
           const isLocked = !section.selectable;
-          const isResolved = section.runtime !== STAGE_RUNTIME.LOADING;
-
-          const icon =
-            section.runtime === STAGE_RUNTIME.COMPLETE || section.runtime === STAGE_RUNTIME.PARTIAL ? (
-              '✓'
-            ) : isResolved ? (
-              '○'
-            ) : (
-              <span className="spinner" aria-hidden="true" />
-            );
-
           return (
-            <li key={section.id}>
+            <li className="inv-step" key={section.id}>
               <button
                 type="button"
                 className={`inv-nav__item inv-nav__item--${section.runtime}${
                   isActive ? ' is-active' : ''
                 }`}
-                data-section={section.id}
                 onClick={() => onSelect(section.id)}
                 disabled={isLocked}
                 aria-current={isActive ? 'true' : undefined}
-                title={isLocked ? `${section.label} — not built yet (phase ${section.stage.phase})` : undefined}
+                title={isLocked ? `${section.label} — not built yet (phase ${section.stage.phase})` : section.label}
               >
-                <span className="stage__icon" aria-hidden="true">
-                  {icon}
-                </span>
-                <span className="inv-nav__body">
-                  <span className="inv-nav__label">
-                    <span className="inv-nav__index">{index + 1}</span>
-                    <span className="stage__label">{section.label}</span>
-                  </span>
-                  <StatusBadge runtime={section.runtime} label={section.statusLabel} />
+                <span className="inv-nav__index">{index + 1}</span>
+                <span className="inv-nav__dot" aria-hidden="true" />
+                <span className="inv-nav__label">
+                  <span className="stage__label">{section.label}</span>
                 </span>
               </button>
+              {index < sections.length - 1 && (
+                <span className="inv-nav__sep" aria-hidden="true">
+                  →
+                </span>
+              )}
             </li>
           );
         })}
       </ul>
+
+      <div className="inv-nav__foot">
+        <span className={`inv-gate inv-gate--${gv.mod}`}>
+          <span className="inv-gate__dot" aria-hidden="true" />
+          {gv.label}
+        </span>
+        <div className="inv-nav__next">
+          <button type="button" className="btn btn--inline" onClick={() => onNavigate('decision')}>
+            Record decision →
+          </button>
+          <button
+            type="button"
+            className="btn btn--inline"
+            onClick={() => onNavigate('paper-execution')}
+            disabled={!decisionRecorded}
+            title={decisionRecorded ? undefined : 'Record your decision (TAKE) first'}
+          >
+            Paper execution →
+          </button>
+        </div>
+      </div>
     </nav>
   );
 }

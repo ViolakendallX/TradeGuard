@@ -3,6 +3,7 @@ import AppShell from './components/AppShell.jsx';
 import TradeIdeaScreen from './screens/TradeIdeaScreen.jsx';
 import InvestigationScreen from './screens/InvestigationScreen.jsx';
 import DecisionScreen from './screens/DecisionScreen.jsx';
+import PaperExecutionScreen from './screens/PaperExecutionScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
@@ -25,6 +26,11 @@ export default function App() {
   // decision screen so it survives navigation — the trader must be able to step
   // back into the investigation and return to a decision that is still there.
   const [decision, setDecision] = useState(null);
+  // Phase 10: the paper-execution record — the gate evaluation, and later the
+  // venue's own response if the trader confirmed an order. Held here so a
+  // submitted order is still visible after the trader navigates back into the
+  // investigation.
+  const [execution, setExecution] = useState(null);
 
   useEffect(() => {
     const onHashChange = () => setScreen(readScreenFromHash());
@@ -56,9 +62,11 @@ export default function App() {
     (data, form) => {
       setSubmission(data);
       setDraft(form);
-      // A different trade is a different decision: the previous record must not
-      // carry over and be mistaken for a decision about this one.
+      // A different trade is a different decision and a different execution:
+      // neither previous record may carry over and be mistaken for one about
+      // this trade.
       setDecision(null);
+      setExecution(null);
       navigate('investigation');
     },
     [navigate]
@@ -68,6 +76,16 @@ export default function App() {
   // Passing null clears it (the trader chose to change their decision).
   const handleDecisionRecorded = useCallback((record) => {
     setDecision(record || null);
+    // The execution gate is derived from the decision, so changing the decision
+    // invalidates any execution record taken from the previous one. It is
+    // re-evaluated rather than left on screen stale.
+    setExecution(null);
+  }, []);
+
+  // Phase 10: the execution screen hands back the gate evaluation, and later the
+  // venue's own response. Nothing was submitted unless this carries a result.
+  const handleExecutionRecorded = useCallback((record) => {
+    setExecution(record || null);
   }, []);
 
   // Return the trader to the Trade Idea screen with the previous submission restored.
@@ -84,6 +102,8 @@ export default function App() {
       ? 'TradeGuard is examining your thesis before you risk capital.'
       : screen === 'decision'
       ? 'Record the decision you are making. TradeGuard records it — it does not make it.'
+      : screen === 'paper-execution'
+      ? 'Confirm, or do not, that this trade goes to Bitget Demo with virtual funds.'
       : 'Not built in this phase.';
 
   return (
@@ -97,13 +117,26 @@ export default function App() {
       {screen === 'trade-idea' ? (
         <TradeIdeaScreen initialForm={draft} onSubmitted={handleSubmitted} />
       ) : screen === 'investigation' ? (
-        <InvestigationScreen submission={submission} onEdit={handleEdit} decision={decision} />
+        <InvestigationScreen
+          submission={submission}
+          onEdit={handleEdit}
+          decision={decision}
+          execution={execution}
+          onNavigate={navigate}
+        />
       ) : screen === 'decision' ? (
         <DecisionScreen
           submission={submission}
           onEdit={handleEdit}
           decision={decision}
           onDecisionRecorded={handleDecisionRecorded}
+        />
+      ) : screen === 'paper-execution' ? (
+        <PaperExecutionScreen
+          submission={submission}
+          onEdit={handleEdit}
+          decision={decision}
+          onExecutionRecorded={handleExecutionRecorded}
         />
       ) : (
         <PlaceholderScreen screenId={screen} onNavigate={navigate} />
