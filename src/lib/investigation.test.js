@@ -9,6 +9,7 @@ import {
   builtStageCount,
   lockedStageCount,
   completedStageCountFromResearch,
+  reportState,
 } from './investigation.js';
 
 const byId = (id) => stageById(id);
@@ -39,6 +40,11 @@ const STRUCTURE_COMPLETE = { available: true, status: 'complete', statusLabel: '
 const STRUCTURE_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'STRUCTURE INCOMPLETE' };
 const STRUCTURE_UNAVAIL = { available: false, statusDetail: 'backend offline' };
 
+// Phase 8 fixtures — mirror the final-report service's own statuses.
+const REPORT_READY = { available: true, status: 'ready', statusLabel: 'REPORT READY' };
+const REPORT_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'REPORT INCOMPLETE' };
+const REPORT_UNAVAIL = { available: false, statusDetail: 'backend offline' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -49,6 +55,7 @@ test('declares the expected investigation stages in order', () => {
     'historical-comparisons',
     'risk-assessment',
     'trade-structure',
+    'final-report',
   ]);
 });
 
@@ -251,23 +258,105 @@ test('the structure stage does not depend on market data being reachable', () =>
   );
 });
 
-test('every declared stage is now built; nothing in the investigation is locked', () => {
-  assert.equal(builtStageCount(), 7);
-  assert.equal(lockedStageCount(), 0);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 7);
+test('the final trade report is now built (phase 8) and reflects the report runtime state', () => {
+  const report = byId('final-report');
+  assert.equal(report.available, true);
+  assert.equal(report.phase, 8);
+  assert.equal(report.label, 'Final trade report');
+
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  // No result yet -> loading (NOT complete).
+  assert.equal(
+    stageRuntimeState(report, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, null),
+    STAGE_RUNTIME.LOADING
+  );
+
+  // The report could not be assembled at all -> unavailable, never complete.
+  assert.equal(
+    stageRuntimeState(report, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_UNAVAIL),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+
+  // Assembled over an investigation that is genuinely incomplete -> partial.
+  assert.equal(
+    stageRuntimeState(report, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+
+  // Assembled over a complete investigation -> complete.
+  assert.equal(
+    stageRuntimeState(report, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_READY),
+    STAGE_RUNTIME.COMPLETE
+  );
 });
 
-test('Phase 8+ screens remain planned and are not reachable', async () => {
-  const { NAV_ITEMS } = await import('./constants.js');
-  const future = NAV_ITEMS.filter((item) => item.phase > 7);
+test('the report stage never claims completion without a ready report', () => {
+  const report = byId('final-report');
+  const research = { market: MARKET_OK, events: EVENTS_OK };
 
-  // The trade report, decision, review and trader review screens are still
-  // placeholders — Phase 7 did not activate any of them.
-  assert.ok(future.length >= 4);
+  for (const value of [null, REPORT_UNAVAIL, REPORT_INCOMPLETE]) {
+    assert.notEqual(
+      stageRuntimeState(report, research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, value),
+      STAGE_RUNTIME.COMPLETE
+    );
+  }
+});
+
+test('the report stage does not depend on market data being reachable', () => {
+  const report = byId('final-report');
+  // The market-data chain failed entirely, but the report is a synthesis of the
+  // trader's own parameters and the earlier findings, so it still resolves
+  // rather than sitting on "loading" forever.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+
+  assert.equal(
+    stageRuntimeState(report, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_COMPLETE, REPORT_READY),
+    STAGE_RUNTIME.COMPLETE
+  );
+  assert.equal(
+    stageRuntimeState(report, deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_COMPLETE, REPORT_INCOMPLETE),
+    STAGE_RUNTIME.PARTIAL
+  );
+});
+
+test('an unavailable or incomplete report is never reported as ready', () => {
+  // reportState is the single point that maps the service's own status onto a
+  // runtime state, so guard it directly.
+  assert.equal(reportState(null), STAGE_RUNTIME.LOADING);
+  assert.equal(reportState(REPORT_UNAVAIL), STAGE_RUNTIME.UNAVAILABLE);
+  assert.equal(reportState(REPORT_INCOMPLETE), STAGE_RUNTIME.PARTIAL);
+  assert.equal(reportState(REPORT_READY), STAGE_RUNTIME.COMPLETE);
+  assert.equal(reportState({ available: true, status: 'incomplete' }), STAGE_RUNTIME.PARTIAL);
+
+  // And any status the service might publish that is not exactly 'ready' is
+  // treated as incomplete rather than silently promoted to complete.
+  for (const status of ['incomplete', 'unavailable', 'READY', '', undefined, null]) {
+    assert.notEqual(reportState({ available: true, status }), STAGE_RUNTIME.COMPLETE);
+  }
+});
+
+test('every declared stage is now built; nothing in the investigation is locked', () => {
+  assert.equal(builtStageCount(), 8);
+  assert.equal(lockedStageCount(), 0);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 8);
+});
+
+test('Phase 9+ screens remain planned and are not reachable', async () => {
+  const { NAV_ITEMS } = await import('./constants.js');
+  const future = NAV_ITEMS.filter((item) => item.phase > 8);
+
+  // The trade report is now Phase 8 and reachable; the decision, review and
+  // trader review screens are still placeholders.
+  assert.ok(future.length >= 3);
   assert.deepEqual(
     future.map((item) => item.id),
-    ['trade-report', 'decision', 'trade-review', 'trader-review']
+    ['decision', 'trade-review', 'trader-review']
   );
+
+  // Phase 8's own screen, by contrast, is now active.
+  const report = NAV_ITEMS.find((item) => item.id === 'trade-report');
+  assert.equal(report.phase, 8);
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
@@ -282,28 +371,32 @@ test('partial data is reported as partial, not complete', () => {
   assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1);
 });
 
-test('a fully researched trade with a full attack, a usable sample, a defined risk and a complete structure marks seven stages complete', () => {
+test('a fully researched trade with a full attack, a usable sample, a defined risk, a complete structure and a ready report marks eight stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
-  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE), 7);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 7);
+  assert.equal(
+    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_READY),
+    8
+  );
+  assert.equal(INVESTIGATION_STAGE_COUNT, 8);
 
-  // Phase 1-6 stages are unaffected by the Phase 7 addition: with no structure
-  // result yet, the structure stage is loading rather than complete.
+  // Phase 1-7 stages are unaffected by the Phase 8 addition: with no report
+  // result yet, the report stage is loading rather than complete.
+  assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE), 7);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY), 6);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, null), 4);
 });
 
-test('an incomplete or unavailable structure adds no completion', () => {
+test('an incomplete or unavailable report adds no completion', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
 
   assert.equal(
-    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_INCOMPLETE),
-    6
+    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_INCOMPLETE),
+    7
   );
   assert.equal(
-    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_UNAVAIL),
-    6
+    completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_UNAVAIL),
+    7
   );
 });
 
@@ -320,6 +413,51 @@ test('a complete structure still cannot complete a trade whose other stages have
   assert.equal(
     completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, STRUCTURE_INCOMPLETE),
     2
+  );
+});
+
+test('a ready report still cannot complete a trade whose other stages have no data', () => {
+  // The report is a synthesis — it summarises what the other stages found, and
+  // an unavailable section stays unavailable no matter how well-written the
+  // report around it is. It never manufactures the evidence it is missing.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+  assert.equal(
+    completedStageCountFromResearch(
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY
+    ),
+    4 // thesis-captured + risk + structure + report; no fabricated market/events/attack/history
+  );
+
+  // With the earlier stages dead and no structure either, the report adds one
+  // stage over the risk assessment and nothing more.
+  assert.equal(
+    completedStageCountFromResearch(deadResearch, ATTACK_UNAVAIL, HISTORY_UNAVAIL, RISK_READY, null, REPORT_READY),
+    3
+  );
+});
+
+test('a ready report is a real report even when part of the investigation is unavailable', () => {
+  // The important nuance of Phase 8: a report assembled over an investigation
+  // with a dead provider is still REPORT READY — it honestly labels that
+  // section UNAVAILABLE rather than pretending it does not exist. The stage
+  // model reflects the report's OWN status, not a re-derivation of the inputs.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+  assert.equal(
+    stageRuntimeState(
+      byId('final-report'),
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY
+    ),
+    STAGE_RUNTIME.COMPLETE
   );
 });
 

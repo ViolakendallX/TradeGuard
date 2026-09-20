@@ -30,6 +30,7 @@ import {
   fetchHistoricalStressTest,
   fetchRiskAssessment,
   fetchTradeStructure,
+  fetchFinalReport,
 } from '../lib/api.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import InvestigationNav from '../components/investigation/InvestigationNav.jsx';
@@ -61,6 +62,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
   const [history, setHistory] = useState(null);
   const [risk, setRisk] = useState(null);
   const [structure, setStructure] = useState(null);
+  const [report, setReport] = useState(null);
   const [activeId, setActiveId] = useState(DEFAULT_SECTION_ID);
 
   // The trade header is sticky, so the navigation rail needs to know how tall it
@@ -113,29 +115,74 @@ export default function InvestigationScreen({ submission, onEdit }) {
         statusLabel: 'TRADE STRUCTURE UNAVAILABLE',
         statusDetail: 'Backend offline — the trade structure is assembled server-side and requires the TradeGuard API.',
       });
+      setReport({
+        available: false,
+        statusLabel: 'REPORT UNAVAILABLE',
+        statusDetail: 'Backend offline — the final report is assembled server-side and requires the TradeGuard API.',
+      });
       return undefined;
     }
 
     let cancelled = false;
 
-    // Phase 7 needs BOTH the risk result (Phase 6) and the attack (Phase 4), but
-    // it must not re-derive either: the risk figures are reused verbatim and the
-    // conditions come straight from the Devil's Advocate. So we hold whichever
-    // settles first and fire the structure call as soon as both are in.
-    let riskResult = null;
-    let attackResult = null;
+    // Phase 8 needs the results of EVERY earlier stage, but it must not re-derive
+    // any of them: it restates the research, the attack, the history, the risk
+    // figures and the structure. Phase 7 in turn needs the risk result and the
+    // attack. So we hold whichever results settle first and fire each dependent
+    // call as soon as its own inputs are in — including on the failure paths, so
+    // neither call can hang on "loading" when a provider dies mid-chain.
+    const settled = {
+      market: null,
+      events: null,
+      attack: null,
+      history: null,
+      risk: null,
+      structure: null,
+    };
     let structureRequested = false;
+    let reportRequested = false;
 
     const requestStructure = () => {
-      if (cancelled || structureRequested || !riskResult || !attackResult) return;
+      if (cancelled || structureRequested || !settled.risk || !settled.attack) return;
       structureRequested = true;
 
-      fetchTradeStructure(context, { risk: riskResult, attack: attackResult })
+      fetchTradeStructure(context, { risk: settled.risk, attack: settled.attack })
         .then((s) => {
-          if (!cancelled) setStructure(s.ok ? s.data.structure : { available: false, statusDetail: s.message });
+          if (cancelled) return;
+          settled.structure = s.ok ? s.data.structure : { available: false, statusDetail: s.message };
+          setStructure(settled.structure);
+          requestReport();
         })
         .catch((e) => {
-          if (!cancelled) setStructure({ available: false, statusDetail: String(e?.message || e) });
+          if (cancelled) return;
+          settled.structure = { available: false, statusDetail: String(e?.message || e) };
+          setStructure(settled.structure);
+          requestReport();
+        });
+    };
+
+    // The report is the last stage: it consolidates all six earlier results. It
+    // fires once each of them has settled, so it is never assembled from a
+    // half-finished investigation.
+    const requestReport = () => {
+      if (cancelled || reportRequested) return;
+      const ready = Object.values(settled).every((v) => v !== null);
+      if (!ready) return;
+      reportRequested = true;
+
+      fetchFinalReport(context, {
+        market: settled.market,
+        events: settled.events,
+        attack: settled.attack,
+        history: settled.history,
+        risk: settled.risk,
+        structure: settled.structure,
+      })
+        .then((r) => {
+          if (!cancelled) setReport(r.ok ? r.data.report : { available: false, statusDetail: r.message });
+        })
+        .catch((e) => {
+          if (!cancelled) setReport({ available: false, statusDetail: String(e?.message || e) });
         });
     };
 
@@ -146,15 +193,17 @@ export default function InvestigationScreen({ submission, onEdit }) {
     fetchRiskAssessment(context)
       .then((r) => {
         if (cancelled) return;
-        riskResult = r.ok ? r.data.risk : { available: false, statusDetail: r.message };
-        setRisk(riskResult);
+        settled.risk = r.ok ? r.data.risk : { available: false, statusDetail: r.message };
+        setRisk(settled.risk);
         requestStructure();
+        requestReport();
       })
       .catch((e) => {
         if (cancelled) return;
-        riskResult = { available: false, statusDetail: String(e?.message || e) };
-        setRisk(riskResult);
+        settled.risk = { available: false, statusDetail: String(e?.message || e) };
+        setRisk(settled.risk);
         requestStructure();
+        requestReport();
       });
 
     fetchResearch(context)
@@ -167,13 +216,15 @@ export default function InvestigationScreen({ submission, onEdit }) {
               events: { available: false, reason: r.message },
             };
         setResearch(researchData);
+        settled.market = researchData.market;
+        settled.events = researchData.events;
 
         // Chain the Devil's Advocate pass on the research we just retrieved.
         return fetchThesisAttack(context, { market: researchData.market, events: researchData.events })
           .then((a) => {
             if (cancelled) return undefined;
-            attackResult = a.ok ? a.data.analysis : { available: false, reason: a.message };
-            setAttack(attackResult);
+            settled.attack = a.ok ? a.data.analysis : { available: false, reason: a.message };
+            setAttack(settled.attack);
             requestStructure();
 
             // Phase 5 runs after the attack, reusing the same research context.
@@ -183,19 +234,26 @@ export default function InvestigationScreen({ submission, onEdit }) {
             })
               .then((h) => {
                 if (cancelled) return;
-                setHistory(h.ok ? h.data.history : { available: false, reason: h.message });
+                settled.history = h.ok ? h.data.history : { available: false, reason: h.message };
+                setHistory(settled.history);
+                requestReport();
               })
               .catch((e) => {
-                if (!cancelled) setHistory({ available: false, reason: String(e?.message || e) });
+                if (cancelled) return;
+                settled.history = { available: false, reason: String(e?.message || e) };
+                setHistory(settled.history);
+                requestReport();
               });
           })
           .catch((e) => {
-            if (!cancelled) {
-              attackResult = { available: false, reason: String(e?.message || e) };
-              setAttack(attackResult);
-              setHistory({ available: false, reason: String(e?.message || e) });
-              requestStructure();
-            }
+            if (cancelled) return;
+            const message = String(e?.message || e);
+            settled.attack = { available: false, reason: message };
+            settled.history = { available: false, reason: message };
+            setAttack(settled.attack);
+            setHistory(settled.history);
+            requestStructure();
+            requestReport();
           });
       })
       .catch((e) => {
@@ -205,10 +263,14 @@ export default function InvestigationScreen({ submission, onEdit }) {
           market: { available: false, reason: message },
           events: { available: false, reason: message },
         });
-        attackResult = { available: false, reason: message };
-        setAttack(attackResult);
-        setHistory({ available: false, reason: message });
+        settled.market = { available: false, reason: message };
+        settled.events = { available: false, reason: message };
+        settled.attack = { available: false, reason: message };
+        settled.history = { available: false, reason: message };
+        setAttack(settled.attack);
+        setHistory(settled.history);
         requestStructure();
+        requestReport();
       });
 
     return () => {
@@ -227,11 +289,11 @@ export default function InvestigationScreen({ submission, onEdit }) {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [submission, research, attack, history, risk, structure]);
+  }, [submission, research, attack, history, risk, structure, report]);
 
   const sections = useMemo(
-    () => buildSectionNav(research, attack, history, risk, structure),
-    [research, attack, history, risk, structure]
+    () => buildSectionNav(research, attack, history, risk, structure, report),
+    [research, attack, history, risk, structure, report]
   );
 
   if (!submission || !submission.idea) {
@@ -240,7 +302,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
 
   const idea = submission.idea;
   const activeSection = sections.find((section) => section.id === activeId) || sections[0];
-  const completed = completedStageCountFromResearch(research, attack, history, risk, structure);
+  const completed = completedStageCountFromResearch(research, attack, history, risk, structure, report);
 
   return (
     <>
@@ -251,8 +313,9 @@ export default function InvestigationScreen({ submission, onEdit }) {
           TradeGuard gathers live market and event research for this trade, runs the Devil's Advocate — a
           deliberate search for evidence that could make your thesis wrong — then looks for similar past
           setups and what happened afterwards. Finally it calculates the defined risk from your entry,
-          invalidation and risk budget, and brings the whole trade together into one structure. Where a
-          data source is unavailable, it says so honestly rather than guessing.
+          invalidation and risk budget, brings the whole trade together into one structure, and consolidates
+          the whole investigation into a final report. Where a data source is unavailable, it says so
+          honestly rather than guessing.
         </p>
       </div>
 
@@ -280,6 +343,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           history={history}
           risk={risk}
           structure={structure}
+          report={report}
           idea={idea}
           onEdit={onEdit}
         />

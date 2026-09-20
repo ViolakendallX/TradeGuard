@@ -26,6 +26,7 @@ const NAV_LABELS = {
   'historical-comparisons': 'Historical Stress Test',
   'risk-assessment': 'Risk Assessment',
   'trade-structure': 'Trade Structure',
+  'final-report': 'Final Trade Report',
 };
 
 export function navLabel(stage) {
@@ -56,13 +57,23 @@ const STRUCTURE_NAV_LABELS = {
 };
 
 /**
+ * Short navigation labels for the final report's own statuses. Same reasoning
+ * again: the canonical 'REPORT READY' / 'REPORT INCOMPLETE' wording is used
+ * verbatim inside the panel, while the rail needs something that fits.
+ */
+const REPORT_NAV_LABELS = {
+  ready: 'Report ready',
+  incomplete: 'Report incomplete',
+};
+
+/**
  * Human-readable status copy for a stage's runtime state.
  *
  * `detail` is the stage's own analysis result, when it has one. The risk stage
  * uses it because its two non-complete outcomes (missing inputs vs a
  * self-contradicting construction) are genuinely different and the generic
- * "Partial" badge would hide that. The structure stage uses it for the same
- * reason: "incomplete" is the meaningful word, not "partial".
+ * "Partial" badge would hide that. The structure and report stages use it for
+ * the same reason: "incomplete" is the meaningful word, not "partial".
  */
 export function runtimeLabel(runtime, stage, detail) {
   if (stage?.id === 'risk-assessment' && detail && detail.status) {
@@ -70,6 +81,9 @@ export function runtimeLabel(runtime, stage, detail) {
   }
   if (stage?.id === 'trade-structure' && detail && detail.status) {
     return STRUCTURE_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
+  }
+  if (stage?.id === 'final-report' && detail && detail.status) {
+    return REPORT_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
   }
 
   switch (runtime) {
@@ -107,15 +121,21 @@ export function runtimeModifier(runtime) {
  * never drift from the stage model. Locked stages stay listed — the user should
  * be able to see what is coming — but they are not selectable.
  *
- * `risk` is the Phase 6 result and `structure` the Phase 7 result; they are
- * passed to runtimeLabel so those rows can report their own status rather than a
- * generic one.
+ * `risk` is the Phase 6 result, `structure` the Phase 7 result and `report` the
+ * Phase 8 result; they are passed to runtimeLabel so those rows can report their
+ * own status rather than a generic one.
  */
-export function buildSectionNav(research, attack, history, risk, structure) {
+export function buildSectionNav(research, attack, history, risk, structure, report) {
   return INVESTIGATION_STAGES.map((stage) => {
-    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure);
+    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure, report);
     const detail =
-      stage.id === 'risk-assessment' ? risk : stage.id === 'trade-structure' ? structure : null;
+      stage.id === 'risk-assessment'
+        ? risk
+        : stage.id === 'trade-structure'
+        ? structure
+        : stage.id === 'final-report'
+        ? report
+        : null;
     return {
       id: stage.id,
       stage,

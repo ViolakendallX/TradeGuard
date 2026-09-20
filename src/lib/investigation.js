@@ -3,8 +3,9 @@
  *
  * Phase 2 declared the stages. Phase 3 made market-context and events-catalysts
  * REAL, Phase 4 makes the Devil's Advocate stage REAL, Phase 5 makes the
- * historical stress test REAL, Phase 6 makes the risk assessment REAL, and
- * Phase 7 makes the trade structure REAL. A
+ * historical stress test REAL, Phase 6 makes the risk assessment REAL,
+ * Phase 7 makes the trade structure REAL, and Phase 8 makes the final trade
+ * report REAL. A
  * stage's completion
  * never depends on a static flag — it depends on whether the underlying work
  * actually produced valid output. A stage is marked complete ONLY when its data
@@ -77,6 +78,14 @@ export const INVESTIGATION_STAGES = [
     available: true,
     description:
       'The trade you described, brought together with the findings of the earlier stages: the setup, the risk calculated by the risk engine, the thesis with its supporting and contradicting context, and the conditions that would invalidate it — or an explicit incomplete state whenever information is missing.',
+  },
+  {
+    id: 'final-report',
+    label: 'Final trade report',
+    phase: 8,
+    available: true,
+    description:
+      'The whole investigation consolidated into one scannable report: the setup, the thesis and its evidence, the market and event context, the attack, the historical comparison, the defined risk and the conditions — each marked available, partial or unavailable. A synthesis, not a verdict: the decision remains yours.',
   },
 ];
 
@@ -161,25 +170,48 @@ function structureState(structure) {
 }
 
 /**
- * Runtime status of a stage given the live research + thesis-attack + historical
- * + risk + structure results. `research` is the Phase 3 backend response;
- * `attack` is the Phase 4 analysis; `history` is the Phase 5 analysis; `risk` is
- * the Phase 6 analysis; `structure` is the Phase 7 analysis (all null while
- * loading).
+ * Final trade report stage state (Phase 8).
+ *   - no result yet                          -> loading
+ *   - the report could not be assembled      -> unavailable (honest)
+ *   - assembled, but the investigation is
+ *     genuinely incomplete (a provider was
+ *     down, a parameter is missing)          -> partial
+ *   - assembled over a complete investigation -> complete
  *
- * The risk and structure stages are resolved BEFORE the research gate below,
- * because neither depends on market data being reachable: the risk engine is
- * pure arithmetic on the trader's own inputs, and the structure is a synthesis
- * of those inputs and the earlier findings. A research failure must not mark
- * either of them loading.
+ * Note the important nuance: a report over an investigation with an unavailable
+ * provider is still a REAL report — it honestly says that section is
+ * unavailable. But the stage is not COMPLETE in that case, because completeness
+ * here means "the whole investigation was consolidated", and part of it was
+ * missing. Marking it complete would overstate what the trader actually has.
  */
-export function stageRuntimeState(stage, research, attack, history, risk, structure) {
+export function reportState(report) {
+  if (!report) return STAGE_RUNTIME.LOADING;
+  if (report.available === false) return STAGE_RUNTIME.UNAVAILABLE;
+  if (report.status === 'ready') return STAGE_RUNTIME.COMPLETE;
+  return STAGE_RUNTIME.PARTIAL;
+}
+
+/**
+ * Runtime status of a stage given the live research + thesis-attack + historical
+ * + risk + structure + report results. `research` is the Phase 3 backend
+ * response; `attack` is the Phase 4 analysis; `history` is the Phase 5 analysis;
+ * `risk` is the Phase 6 analysis; `structure` is the Phase 7 analysis; `report`
+ * is the Phase 8 analysis (all null while loading).
+ *
+ * The risk, structure and report stages are resolved BEFORE the research gate
+ * below, because none of them depends on market data being reachable: the risk
+ * engine is pure arithmetic on the trader's own inputs, the structure is a
+ * synthesis of those inputs and the earlier findings, and the report is a
+ * synthesis of everything. A research failure must not mark any of them loading.
+ */
+export function stageRuntimeState(stage, research, attack, history, risk, structure, report) {
   if (!stage.available) return STAGE_RUNTIME.LOCKED;
   if (stage.id === 'thesis-captured') return STAGE_RUNTIME.COMPLETE;
   if (stage.id === 'contradicting-evidence') return attackState(attack);
   if (stage.id === 'historical-comparisons') return historyState(history);
   if (stage.id === 'risk-assessment') return riskState(risk);
   if (stage.id === 'trade-structure') return structureState(structure);
+  if (stage.id === 'final-report') return reportState(report);
   if (!research) return STAGE_RUNTIME.LOADING;
   if (stage.id === 'market-context') return marketState(research.market);
   if (stage.id === 'events-catalysts') return eventsState(research.events);
@@ -198,8 +230,8 @@ export function lockedStageCount() {
   return INVESTIGATION_STAGES.filter((stage) => !stage.available).length;
 }
 
-export function completedStageCountFromResearch(research, attack, history, risk, structure) {
+export function completedStageCountFromResearch(research, attack, history, risk, structure, report) {
   return INVESTIGATION_STAGES.filter(
-    (stage) => stageRuntimeState(stage, research, attack, history, risk, structure) === STAGE_RUNTIME.COMPLETE
+    (stage) => stageRuntimeState(stage, research, attack, history, risk, structure, report) === STAGE_RUNTIME.COMPLETE
   ).length;
 }

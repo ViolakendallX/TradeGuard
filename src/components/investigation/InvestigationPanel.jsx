@@ -19,8 +19,9 @@ import DevilsAdvocatePanel from './DevilsAdvocatePanel.jsx';
 import HistoricalPanel from './HistoricalPanel.jsx';
 import RiskPanel from './RiskPanel.jsx';
 import TradeStructurePanel from './TradeStructurePanel.jsx';
+import FinalReportPanel from './FinalReportPanel.jsx';
 
-function SectionBody({ section, research, attack, history, risk, structure, idea, onEdit }) {
+function SectionBody({ section, research, attack, history, risk, structure, report, idea, onEdit }) {
   switch (section.id) {
     case 'thesis-captured':
       return <ThesisPanel idea={idea} onEdit={onEdit} />;
@@ -36,12 +37,14 @@ function SectionBody({ section, research, attack, history, risk, structure, idea
       return <RiskPanel risk={risk} />;
     case 'trade-structure':
       return <TradeStructurePanel structure={structure} />;
+    case 'final-report':
+      return <FinalReportPanel report={report} />;
     default:
       return null;
   }
 }
 
-export default function InvestigationPanel({ section, research, attack, history, risk, structure, idea, onEdit }) {
+export default function InvestigationPanel({ section, research, attack, history, risk, structure, report, idea, onEdit }) {
   if (!section) return null;
 
   const isLoading = section.runtime === STAGE_RUNTIME.LOADING;
@@ -70,6 +73,7 @@ export default function InvestigationPanel({ section, research, attack, history,
             history={history}
             risk={risk}
             structure={structure}
+            report={report}
             idea={idea}
             onEdit={onEdit}
           />

@@ -6,7 +6,7 @@
 
 TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined — then leaves the decision to you.
 
-**Status:** Phases 1–7 complete · Phases 8–13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–8 complete · Phases 9–13 planned. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,7 +14,7 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does seven things:
+It does eight things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
@@ -22,6 +22,7 @@ It does seven things:
 - **Stress-tests the idea against history** — it retrieves real historical candles for the asset and reports what followed comparable past setups, or says plainly that historical data is unavailable.
 - **Calculates the risk you defined** — from your own entry, invalidation and risk budget it derives the price risk per unit, the position size that keeps your loss at that budget, and the defined risk — or says plainly that an input is missing or the construction contradicts itself.
 - **Brings the trade together into one structured plan** — asset, direction, timeframe, entry, invalidation, risk and thesis conditions collected into a single view, reusing the risk engine's numbers rather than recomputing them, or reported as an explicit incomplete state.
+- **Consolidates everything into one final report** — the setup, the thesis and its evidence, the market and event context, the attack, the historical comparison, the defined risk and the invalidation conditions collected into one scannable report, with every section marked available, partial or unavailable and the remaining information gaps listed.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -47,13 +48,13 @@ TradeGuard exists to answer those questions in a structured way before the money
 
 ```
 THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
-       →  TRADE STRUCTURE  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
+       →  TRADE STRUCTURE  →  FINAL REPORT  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT.
 **Still on the roadmap:** HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
 
-Later stages are planned, not built. Nothing after Phase 7 is presented as working.
+Later stages are planned, not built. Nothing after Phase 8 is presented as working.
 
 ---
 
@@ -68,6 +69,7 @@ Trade Idea  →  Investigation  →  Market Context
                               →  Historical Stress Test
                               →  Risk Assessment
                               →  Trade Structure
+                              →  Final Trade Report
 ```
 
 **You submit:** asset, direction, thesis, timeframe, entry price, invalidation / stop price, risk amount, confidence, and existing position.
@@ -84,11 +86,16 @@ Trade Idea  →  Investigation  →  Market Context
 - report an incomplete risk assessment when a required input is missing, or an invalid trade construction when the inputs contradict each other
 - collect the trade setup, the risk engine's result, the thesis with its supporting and contradicting context, and the conditions that would invalidate it into one structured trade plan
 - report the trade structure as incomplete when information it needs is missing, rather than filling the gap
+- consolidate the whole investigation into a single final report, restating each earlier stage's finding and reusing the risk engine's numbers rather than recalculating them
+- mark every section of that report available, partial or unavailable, and surface a consolidated list of the information gaps and limitations the investigation actually produced
+- state explicitly that the report is a summary of the trade and the evidence, and that the final decision remains with the trader
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
 
-Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**.
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there.
+
+One distinction matters for the final report. A report whose sections are honestly marked **unavailable** is still a real report: it tells you which evidence is missing and why. What it never does is dress an incomplete investigation up as a complete one, or substitute generic commentary, assumed prices or invented events for evidence it does not have.
 
 The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, stop, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
 
@@ -105,14 +112,14 @@ The Investigation screen presents all of this as a single workspace rather than 
 | Phase 5 — Historical Stress Test | Real historical candle retrieval, deterministic setup matching, observed outcomes, explicit unavailable/partial states | ✅ Complete |
 | Phase 6 — Risk Engine / Risk Assessment | Deterministic price risk, position sizing and defined risk from the trader's own entry, invalidation and risk budget, with explicit RISK READY / INCOMPLETE / INVALID TRADE CONSTRUCTION states | ✅ Complete |
 | Phase 7 — Trade Structuring | The trader's own setup combined with the risk engine's result, the thesis context and the invalidation conditions into one structured trade plan, with explicit STRUCTURE COMPLETE / STRUCTURE INCOMPLETE / TRADE STRUCTURE UNAVAILABLE states | ✅ Complete |
-| Phase 8 — Final Trade Report | One consolidated decision-ready report | ⏳ Planned |
+| Phase 8 — Final Trade Report | The whole investigation consolidated into one scannable report, with per-section AVAILABLE / PARTIAL / UNAVAILABLE evidence states, the Phase 6 risk engine's numbers reused without recalculation, consolidated information gaps and limitations, and the explicit human decision boundary, under REPORT READY / REPORT INCOMPLETE / REPORT UNAVAILABLE states | ✅ Complete |
 | Phase 9 — Human Decision | Execute / Modify / Pass with decision recording | ⏳ Planned |
 | Phase 10 — Paper Execution | Paper order submission, execution status, trade record | ⏳ Planned |
 | Phase 11 — Trade Memory | Persistent trade journal | ⏳ Planned |
 | Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
 | Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
 
-Phases 8–13 are not implemented in any form. The screens they will occupy (Trade Report, Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All seven investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment and Trade Structure — are now active; nothing in the investigation is locked.
+Phases 9–13 are not implemented in any form. The screens they will occupy (Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All eight investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure and Final Trade Report — are now active; nothing in the investigation is locked.
 
 ---
 
@@ -294,6 +301,62 @@ The structure is organised into four sections:
 
 ---
 
+## Phase 8 — Final Trade Report
+
+Phase 8 answers one question: **"What did the whole investigation find, and what does the trader still not know?"**
+
+It is **not** the question *"should I take this trade?"* Phase 8 consolidates what was found; it does not judge it, and it does not move the trade forward. The Human Decision is a separate, later phase.
+
+Like Phase 7, this stage adds **no new analysis**. It is a **synthesis of Phases 1–7**: every section restates a finding an earlier stage already produced, and the numbers are that stage's own numbers. It reads no market price, calls no model, and runs no calculation of its own. In fact the report service imports nothing but the risk engine, so it produces an honest report even when every external data source is unreachable.
+
+### The ten-section report
+
+| # | Section | What it shows |
+| - | ------- | ------------- |
+| 1 | **Executive summary** | Asset, direction, side, timeframe, entry, invalidation, risk budget, confidence, existing position, the defined risk, and the overall investigation status — a summary of the trade, not a recommendation |
+| 2 | **Trade thesis** | Your original thesis and TradeGuard's interpretation of it, kept clearly separate, with the evidence strength and the supporting and contradicting evidence found |
+| 3 | **Market context** | The Phase 3 market finding, or an unavailable state carrying the original reason |
+| 4 | **Events & catalysts** | The Phase 3 event finding, or an unavailable state carrying the original reason |
+| 5 | **Devil's Advocate** | The strongest argument against the thesis already produced in Phase 4, its supporting and contradicting evidence, key risks, invalidation conditions and missing information |
+| 6 | **Historical stress test** | The Phase 5 comparison and its methodology, restated as observed past outcomes |
+| 7 | **Risk assessment** | The Phase 6 engine's entry, invalidation, risk budget, price risk per unit, position size and defined risk, reused unchanged |
+| 8 | **Trade structure** | A concise restatement of the Phase 7 plan; the full detail stays in that stage |
+| 9 | **Information gaps & limitations** | One consolidated list of the gaps the investigation actually produced, each attributed to its stage and phase |
+| 10 | **Final decision boundary** | The explicit statement that the report summarises the trade and the evidence available, and that the final decision remains with the trader |
+
+Every evidence section carries its own state marker, and the report header carries a roll-up — for example *"2 available · 1 partial · 3 unavailable of 6"* — so the state of the investigation is legible at a glance. Each section also carries a status badge, so the report can be scanned without opening every previous stage.
+
+### The three evidence states
+
+| State | Meaning |
+| ----- | ------- |
+| **AVAILABLE** | The stage ran and produced a usable finding, which is restated in full. |
+| **PARTIAL** | The stage ran but only with limited data, and the report says so rather than presenting the finding as complete. |
+| **UNAVAILABLE** | The stage could not retrieve its data. The report names that plainly and carries the original reason. |
+
+### The three report states
+
+| State | Meaning |
+| ----- | ------- |
+| **REPORT READY** | The report was assembled over an investigation in which every stage produced what it exists to produce. |
+| **REPORT INCOMPLETE** | The report is here, but part of the investigation is missing. The report names exactly which sections are unavailable and why. |
+| **REPORT UNAVAILABLE** | The report could not be assembled at all, and the stage says so rather than showing a partial report. |
+
+An important distinction: a report whose sections are honestly marked unavailable is still a real report. A provider being down does not make the report unavailable — it makes that section unavailable and the report **incomplete**, which is the truthful answer. What the report never does is dress an incomplete investigation up as a complete one.
+
+### What it never does
+
+- **It never recalculates risk.** The Risk Engine from [Phase 6](#phase-6--risk-assessment) remains the single source of truth. The report service reuses the risk result it is given, object-for-object, and only calls the engine itself when nothing was supplied — so the Risk Engine is authoritative either way. The numbers in the final report cannot drift from the Risk Assessment panel, because they are the same numbers.
+- **It never re-derives an earlier stage's finding.** The historical comparison is restated, not recomputed; the Devil's Advocate's counterargument is the one Phase 4 produced, not a new one generated to fill the section; the trade structure is restated concisely, not rebuilt. There is no second risk calculation, no second historical analysis and no second thesis attack anywhere in the codebase.
+- **It never converts observed history into a forecast.** Matched past setups are described as what happened. Nothing in the report turns them into a probability, a win rate, an expected return or a predicted price.
+- **It never fabricates evidence to fill a gap.** Missing market data, missing events or missing history produce an explicit unavailable state and a named gap. The report does not substitute generic market commentary, assumed prices, invented events or made-up historical outcomes — and it does not claim a data provider was reachable when it was not.
+- **It never makes the trading decision.** No BUY, SELL, PASS, "take the trade", "don't take the trade", trade recommendation, trade-quality score, ranking, probability of success, expected return, predicted price or guaranteed outcome appears anywhere in the report or the API response. The API route itself documents its decision output as *"None"*.
+- **It never presents an incomplete investigation as complete.** The information gaps it lists are only gaps the underlying stages actually reported. It does not invent limitations, and it does not silently drop the ones that exist.
+
+**Boundary:** the report summarises the trade and the evidence available. It does not tell you to buy, to sell, or to pass, it does not score the trade, and it does not estimate the chance of it working. **The final decision remains with the trader**, and the Human Decision phase is where that decision gets recorded.
+
+---
+
 ## Data & integrations
 
 ### Market research
@@ -342,8 +405,10 @@ These are enforced in the code, not aspirational:
 - **No fabricated risk numbers.** The risk engine only ever emits numbers it derived from the trader's own inputs, and only when every input is present and coherent. A missing input produces an INCOMPLETE assessment naming what is missing; a contradictory construction produces an INVALID TRADE CONSTRUCTION with no calculation at all. Nothing is assumed in the gap.
 - **No market price is substituted for your entry.** The risk engine reads no market data. Entry and invalidation are the trader's levels, and the response states that they were not verified against the market.
 - **The defined risk is not presented as the realised loss.** Slippage, fees, financing, gaps and liquidity are disclosed as limitations on every risk response.
-- **No trade verdict.** There is no BUY, SELL, or PASS anywhere in the product — not in the risk stage, not in any other stage.
-- **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect.
+- **No trade verdict.** There is no BUY, SELL, or PASS anywhere in the product — not in the risk stage, not in the final report, not in any other stage.
+- **No recommendation, score or ranking.** The final report does not grade, rank or score the trade, and it does not estimate a probability of success, an expected return or a predicted price. Its API route documents its decision output as *"None"*.
+- **No manufactured report completeness.** A report assembled over an investigation with a missing provider is reported as REPORT INCOMPLETE with the unavailable sections named, never as REPORT READY. The report lists only the gaps the earlier stages actually produced; it does not invent limitations.
+- **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect, and the final report states its boundary explicitly: the report summarises the trade and the evidence available, and the final decision remains with the trader.
 - **The human remains responsible for the final decision.**
 - **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
 - **Provider credentials stay server-side.** API keys are read from the backend environment and never reach the browser.
@@ -352,7 +417,7 @@ These are enforced in the code, not aspirational:
 
 ## Analysis architecture
 
-The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine and the Phase 7 trade structure all run entirely in the backend as deterministic pipelines. The thesis attack:
+The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure and the Phase 8 final report all run entirely in the backend as deterministic pipelines. The thesis attack:
 
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
@@ -408,6 +473,25 @@ TRADE CONTEXT  +  PHASE 4 ATTACK  +  PHASE 6 RISK RESULT
 
 It imports the risk engine and reuses its output object directly — the numbers are passed through, never recomputed — and like the risk engine it has no provider and no model in the path, so it resolves even when every data provider is unreachable. The invalidation conditions it shows are carried across verbatim from the thesis attack as titled conditions, never converted into exit prices.
 
+The final report service (Phase 8) is a synthesis of syntheses — it consumes the outputs of all seven earlier stages and restates them:
+
+```
+PHASE 3 RESEARCH  +  PHASE 4 ATTACK  +  PHASE 5 HISTORY
+        +  PHASE 6 RISK RESULT  +  PHASE 7 STRUCTURE  +  TRADE CONTEXT
+                        ↓
+   REUSE CHECK  (is each supplied result usable? otherwise call the engine)
+                        ↓
+   PER-SECTION EVIDENCE STATE  (available? partial? unavailable?)
+                        ↓
+   REPORT READY  /  REPORT INCOMPLETE  /  REPORT UNAVAILABLE
+                        ↓
+   TEN SECTIONS  ·  EVIDENCE ROLL-UP  ·  CONSOLIDATED GAPS
+                        ↓
+   METHOD NOTE · LIMITATIONS · DISCLAIMER · DECISION BOUNDARY
+```
+
+It is the purest synthesis stage in the product: it imports **only** the risk engine, computes no statistic of its own, and adds no provider and no model to the path. Every section carries the state of the evidence behind it, so a missing provider produces a named unavailable section and a REPORT INCOMPLETE state rather than a fabricated one. The projected risk numbers are asserted to be identical to the engine's own output, which is what makes it structurally impossible for the final report to disagree with the Risk Assessment panel.
+
 Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
@@ -430,8 +514,8 @@ TRADEGUARD
 │
 └── server/                       Express backend
     ├── index.js                  App wiring, /api/health
-    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure
-    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure
+    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure, finalReport
+    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure, finalReport
     │   └── providers/            bitget (isolated provider knowledge)
     ├── lib/                      Trade idea validation
     └── tests/                    Node test runner suites
@@ -450,8 +534,9 @@ TRADEGUARD
 | `POST /api/historical-stress-test` | Historical setup matching and observed outcomes for the asset |
 | `POST /api/risk-assessment` | Deterministic price risk, position size and defined risk from the trader's own levels |
 | `POST /api/trade-structure` | The trade setup, risk result, thesis context and invalidation conditions combined into one structured trade plan |
+| `POST /api/final-report` | The ten-section final report consolidating Phases 1–7, with per-section evidence states and the explicit decision boundary |
 
-Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider.
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors.
 
 ---
 
@@ -468,6 +553,7 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Event data | Financial Modeling Prep earnings calendar (env-configured) |
 | Risk calculation | TradeGuard's own deterministic risk engine — no provider, no model, no market data |
 | Trade structure | TradeGuard's own deterministic synthesis layer — reuses the risk engine's result, adds no provider and no model |
+| Final trade report | TradeGuard's own deterministic consolidation layer — restates Phases 1–7, reuses the risk engine's result unchanged, and adds no provider and no model |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
 | Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
 
@@ -543,11 +629,15 @@ npm test        # unit + integration tests
 npm run build   # production build
 ```
 
-**Verified state of the Phase 7 build:**
+**Verified state of the Phase 8 build:**
 
-- **154/154 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, and the frontend stage model.
+- **193/193 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
-- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the data-limited Devil's Advocate state, the historical stress test in both its available and `HISTORICAL DATA UNAVAILABLE` forms, the risk assessment in its RISK READY, INCOMPLETE and INVALID TRADE CONSTRUCTION states, and the trade structure in both its complete and incomplete forms — confirming that unavailable data is reported honestly, that no evidence, historical observation or risk number is fabricated, and that a missing setup value produces an explicit incomplete structure rather than an invented one.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the ten-section final report in both its bullish and bearish forms, the per-section AVAILABLE / PARTIAL / UNAVAILABLE markers, the honest REPORT INCOMPLETE state when providers cannot be reached, and the confirmation that no verdict, score, probability or prediction appears anywhere and that the Human Decision stage remains locked.
+
+The final report has dedicated coverage across its required scenarios: a complete report over available structured inputs, a bullish report, a bearish report, missing market data, missing event data, missing historical data, a partial Devil's Advocate, direct reuse of the risk engine's results, reuse of the trade structure's result, missing trade information, the absence of fabricated evidence, the absence of any BUY / SELL / PASS recommendation, the absence of any score, probability or prediction, the correct final decision boundary wording, and the existing Phase 1–7 regressions.
+
+The report's verdict guard is worth noting because it is subtly tested twice over. The report legitimately *names* the things it refuses to produce — its boundary copy says it "does not tell you to buy, to sell, or to pass", and it restates Phase 5's guarantee that a match frequency "is not a probability, a win rate, or an edge". A naive scan cannot tell a negation from an assertion, so the suite scans the report's substantive content for banned terms and separately asserts that every occurrence of those terms in the report's disclosure copy sits inside a negation, and that the copy never becomes a positive instruction.
 
 The trade structure has dedicated coverage across its required scenarios: a complete bullish structure, a complete bearish structure, a missing entry, a missing invalidation, a missing risk amount, an invalid risk assessment, an incomplete risk assessment, preservation of the trader-supplied entry and invalidation, direct reuse of the risk engine's output object, the absence of any BUY / SELL / PASS verdict, the absence of fabricated values, and determinism across repeated builds.
 
@@ -570,9 +660,8 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phases 8–13, in order. All are planned and none are implemented:
+Phases 9–13, in order. All are planned and none are implemented:
 
-- **Phase 8 — Final Trade Report.** Consolidate thesis, research, attack, historical test, risk, and structure into one decision-ready report.
 - **Phase 9 — Human Decision.** Execute / Modify / Pass, with the decision recorded. No trade can proceed without explicit human approval.
 - **Phase 10 — Paper Execution.** Simulated order submission, execution status, and trade record.
 - **Phase 11 — Trade Memory.** Persist the full decision context — what you believed, why, what TradeGuard warned about, what you decided, and what happened.

@@ -226,3 +226,51 @@ export async function fetchTradeStructure(context, extras = {}) {
 
   return { ok: true, data: payload };
 }
+
+/**
+ * Phase 8: request the consolidated final trade report.
+ *
+ * Every earlier result we already hold is sent along so the backend can RESTATE
+ * them rather than re-derive them — the market and event research, the attack,
+ * the historical stress test, the risk assessment and the trade structure. The
+ * report therefore reads no market data of its own and computes no new analysis,
+ * so it still resolves when every provider is unreachable.
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchFinalReport(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/final-report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      context,
+      market: extras.market || null,
+      events: extras.events || null,
+      attack: extras.attack || null,
+      history: extras.history || null,
+      risk: extras.risk || null,
+      structure: extras.structure || null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400 && payload?.errors) {
+    return { ok: false, kind: 'validation', errors: payload.errors, message: payload.message };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Final report request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}

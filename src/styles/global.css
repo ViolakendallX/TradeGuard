@@ -2927,3 +2927,643 @@ textarea {
     min-width: 0;
   }
 }
+
+/* ==========================================================================
+   Phase 8 — Final Trade Report
+   ==========================================================================
+   The report is a synthesis panel: it restates the earlier stages rather than
+   adding analysis, so the visual language deliberately reuses the established
+   section / grid / evidence primitives instead of introducing a new system.
+   The one addition is the availability marker (AVAILABLE / PARTIAL /
+   UNAVAILABLE), which is the whole point of the report being honest about what
+   it actually has.
+   ========================================================================== */
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.report__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.report__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+
+.report__badge--ready {
+  background: var(--ok-soft);
+  border-color: rgba(23, 201, 138, 0.32);
+  color: var(--ok);
+}
+
+.report__badge--incomplete {
+  background: var(--warn-soft);
+  border-color: rgba(245, 165, 36, 0.32);
+  color: var(--warn);
+}
+
+.report__badge--unavailable {
+  background: var(--neutral-soft);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.report__status-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.report__detail {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* --- availability roll-up ------------------------------------------------- */
+
+.report__roll-up {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+  padding: 12px 14px;
+}
+
+.report__roll-up-counts {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.report__count strong {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  margin-right: 3px;
+}
+
+.report__count--available strong {
+  color: var(--ok);
+}
+
+.report__count--partial strong {
+  color: var(--warn);
+}
+
+.report__count--unavailable strong {
+  color: var(--text-muted);
+}
+
+.report__count--total {
+  color: var(--text-muted);
+}
+
+.report__roll-up-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+.report__roll-up-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.report__roll-up-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- the availability marker --------------------------------------------- */
+
+.report__state {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.report__state--available {
+  background: var(--ok-soft);
+  border-color: rgba(23, 201, 138, 0.28);
+  color: var(--ok);
+}
+
+.report__state--partial {
+  background: var(--warn-soft);
+  border-color: rgba(245, 165, 36, 0.28);
+  color: var(--warn);
+}
+
+.report__state--unavailable {
+  background: var(--neutral-soft);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+/* --- caveats / notices ---------------------------------------------------- */
+
+.report__caveats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report__caveats--inline {
+  margin-top: 4px;
+}
+
+.report__caveat {
+  position: relative;
+  padding: 8px 10px 8px 26px;
+  border: 1px solid rgba(245, 165, 36, 0.28);
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.report__caveat::before {
+  content: '!';
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: var(--bg-app);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report__notice {
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.report__notice--muted {
+  border-color: var(--border);
+  background: var(--bg-panel);
+}
+
+.report__honesty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* --- sections ------------------------------------------------------------- */
+
+.report__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.report__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.report__section-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  flex: none;
+}
+
+.report__section-label {
+  flex: 1;
+}
+
+/* --- content primitives --------------------------------------------------- */
+
+.report__sub-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.report__thesis {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.report__interpretation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+}
+
+.report__interpretation-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.report__interpretation-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.report__strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report__strength-basis {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.report__two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.report__mini,
+.report__block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  padding: 10px 12px;
+}
+
+.report__block {
+  margin-top: 2px;
+}
+
+.report__mini-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 7px;
+}
+
+.report__counter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 84, 112, 0.28);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+}
+
+.report__counter-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.report__counter-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.report__summary-line {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.report__empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.report__absent {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.report__footnote {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.report__footnote--guard {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+
+.report__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+}
+
+.report__meta-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.report__meta-value {
+  color: var(--text-secondary);
+  margin-right: 8px;
+}
+
+/* Direction colours, from the direction tokens — bullish green, bearish red. */
+.report__meta-value.is-bullish {
+  color: var(--dir-bullish);
+}
+
+.report__meta-value.is-bearish {
+  color: var(--dir-bearish);
+}
+
+/* Market-magnitude tones. */
+.report__meta-value.is-up,
+.report td.is-up {
+  color: var(--up);
+}
+
+.report__meta-value.is-down,
+.report td.is-down {
+  color: var(--down);
+}
+
+/* --- tables / lists ------------------------------------------------------- */
+
+.report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.report__table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.report__table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.report__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.report__plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report__plain-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.report__plain-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.report__plain-list strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* --- gaps ----------------------------------------------------------------- */
+
+.report__gaps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report__gap {
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+}
+
+.report__gap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report__gap-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.report__gap-stage {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.report__gap-detail {
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* --- limits --------------------------------------------------------------- */
+
+.report__block--limits {
+  border-color: var(--border-strong);
+}
+
+.report__limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report__limits li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.report__limits li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+/* --- the decision boundary ------------------------------------------------ */
+
+.report__section--boundary {
+  border-top: 1px solid var(--border-strong);
+}
+
+.report__boundary {
+  padding: 12px 14px;
+  border: 1px solid var(--accent-ring);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.report__boundary-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.report__method {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.report__disclaimer {
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .report__gap-stage {
+    margin-left: 0;
+  }
+
+  .report__table {
+    font-size: 11px;
+  }
+}
