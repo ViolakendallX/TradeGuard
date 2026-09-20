@@ -1,17 +1,21 @@
 /**
  * TradeGuard backend.
  *
- * Phases 1–11 are built: thesis capture, the investigation flow, market/event
+ * Phases 1–12 are built: thesis capture, the investigation flow, market/event
  * research, the Devil's Advocate thesis attack, the historical stress test, the
  * deterministic risk engine, the trade structure that synthesises them into one
  * plan, the final trade report that consolidates the whole investigation, the
  * human decision that records the trader's own choice, paper execution — which
  * submits to the Bitget DEMO environment only, and only after an explicit human
- * confirmation on a trade the trader already decided to TAKE — and Trade Review,
- * which assembles those verified records into one post-decision review.
- * Still one Express process, no database, and no LLM provider — the analysis is
- * deterministic, and the decision is the trader's. Provider access is isolated
- * in server/services/providers/.
+ * confirmation on a trade the trader already decided to TAKE — Trade Review,
+ * which assembles those verified records into one post-decision review, and
+ * Trade Memory, which saves a completed trade to a local JSON file so it can be
+ * read back after navigation, a page reload, or a frontend restart.
+ *
+ * Still one Express process. Trade Memory is a plain JSON file on this server —
+ * no database, no migrations, no cache server, no cloud storage. There is still
+ * no LLM provider: the analysis is deterministic, and the decision is the
+ * trader's. Provider access is isolated in server/services/providers/.
  *
  * There is no live-trading path in this application. Paper execution reads demo
  * credentials only, has no live host, and has no fallback from demo to live.
@@ -29,19 +33,23 @@ import finalReportRouter from './routes/finalReport.js';
 import humanDecisionRouter from './routes/humanDecision.js';
 import paperExecutionRouter from './routes/paperExecution.js';
 import tradeReviewRouter from './routes/tradeReview.js';
+import tradeJournalRouter from './routes/tradeJournal.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '64kb' }));
+// 128kb rather than 64kb: a Trade Memory save carries the submitted trade, the
+// recorded decision, the paper-execution record and the assembled review in one
+// body. It is still a small, bounded request — this is not a file upload path.
+app.use(express.json({ limit: '128kb' }));
 
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 11,
+    phase: 12,
     time: new Date().toISOString(),
   });
 });
@@ -56,6 +64,7 @@ app.use('/api', finalReportRouter);
 app.use('/api', humanDecisionRouter);
 app.use('/api', paperExecutionRouter);
 app.use('/api', tradeReviewRouter);
+app.use('/api', tradeJournalRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ status: 'error', message: 'Unknown API route.' });

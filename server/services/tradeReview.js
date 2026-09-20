@@ -80,12 +80,12 @@ export const REVIEW_LIMITATIONS = Object.freeze([
   'Profit/loss is never calculated. Unless a verified execution outcome reports a fill and a P&L, the outcome ' +
     'stays "Outcome not yet available."',
   'Notes you write are your own observations. TradeGuard does not auto-generate behavioural conclusions from ' +
-    'them, and Trade Memory (later phases) is not built yet.',
+    'them. They are saved with the trade in Trade Memory (Phase 12), in a local file on this server.',
 ]);
 
 const NOTES_PERSISTENCE_NOTE =
-  'Trader notes are held for this session. TradeGuard does not yet persist them between sessions — Trade Memory ' +
-  'is a later phase.';
+  'Trader notes are saved with the trade in Trade Memory, so they survive a page reload. They are stored in a ' +
+  'local JSON file on the TradeGuard server — not in the cloud, and not backed up.';
 
 // --- small helpers ----------------------------------------------------------
 

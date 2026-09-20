@@ -156,7 +156,7 @@ export function validateTradeIdea(payload) {
  *
  * Deliberately contains no analysis, no scores and no probabilities — it only
  * echoes what was captured and says which investigation stages exist. The
- * availability flags describe what is actually BUILT (Phases 1–6); they are not
+ * availability flags describe what is actually BUILT (Phases 1–12); they are not
  * a prediction of what the current run will produce.
  */
 export function buildCaptureResponse(value) {
@@ -174,6 +174,7 @@ export function buildCaptureResponse(value) {
       { step: 'Human decision', phase: 9, available: true },
       { step: 'Paper execution', phase: 10, available: true },
       { step: 'Trade Review', phase: 11, available: true },
+      { step: 'Trade Memory', phase: 12, available: true },
     ],
     message:
       'Thesis captured. TradeGuard has recorded what you believe and why. ' +
@@ -183,7 +184,8 @@ export function buildCaptureResponse(value) {
       'final trade report. You then record your own decision — TradeGuard records it, it does not make it. ' +
       'If you record TAKE you can then confirm paper execution, which sends the trade to the Bitget Demo ' +
       'environment using virtual funds. Trade Review then assembles those verified records into one ' +
-      'read-only view of what happened. No live-money order is ever placed, and no profit, loss or fill ' +
-      'is shown unless it was actually verified.',
+      'read-only view of what happened, and Trade Memory saves the completed trade so you can come back ' +
+      'to it later. No live-money order is ever placed, and no profit, loss or fill is shown unless it ' +
+      'was actually verified.',
   };
 }

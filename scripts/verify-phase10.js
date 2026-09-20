@@ -127,12 +127,12 @@ async function post(path, body) {
   const blob = JSON.stringify(submitted);
   check('no secret value leaks in response', !/demo-secret|demo-key|demo-pass/.test(blob));
 
-  // 10. Phase 11/12 remain locked (navigation placeholders). Phase 11 was not
-  //     built in this phase, so a request for it has no route and the server
-  //     stays healthy.
+  // 10. Later phases must not have broken this one. Phases 11 and 12 were built
+  //     afterwards, so this only asserts the server is still healthy and that
+  //     adding them changed nothing about the Phase 10 contract above.
   const nav = await fetch(`${BASE}/api/health`);
   const navData = await nav.json().catch(() => ({}));
-  check('server still alive (Phase 11 untouched)', navData.status === 'ok');
+  check('server still alive after the Phase 10 checks', navData.status === 'ok');
 
   console.log('\n' + (failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`));
   process.exit(failures === 0 ? 0 : 1);

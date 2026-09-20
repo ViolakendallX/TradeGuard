@@ -4762,3 +4762,209 @@ textarea {
     padding: 12px;
   }
 }
+
+/* ============================================================
+   Phase 12 — Trade Memory (journal index + saved trade detail)
+   ============================================================ */
+
+/* --- the index toolbar (used in the detail view) --- */
+
+.journal__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.journal__toolbar-meta {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* --- the compact journal table --- */
+
+.journal__table-wrap {
+  overflow-x: auto;
+  padding: 0 22px 22px;
+}
+
+.journal__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.journal__table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.journal__th-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.journal__row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.journal__row:hover {
+  background: var(--bg-hover);
+}
+
+.journal__row.is-selected {
+  background: var(--accent-soft);
+}
+
+.journal__row + .journal__row .journal__cell {
+  border-top: 1px solid var(--border);
+}
+
+.journal__cell {
+  padding: 12px;
+  vertical-align: top;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.journal__cell--trade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 190px;
+}
+
+.journal__cell--thesis {
+  min-width: 240px;
+  max-width: 340px;
+}
+
+.journal__cell--notes {
+  min-width: 150px;
+  max-width: 220px;
+}
+
+.journal__cell--when {
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.journal__cell--open {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.journal__thesis {
+  color: var(--text);
+}
+
+.journal__notes,
+.journal__sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.journal__sub {
+  margin-top: 3px;
+}
+
+.journal__decision {
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.journal__exec {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.journal__none {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* A smaller chip, so a direction label does not dominate the row. */
+.chip--sm {
+  padding: 1px 7px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.journal__row .chip.is-bullish {
+  background: var(--dir-bullish-soft);
+  color: var(--dir-bullish);
+}
+
+.journal__row .chip.is-bearish {
+  background: var(--dir-bearish-soft);
+  color: var(--dir-bearish);
+}
+
+/* --- states --- */
+
+.journal__loading {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.journal__storage-note {
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* --- the saved-trade detail --- */
+
+.journal__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.journal__note-text {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* On a narrow viewport the table scrolls horizontally rather than dropping a
+   column: the notes are part of what makes a saved trade identifiable, so they
+   are never hidden. Only the "last saved" timestamp — the least load-bearing
+   column — is dropped on the smallest screens. */
+@media (max-width: 760px) {
+  .journal__cell--when,
+  .journal__table th:nth-child(6) {
+    display: none;
+  }
+}
+
+.journal__detail .review__known {
+  margin-top: 12px;
+}

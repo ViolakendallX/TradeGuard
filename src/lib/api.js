@@ -420,6 +420,134 @@ export async function fetchTradeReview(context, extras = {}) {
 }
 
 /**
+ * Phase 12: save the current trade to Trade Memory.
+ *
+ * This SENDS the records TradeGuard already produced — the submitted trade, the
+ * Phase 9 decision, the Phase 10 execution state and the Phase 11 review — and
+ * the backend stores them in a local JSON file. It performs NO new analysis and
+ * submits NOTHING to any venue.
+ *
+ * `sessionId` is what makes a save an upsert: saving the same trade again updates
+ * the same record instead of creating a duplicate.
+ *
+ * Returns { ok, data } on success, or { ok:false, kind, errors, message } on
+ * failure.
+ */
+export async function saveJournalRecord(sessionId, extras = {}) {
+  const response = await fetch(`${API_BASE}/journal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: sessionId,
+      idea: extras.idea || null,
+      decision: extras.decision || null,
+      execution: extras.execution || null,
+      review: extras.review || null,
+      notes: typeof extras.notes === 'string' ? extras.notes : null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400) {
+    return {
+      ok: false,
+      kind: 'validation',
+      errors: payload?.errors || {},
+      message: payload?.message || 'This trade could not be saved to Trade Memory.',
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Trade Memory request failed (${response.status}).`,
+    };
+  }
+
+  // A 200 carrying "unavailable" is the honest answer when the journal file
+  // cannot be written — it is not a success, so it is reported as a failure.
+  if (payload?.status !== 'saved') {
+    return {
+      ok: false,
+      kind: 'unavailable',
+      errors: {},
+      message: payload?.message || 'Trade Memory could not be written.',
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
+ * Phase 12: list the trades saved in Trade Memory, newest first.
+ *
+ * Returns summaries only. Reading Trade Memory runs no analysis and touches no
+ * provider — it reads the stored records back.
+ *
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ * A 200 carrying "unavailable" means the journal exists but could not be read,
+ * which is deliberately NOT the same as "you have no saved trades".
+ */
+export async function fetchJournalList() {
+  const response = await fetch(`${API_BASE}/journal`);
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      message: payload?.message || `Trade Memory request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/** Phase 12: read one saved trade in full. Returns { ok, data } or { ok:false }. */
+export async function fetchJournalRecord(id) {
+  const response = await fetch(`${API_BASE}/journal/${encodeURIComponent(id)}`);
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 404) {
+    return { ok: false, kind: 'not-found', message: payload?.message || 'That saved trade no longer exists.' };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      message: payload?.message || `Trade Memory request failed (${response.status}).`,
+    };
+  }
+
+  if (!payload?.record) {
+    return { ok: false, kind: 'unavailable', message: payload?.message || 'Trade Memory could not be read.' };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
  * Phase 9: record the trader's OWN decision.
  *
  * This is the one request in TradeGuard that does not ask for analysis — it

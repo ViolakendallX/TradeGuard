@@ -5,6 +5,7 @@ export const NAV_ITEMS = [
   { id: 'decision', label: 'Decision', phase: 9 },
   { id: 'paper-execution', label: 'Paper Execution', phase: 10 },
   { id: 'trade-review', label: 'Trade Review', phase: 11 },
+  { id: 'trade-memory', label: 'Trade Memory', phase: 12 },
   { id: 'trader-review', label: 'Trader Review', phase: 13 },
 ];
 

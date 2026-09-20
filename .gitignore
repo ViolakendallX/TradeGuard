@@ -13,5 +13,9 @@ yarn-error.log*
 Thumbs.db
 coverage/
 
+# Phase 12 — Trade Memory journal. Local runtime data written by the API; the
+# saved trades are the user's own and are never committed.
+server/data/
+
 # WorkBuddy internal workspace files (never commit these)
 .workbuddy-ai/

@@ -6,10 +6,12 @@ import DecisionScreen from './screens/DecisionScreen.jsx';
 import PaperExecutionScreen from './screens/PaperExecutionScreen.jsx';
 import TradeReportScreen from './screens/TradeReportScreen.jsx';
 import TradeReviewScreen from './screens/TradeReviewScreen.jsx';
+import TradeMemoryScreen from './screens/TradeMemoryScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
 import useTradeSession from './lib/useTradeSession.js';
+import { newSessionId, useJournalSync } from './lib/journal.js';
 
 const DEFAULT_SCREEN = 'trade-idea';
 const SCREEN_IDS = NAV_ITEMS.map((item) => item.id);
@@ -37,6 +39,11 @@ export default function App() {
   // Phase 11: trader-entered review notes. Held here so they survive navigation
   // within the session. TradeGuard never auto-fills or learns from them.
   const [reviewNotes, setReviewNotes] = useState('');
+  // Phase 12: the identity of the CURRENT trade session. It is what makes saving
+  // to Trade Memory an update of one record rather than a new one, and it is
+  // regenerated for every new trade — so a new trade can never overwrite the
+  // previous one in the journal.
+  const [sessionId, setSessionId] = useState(null);
 
   // The current trade's server-side records (research, attack, history, risk,
   // structure, report, the execution gate, and the trade review). Fetched ONCE
@@ -44,6 +51,20 @@ export default function App() {
   // workspaces reuses what is already loaded instead of re-running the chain,
   // and a new trade resets the session to empty.
   const session = useTradeSession(submission, decision, execution);
+
+  // Phase 12: save the current trade to Trade Memory whenever the records that
+  // describe it change. This writes only what the app already holds — it runs no
+  // analysis and sends nothing to any venue. The gate evaluation is used when no
+  // order was submitted, so the journal remembers LOCKED / READY / UNAVAILABLE
+  // honestly rather than as a blank.
+  useJournalSync({
+    sessionId,
+    idea: session.idea,
+    decision,
+    execution: execution || session.gate || null,
+    review: session.review,
+    notes: reviewNotes,
+  });
 
   useEffect(() => {
     const onHashChange = () => setScreen(readScreenFromHash());
@@ -75,12 +96,14 @@ export default function App() {
     (data, form) => {
       setSubmission(data);
       setDraft(form);
-      // A different trade is a different decision and a different execution:
-      // neither previous record may carry over and be mistaken for one about
-      // this trade. The same goes for any review notes from a prior trade.
+      // A different trade is a different decision, a different execution and a
+      // different Trade Memory record: none of the previous trade's state may
+      // carry over and be mistaken for something about this one. The session id
+      // is regenerated here, so this trade gets its own row in the journal.
       setDecision(null);
       setExecution(null);
       setReviewNotes('');
+      setSessionId(newSessionId());
       navigate('investigation');
     },
     [navigate]
@@ -122,6 +145,8 @@ export default function App() {
       ? 'Confirm, or do not, that this trade goes to Bitget Demo with virtual funds.'
       : screen === 'trade-review'
       ? 'This review describes what happened after the decision you already made. It does not tell you what to do next.'
+      : screen === 'trade-memory'
+      ? 'The trades you have saved. Open one to see what you originally recorded — no analysis is re-run.'
       : 'Not built in this phase.';
 
   return (
@@ -172,6 +197,8 @@ export default function App() {
           notes={reviewNotes}
           onNotesChange={setReviewNotes}
         />
+      ) : screen === 'trade-memory' ? (
+        <TradeMemoryScreen onNavigate={navigate} />
       ) : (
         <PlaceholderScreen screenId={screen} onNavigate={navigate} />
       )}

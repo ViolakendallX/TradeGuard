@@ -385,12 +385,15 @@ test('14/15. never fabricates a fill and never computes P&L', () => {
 
 // --- 16. Notes slot + persistence note -------------------------------------
 
-test('16. review exposes a notes slot and a session-persistence note', () => {
+test('16. review exposes a notes slot and an honest persistence note', () => {
   const review = buildTradeReview(fullSources());
   assert.equal(review.notes, null); // UI binds this to session state
-  assert.match(review.notesPersistenceNote, /session/i);
-  // The note honestly states notes are not yet persisted between sessions.
-  assert.match(review.notesPersistenceNote, /not yet persist/i);
+  // Since Phase 12 the notes ARE persisted, so the note says where — and says
+  // plainly that the store is a local file, not the cloud.
+  assert.match(review.notesPersistenceNote, /Trade Memory/);
+  assert.match(review.notesPersistenceNote, /reload/i);
+  assert.match(review.notesPersistenceNote, /local JSON file/i);
+  assert.match(review.notesPersistenceNote, /not in the cloud/i);
 });
 
 // --- 17. No new prediction / recommendation / signal -----------------------
