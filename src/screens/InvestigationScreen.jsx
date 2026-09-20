@@ -56,7 +56,7 @@ function EmptyInvestigation({ onEdit }) {
   );
 }
 
-export default function InvestigationScreen({ submission, onEdit }) {
+export default function InvestigationScreen({ submission, onEdit, decision }) {
   const [research, setResearch] = useState(null);
   const [attack, setAttack] = useState(null);
   const [history, setHistory] = useState(null);
@@ -344,6 +344,7 @@ export default function InvestigationScreen({ submission, onEdit }) {
           risk={risk}
           structure={structure}
           report={report}
+          decision={decision}
           idea={idea}
           onEdit={onEdit}
         />

@@ -4,9 +4,9 @@
 
 **Stress-test your trade thesis before you risk capital.**
 
-TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined — then leaves the decision to you.
+TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined, consolidates the whole investigation into one report — and then you record the decision yourself.
 
-**Status:** Phases 1–8 complete · Phases 9–13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–9 complete · Phases 10–13 planned. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,7 +14,7 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does eight things:
+It does nine things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
@@ -23,6 +23,7 @@ It does eight things:
 - **Calculates the risk you defined** — from your own entry, invalidation and risk budget it derives the price risk per unit, the position size that keeps your loss at that budget, and the defined risk — or says plainly that an input is missing or the construction contradicts itself.
 - **Brings the trade together into one structured plan** — asset, direction, timeframe, entry, invalidation, risk and thesis conditions collected into a single view, reusing the risk engine's numbers rather than recomputing them, or reported as an explicit incomplete state.
 - **Consolidates everything into one final report** — the setup, the thesis and its evidence, the market and event context, the attack, the historical comparison, the defined risk and the invalidation conditions collected into one scannable report, with every section marked available, partial or unavailable and the remaining information gaps listed.
+- **Records the decision you make, but never makes it** — you choose TAKE, WAIT or SKIP and give your own reason, and TradeGuard stores that decision with the time it was recorded and the trade and risk context behind it. It does not suggest which one to pick, does not write the reason, and does not execute anything.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -51,10 +52,10 @@ THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
        →  TRADE STRUCTURE  →  FINAL REPORT  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT.
-**Still on the roadmap:** HUMAN DECISION, PAPER EXECUTION, REVIEW, LEARN.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT → HUMAN DECISION.
+**Still on the roadmap:** PAPER EXECUTION, REVIEW, LEARN.
 
-Later stages are planned, not built. Nothing after Phase 8 is presented as working.
+Later stages are planned, not built. Nothing after Phase 9 is presented as working.
 
 ---
 
@@ -70,6 +71,7 @@ Trade Idea  →  Investigation  →  Market Context
                               →  Risk Assessment
                               →  Trade Structure
                               →  Final Trade Report
+                              →  Human Decision            (recorded by you)
 ```
 
 **You submit:** asset, direction, thesis, timeframe, entry price, invalidation / stop price, risk amount, confidence, and existing position.
@@ -89,11 +91,13 @@ Trade Idea  →  Investigation  →  Market Context
 - consolidate the whole investigation into a single final report, restating each earlier stage's finding and reusing the risk engine's numbers rather than recalculating them
 - mark every section of that report available, partial or unavailable, and surface a consolidated list of the information gaps and limitations the investigation actually produced
 - state explicitly that the report is a summary of the trade and the evidence, and that the final decision remains with the trader
+- record the decision **you** make — TAKE, WAIT or SKIP — together with the reason you write for it, the time it was recorded, and the trade and risk context it was made against
+- keep that recorded decision visible next to the report it was made from, so you can see the evidence and your own call in the same place
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
 
-Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there.
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there. The Human Decision stage follows the same rule from the other direction: it is complete only once **you** have actually recorded a decision, so it stays in **DECISION REQUIRED** until a decision exists rather than assuming one.
 
 One distinction matters for the final report. A report whose sections are honestly marked **unavailable** is still a real report: it tells you which evidence is missing and why. What it never does is dress an incomplete investigation up as a complete one, or substitute generic commentary, assumed prices or invented events for evidence it does not have.
 
@@ -113,13 +117,13 @@ The Investigation screen presents all of this as a single workspace rather than 
 | Phase 6 — Risk Engine / Risk Assessment | Deterministic price risk, position sizing and defined risk from the trader's own entry, invalidation and risk budget, with explicit RISK READY / INCOMPLETE / INVALID TRADE CONSTRUCTION states | ✅ Complete |
 | Phase 7 — Trade Structuring | The trader's own setup combined with the risk engine's result, the thesis context and the invalidation conditions into one structured trade plan, with explicit STRUCTURE COMPLETE / STRUCTURE INCOMPLETE / TRADE STRUCTURE UNAVAILABLE states | ✅ Complete |
 | Phase 8 — Final Trade Report | The whole investigation consolidated into one scannable report, with per-section AVAILABLE / PARTIAL / UNAVAILABLE evidence states, the Phase 6 risk engine's numbers reused without recalculation, consolidated information gaps and limitations, and the explicit human decision boundary, under REPORT READY / REPORT INCOMPLETE / REPORT UNAVAILABLE states | ✅ Complete |
-| Phase 9 — Human Decision | Execute / Modify / Pass with decision recording | ⏳ Planned |
+| Phase 9 — Human Decision | The trader's own decision recorded against the trade — TAKE / WAIT / SKIP with a required trader-written reason, a system-generated timestamp, deterministic server-side validation, and the trade and risk context attached, under DECISION REQUIRED / DECISION RECORDED states. TradeGuard records the decision; it does not make it, recommend it, score it or execute it | ✅ Complete |
 | Phase 10 — Paper Execution | Paper order submission, execution status, trade record | ⏳ Planned |
 | Phase 11 — Trade Memory | Persistent trade journal | ⏳ Planned |
 | Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
 | Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
 
-Phases 9–13 are not implemented in any form. The screens they will occupy (Decision, Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All eight investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure and Final Trade Report — are now active; nothing in the investigation is locked.
+Phases 10–13 are not implemented in any form. The screens they will occupy (Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All nine investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure, Final Trade Report and Human Decision — are now active; nothing in the investigation is locked.
 
 ---
 
@@ -305,7 +309,7 @@ The structure is organised into four sections:
 
 Phase 8 answers one question: **"What did the whole investigation find, and what does the trader still not know?"**
 
-It is **not** the question *"should I take this trade?"* Phase 8 consolidates what was found; it does not judge it, and it does not move the trade forward. The Human Decision is a separate, later phase.
+It is **not** the question *"should I take this trade?"* Phase 8 consolidates what was found; it does not judge it, and it does not move the trade forward. The Human Decision is a separate phase that follows it.
 
 Like Phase 7, this stage adds **no new analysis**. It is a **synthesis of Phases 1–7**: every section restates a finding an earlier stage already produced, and the numbers are that stage's own numbers. It reads no market price, calls no model, and runs no calculation of its own. In fact the report service imports nothing but the risk engine, so it produces an honest report even when every external data source is unreachable.
 
@@ -357,6 +361,86 @@ An important distinction: a report whose sections are honestly marked unavailabl
 
 ---
 
+## Phase 9 — Human Decision
+
+Phase 9 is where the trader, not the system, does the deciding. It answers no analytical question at all. It exists to **record the decision you make after reading the final report**, and to keep that record attached to the trade it belongs to.
+
+It is the one stage in TradeGuard where the answer comes from a person. Everything before it is TradeGuard investigating the trade; this is the first and only stage where the content is yours.
+
+### The three decisions
+
+| Decision | Meaning |
+| -------- | ------- |
+| **TAKE** | You are going ahead with this trade on the terms in the report. |
+| **WAIT** | You are not acting yet — you want more information or a better setup first. |
+| **SKIP** | You are not taking this trade. |
+
+The vocabulary is deliberately **TAKE / WAIT / SKIP** rather than BUY / SELL / PASS. BUY, SELL and PASS are *instructions*; TAKE, WAIT and SKIP *record a human choice that has already been made*. That distinction is the whole point of the phase, and the code holds it: no BUY, SELL or PASS appears anywhere in the decision stage, its API route or its API response.
+
+Nothing is preselected. The form opens with no option chosen, there is no default, and the save action is disabled until you have both picked a decision **and** written a reason.
+
+### Your reason is required, and it is yours
+
+Every decision requires a **trader-provided reason** — free text, written in your own words, between 3 and 2,000 characters. It is stored exactly as written: trimmed only for the emptiness check, never reworded, summarised or completed.
+
+TradeGuard has no "generate reason" button, no drafted text, no suggestion and no model in the path. A decision with no reason is rejected rather than stored, because a decision record without the trader's own reasoning is not a decision record.
+
+### The timestamp is the system's
+
+The **recorded-at timestamp is generated server-side**, at the moment the record is built. A client-supplied timestamp is ignored entirely, so a wrong or missing browser clock cannot produce a wrong record.
+
+### Server-side validation is authoritative
+
+Recording a decision is a real write with a real validation step, handled deterministically on the backend:
+
+| Rejected | Why |
+| -------- | --- |
+| No decision supplied | There is no default. An absent choice never becomes TAKE, WAIT or SKIP. |
+| An unsupported value (`BUY`, `SELL`, `PASS`, `HOLD`, `MAYBE`, …) | Only the three trader decisions exist. |
+| A missing, empty or whitespace-only reason | The reason is required, not optional. |
+| A reason shorter than 3 or longer than 2,000 characters | The record stays a note. |
+| A malformed trade context | The decision must belong to an identifiable trade. |
+
+The frontend runs a light pre-check for responsiveness, but the **backend is the authority**: the browser cannot talk the API into storing an incomplete record. Because a missing decision or an empty reason is a validation failure and not an analysis outcome, `POST /api/human-decision` returns **HTTP 400** for an invalid request — deliberately unlike the analysis routes, which always answer 200. Silently storing a default would fabricate the trader's intent, which is the one thing this phase must never do. A rejected request still returns a well-formed **DECISION REQUIRED** record, so the UI can render the honest state. The route never returns 500.
+
+### The record
+
+Recording a decision persists and displays:
+
+- **the decision** — TAKE, WAIT or SKIP, shown as *"You recorded: TAKE"*, in your voice, never as a TradeGuard statement
+- **your reason**, verbatim, attributed to you as *"Written by the trader — not generated by TradeGuard"*
+- **the timestamp**, system-generated
+- **the trade context** — asset, direction, timeframe, entry, invalidation / stop, risk amount, confidence and existing position, carried straight from your submission
+- **the risk context at the time you decided** — price risk per unit, position size, defined risk and risk budget, carried through from the [Phase 6](#phase-6--risk-assessment) risk engine, **not recalculated here**
+
+The record survives navigation, so you can move between the report and your decision without losing either, and the decision is displayed beside the report it was made from. Changing a decision updates the existing record rather than adding a second one.
+
+### The two states
+
+| State | Meaning |
+| ----- | ------- |
+| **DECISION REQUIRED** | No decision has been recorded for this trade yet. The three options and the required reason are shown, with nothing selected. |
+| **DECISION RECORDED** | The trader's decision, reason and timestamp are stored and displayed, with the trade and risk context attached. |
+
+There is deliberately **no third state**, and no state that means "approved". A recorded decision is styled as a neutral record, never as a green light: recording TAKE does not turn anything green, because the outcome is not known.
+
+If the backend cannot be reached while recording, the stage says so plainly, states that nothing was stored, and does not infer a decision from your activity.
+
+### What it never does
+
+- **It never makes the decision.** It does not choose TAKE, WAIT or SKIP, does not preselect one, does not suggest one, does not rank them and expresses no preference. A decision exists only once you have stated one.
+- **It never generates your reason.** No drafted reason, no autocompletion, no rewrite, no model call. The stored reason is the text you typed.
+- **It never recommends a trade.** There is no BUY, SELL or PASS, no TradeGuard recommendation, no "we suggest", no "you should", no trade score, no ranking and no confidence or quality score on the decision.
+- **It never scores the decision after the fact.** It does not say whether the choice was right, good, likely to work or a mistake. It also makes no claim about the outcome — which is unknown at the time of recording.
+- **It never recalculates risk.** The Phase 6 risk engine remains the single source of truth. The record carries the engine's figures through unchanged; when the assessment was incomplete or invalid, it stores that honestly rather than a number, and a figure the engine did not produce stays absent rather than becoming `0`.
+- **It never re-runs the analysis.** The record holds the trade context; it does not restate findings and does not reopen the investigation.
+- **It never executes anything.** No order, no exchange call, no paper trade, no wallet action, no automation, no autonomous execution. Recording that you decided to TAKE is a note about your intention, not an instruction to act — and every record states explicitly that nothing was executed.
+- **It never presents a recorded decision as a successful, validated or endorsed trade.**
+
+**Boundary:** TradeGuard records the decision you make and the reason you give for it. It does not make the decision, does not recommend one of the options, does not score the trade, and does not tell you whether this is a good or bad trade. What is stored is your judgement, written by you. [Paper execution](#roadmap) is a later phase and is not built.
+
+---
+
 ## Data & integrations
 
 ### Market research
@@ -384,6 +468,10 @@ Event research uses a **Financial Modeling Prep**-style earnings calendar, gated
 
 The risk assessment uses **no external data source at all**. It is arithmetic on the entry, invalidation and risk budget the trader submitted, computed by a pure function in the backend. There is no provider, no symbol lookup and no market price, so it cannot fail for data reasons — the risk stage resolves even when Bitget and the events provider are both unreachable. Its only two non-ready outcomes are missing inputs and a self-contradicting construction.
 
+### Human decision recording
+
+The human decision stage uses **no external data source and no model**. It validates the trader's own submission and builds the record in the backend; the timestamp comes from the server clock. It neither reads nor recalculates risk — it carries the Phase 6 engine's figures through unchanged — so it also resolves with every provider unreachable. There is no execution path: recording a decision contacts no exchange and places nothing.
+
 ### Provider availability
 
 External provider availability directly affects live research, and TradeGuard is built to be honest about that. If Bitget is unreachable from the network the backend is running on — a restricted sandbox, a corporate proxy, an outage — market context reports **Data unavailable** with the reason. The integration is real; it simply is not guaranteed to return data on every run, and the UI never pretends otherwise.
@@ -408,6 +496,11 @@ These are enforced in the code, not aspirational:
 - **No trade verdict.** There is no BUY, SELL, or PASS anywhere in the product — not in the risk stage, not in the final report, not in any other stage.
 - **No recommendation, score or ranking.** The final report does not grade, rank or score the trade, and it does not estimate a probability of success, an expected return or a predicted price. Its API route documents its decision output as *"None"*.
 - **No manufactured report completeness.** A report assembled over an investigation with a missing provider is reported as REPORT INCOMPLETE with the unavailable sections named, never as REPORT READY. The report lists only the gaps the earlier stages actually produced; it does not invent limitations.
+- **No AI-made decision.** The Human Decision stage records a choice the trader makes. It does not select one, does not preselect one, does not recommend one and does not score it. A decision with no trader-supplied reason is rejected, not stored.
+- **No reason written for the trader.** The stored reason is the trader's own text, kept verbatim. TradeGuard does not draft, complete, reword or generate it.
+- **No fabricated decision timestamp.** The recorded-at time is generated server-side at the moment of recording. A client-supplied timestamp is ignored.
+- **No inferred decision.** A failed or unreachable recording stores nothing and says so. No decision is inferred from the trader's activity, and a missing decision is never filled with a default.
+- **No execution.** Recording a decision places no order, contacts no exchange and performs no wallet action. Every record states that nothing was executed.
 - **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect, and the final report states its boundary explicitly: the report summarises the trade and the evidence available, and the final decision remains with the trader.
 - **The human remains responsible for the final decision.**
 - **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
@@ -418,7 +511,6 @@ These are enforced in the code, not aspirational:
 ## Analysis architecture
 
 The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure and the Phase 8 final report all run entirely in the backend as deterministic pipelines. The thesis attack:
-
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
               ↓
@@ -492,7 +584,23 @@ PHASE 3 RESEARCH  +  PHASE 4 ATTACK  +  PHASE 5 HISTORY
 
 It is the purest synthesis stage in the product: it imports **only** the risk engine, computes no statistic of its own, and adds no provider and no model to the path. Every section carries the state of the evidence behind it, so a missing provider produces a named unavailable section and a REPORT INCOMPLETE state rather than a fabricated one. The projected risk numbers are asserted to be identical to the engine's own output, which is what makes it structurally impossible for the final report to disagree with the Risk Assessment panel.
 
-Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, or a detail from your own submission. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
+The human decision service (Phase 9) is not an analysis step at all — it is a **recording step**, and it is the only place in the product where the input comes from the trader rather than from a calculation:
+
+```
+TRADER'S DECISION  +  TRADER'S REASON  +  TRADE CONTEXT  +  PHASE 6 RISK RESULT
+                        ↓
+   DETERMINISTIC VALIDATION  (decision supplied? one of the three? reason written? context sane?)
+                        ↓
+   DECISION REQUIRED  /  DECISION RECORDED
+                        ↓
+   DECISION · REASON (verbatim) · SYSTEM TIMESTAMP · TRADE CONTEXT · RISK CONTEXT
+                        ↓
+   METHOD NOTE · LIMITATIONS · DISCLAIMER · EXECUTION NOTICE (executed: false)
+```
+
+Its validation is the mirror image of the analysis stages: where the risk engine proves that a number is derived, this service proves that a decision is **not**. There is no default path, no branch that picks an option, and no code that could write a reason — the decision and the reason both arrive as trader input, and the only thing the service adds is the timestamp and the standing guarantees. There is no provider, no model and no network call in the path; the risk figures it carries are the Phase 6 engine's own output, asserted in the test suite to be identical to it. An invalid submission produces no record at all, which is why this route answers 400 where the analysis routes answer 200.
+
+Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, a detail from your own submission, or a decision you recorded. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
 
@@ -506,7 +614,7 @@ This is deliberately a **clean seam**. The evidence classification and the numbe
 TRADEGUARD
 │
 ├── src/                          React + Vite frontend
-│   ├── screens/                  Trade Idea, Investigation, placeholder screens for later phases
+│   ├── screens/                  Trade Idea, Investigation, Decision, placeholder screens for later phases
 │   ├── components/               App shell, sidebar, trade-idea components
 │   │   └── investigation/        Investigation workspace: trade header, section nav, analysis panels
 │   ├── lib/                      API client, constants, stage model, investigation view model, validation
@@ -514,8 +622,8 @@ TRADEGUARD
 │
 └── server/                       Express backend
     ├── index.js                  App wiring, /api/health
-    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure, finalReport
-    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure, finalReport
+    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure, finalReport, humanDecision
+    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure, finalReport, humanDecision
     │   └── providers/            bitget (isolated provider knowledge)
     ├── lib/                      Trade idea validation
     └── tests/                    Node test runner suites
@@ -535,8 +643,9 @@ TRADEGUARD
 | `POST /api/risk-assessment` | Deterministic price risk, position size and defined risk from the trader's own levels |
 | `POST /api/trade-structure` | The trade setup, risk result, thesis context and invalidation conditions combined into one structured trade plan |
 | `POST /api/final-report` | The ten-section final report consolidating Phases 1–7, with per-section evidence states and the explicit decision boundary |
+| `POST /api/human-decision` | Records the trader's own decision — TAKE / WAIT / SKIP with a required trader-written reason — against the trade, with a system-generated timestamp and the trade and risk context attached. Returns 400 and a DECISION REQUIRED record when the submission is invalid; the route's execution output is documented as *"None"* |
 
-Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors.
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors. The human decision route sits outside the provider structure for the same reason, and depends only on the risk engine to carry its figures through; it is the one route that returns **400** on a bad request, because an absent decision or an unwritten reason is a validation failure rather than an analysis outcome, and there is no honest record to build from it.
 
 ---
 
@@ -554,6 +663,7 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Risk calculation | TradeGuard's own deterministic risk engine — no provider, no model, no market data |
 | Trade structure | TradeGuard's own deterministic synthesis layer — reuses the risk engine's result, adds no provider and no model |
 | Final trade report | TradeGuard's own deterministic consolidation layer — restates Phases 1–7, reuses the risk engine's result unchanged, and adds no provider and no model |
+| Human decision recording | TradeGuard's own deterministic recording layer — validates the trader's own submission, generates the timestamp server-side, and carries the risk engine's figures through unchanged. No provider, no model, no execution |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
 | Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
 
@@ -629,13 +739,15 @@ npm test        # unit + integration tests
 npm run build   # production build
 ```
 
-**Verified state of the Phase 8 build:**
+**Verified state of the Phase 9 build:**
 
-- **193/193 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, and the frontend stage model.
+- **241/241 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, the human-decision service, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
-- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including the ten-section final report in both its bullish and bearish forms, the per-section AVAILABLE / PARTIAL / UNAVAILABLE markers, the honest REPORT INCOMPLETE state when providers cannot be reached, and the confirmation that no verdict, score, probability or prediction appears anywhere and that the Human Decision stage remains locked.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including recording a real TAKE decision with a trader-written reason on a worked example (rNVDA, bullish, entry 100, invalidation 95, risk 50) and confirming the stored record carried the correct timestamp, the verbatim reason, the trade context and the risk engine's own figures (5 per unit, 10 units, defined risk 50), alongside the DECISION REQUIRED state before recording and the DECISION RECORDED state after, and the confirmation that no verdict, score, probability, prediction or recommendation appears anywhere.
 
-The final report has dedicated coverage across its required scenarios: a complete report over available structured inputs, a bullish report, a bearish report, missing market data, missing event data, missing historical data, a partial Devil's Advocate, direct reuse of the risk engine's results, reuse of the trade structure's result, missing trade information, the absence of fabricated evidence, the absence of any BUY / SELL / PASS recommendation, the absence of any score, probability or prediction, the correct final decision boundary wording, and the existing Phase 1–7 regressions.
+The human decision stage has dedicated coverage across its required scenarios: recording each of the three decisions, the required reason, an empty or whitespace-only reason being rejected, the reason being stored verbatim and never swapped for the thesis, a missing decision never defaulting to an option, unsupported values (`BUY`, `SELL`, `PASS`, `HOLD`, `MAYBE` and malformed payloads) being rejected, malformed bodies and contexts not throwing, the system-generated timestamp, a client-supplied timestamp being ignored, the trade context being preserved in full, the risk figures being identical to the Phase 6 engine's own output, a partial or unavailable risk assessment being recorded honestly rather than filled with zeros, the decision being attributed to the trader, the standing limitations always being attached, `executed: false`, determinism across repeated runs, purity, and the absence of any score, probability, prediction or recommendation. Its guards are worth noting: the suite asserts that the stage **names** the concepts it refuses to produce only in order to deny them — the boundary copy says the decision is "not a TradeGuard recommendation" and that TradeGuard "does not tell you whether this is a good or bad trade" — so the scan is negation-aware rather than a naive substring ban, and it separately asserts that those phrases never become a positive instruction, and that no `BUY`, `SELL` or `PASS` vocabulary appears in the trader-facing options.
+
+The final report has dedicated coverage across its required scenarios: a complete report over available structured inputs, a bullish report, a bearish report, missing market data, missing event data, missing historical data, a partial Devil's Advocate, direct reuse of the risk engine's results, reuse of the trade structure's result, missing trade information, the absence of fabricated evidence, the absence of any BUY / SELL / PASS recommendation, the absence of any score, probability or prediction, the correct final decision boundary wording, and the existing Phase 1–8 regressions.
 
 The report's verdict guard is worth noting because it is subtly tested twice over. The report legitimately *names* the things it refuses to produce — its boundary copy says it "does not tell you to buy, to sell, or to pass", and it restates Phase 5's guarantee that a match frequency "is not a probability, a win rate, or an edge". A naive scan cannot tell a negation from an assertion, so the suite scans the report's substantive content for banned terms and separately asserts that every occurrence of those terms in the report's disclosure copy sits inside a negation, and that the copy never becomes a positive instruction.
 
@@ -660,9 +772,8 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phases 9–13, in order. All are planned and none are implemented:
+Phases 10–13, in order. All are planned and none are implemented:
 
-- **Phase 9 — Human Decision.** Execute / Modify / Pass, with the decision recorded. No trade can proceed without explicit human approval.
 - **Phase 10 — Paper Execution.** Simulated order submission, execution status, and trade record.
 - **Phase 11 — Trade Memory.** Persist the full decision context — what you believed, why, what TradeGuard warned about, what you decided, and what happened.
 - **Phase 12 — Post-Trade Review.** Before/after comparison, the original warnings, the outcome, and the lesson.

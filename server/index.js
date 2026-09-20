@@ -1,12 +1,14 @@
 /**
  * TradeGuard backend.
  *
- * Phases 1–8 are built: thesis capture, the investigation flow, market/event
+ * Phases 1–9 are built: thesis capture, the investigation flow, market/event
  * research, the Devil's Advocate thesis attack, the historical stress test, the
  * deterministic risk engine, the trade structure that synthesises them into one
- * plan, and the final trade report that consolidates the whole investigation.
+ * plan, the final trade report that consolidates the whole investigation, and
+ * the human decision that records the trader's own choice.
  * Still one Express process, no database, and no LLM provider — the analysis is
- * deterministic. Provider access is isolated in server/services/providers/.
+ * deterministic, and the decision is the trader's. Provider access is isolated
+ * in server/services/providers/.
  */
 
 import express from 'express';
@@ -18,6 +20,7 @@ import historicalStressTestRouter from './routes/historicalStressTest.js';
 import riskAssessmentRouter from './routes/riskAssessment.js';
 import tradeStructureRouter from './routes/tradeStructure.js';
 import finalReportRouter from './routes/finalReport.js';
+import humanDecisionRouter from './routes/humanDecision.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -30,7 +33,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 8,
+    phase: 9,
     time: new Date().toISOString(),
   });
 });
@@ -42,6 +45,7 @@ app.use('/api', historicalStressTestRouter);
 app.use('/api', riskAssessmentRouter);
 app.use('/api', tradeStructureRouter);
 app.use('/api', finalReportRouter);
+app.use('/api', humanDecisionRouter);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ status: 'error', message: 'Unknown API route.' });

@@ -27,6 +27,7 @@ const NAV_LABELS = {
   'risk-assessment': 'Risk Assessment',
   'trade-structure': 'Trade Structure',
   'final-report': 'Final Trade Report',
+  'human-decision': 'Human Decision',
 };
 
 export function navLabel(stage) {
@@ -67,13 +68,26 @@ const REPORT_NAV_LABELS = {
 };
 
 /**
+ * Short navigation labels for the human decision's own statuses. Same reasoning
+ * again: the canonical 'DECISION REQUIRED' / 'DECISION RECORDED' wording is used
+ * verbatim inside the panel, while the rail needs something that fits. Note that
+ * "recorded" is the word for a captured decision — never "approved" or "good".
+ */
+const DECISION_NAV_LABELS = {
+  required: 'Decision required',
+  recorded: 'Decision recorded',
+};
+
+/**
  * Human-readable status copy for a stage's runtime state.
  *
  * `detail` is the stage's own analysis result, when it has one. The risk stage
  * uses it because its two non-complete outcomes (missing inputs vs a
  * self-contradicting construction) are genuinely different and the generic
  * "Partial" badge would hide that. The structure and report stages use it for
- * the same reason: "incomplete" is the meaningful word, not "partial".
+ * the same reason: "incomplete" is the meaningful word, not "partial". The
+ * decision stage uses it because "decision required" is far more useful to the
+ * trader than the generic "data unavailable".
  */
 export function runtimeLabel(runtime, stage, detail) {
   if (stage?.id === 'risk-assessment' && detail && detail.status) {
@@ -84,6 +98,9 @@ export function runtimeLabel(runtime, stage, detail) {
   }
   if (stage?.id === 'final-report' && detail && detail.status) {
     return REPORT_NAV_LABELS[detail.status] || detail.statusLabel || 'Partial';
+  }
+  if (stage?.id === 'human-decision' && detail && detail.status) {
+    return DECISION_NAV_LABELS[detail.status] || detail.statusLabel || 'Decision required';
   }
 
   switch (runtime) {
@@ -121,13 +138,14 @@ export function runtimeModifier(runtime) {
  * never drift from the stage model. Locked stages stay listed — the user should
  * be able to see what is coming — but they are not selectable.
  *
- * `risk` is the Phase 6 result, `structure` the Phase 7 result and `report` the
- * Phase 8 result; they are passed to runtimeLabel so those rows can report their
- * own status rather than a generic one.
+ * `risk` is the Phase 6 result, `structure` the Phase 7 result, `report` the
+ * Phase 8 result and `decision` the Phase 9 record; they are passed to
+ * runtimeLabel so those rows can report their own status rather than a generic
+ * one.
  */
-export function buildSectionNav(research, attack, history, risk, structure, report) {
+export function buildSectionNav(research, attack, history, risk, structure, report, decision) {
   return INVESTIGATION_STAGES.map((stage) => {
-    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure, report);
+    const runtime = stageRuntimeState(stage, research, attack, history, risk, structure, report, decision);
     const detail =
       stage.id === 'risk-assessment'
         ? risk
@@ -135,6 +153,8 @@ export function buildSectionNav(research, attack, history, risk, structure, repo
         ? structure
         : stage.id === 'final-report'
         ? report
+        : stage.id === 'human-decision'
+        ? decision
         : null;
     return {
       id: stage.id,

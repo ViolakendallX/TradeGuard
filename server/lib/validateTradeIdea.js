@@ -171,12 +171,13 @@ export function buildCaptureResponse(value) {
       { step: 'Risk engine', phase: 6, available: true },
       { step: 'Trade structure', phase: 7, available: true },
       { step: 'Final report', phase: 8, available: true },
+      { step: 'Human decision', phase: 9, available: true },
     ],
     message:
       'Thesis captured. TradeGuard has recorded what you believe and why. ' +
       'The investigation will research this asset, challenge the thesis, look for comparable historical ' +
       'setups, calculate the defined risk from your entry, invalidation and risk budget, bring the ' +
       'whole trade together into one structured plan, and consolidate the whole investigation into a ' +
-      'final trade report.',
+      'final trade report. You then record your own decision — TradeGuard records it, it does not make it.',
   };
 }

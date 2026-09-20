@@ -20,8 +20,9 @@ import HistoricalPanel from './HistoricalPanel.jsx';
 import RiskPanel from './RiskPanel.jsx';
 import TradeStructurePanel from './TradeStructurePanel.jsx';
 import FinalReportPanel from './FinalReportPanel.jsx';
+import DecisionPanel from './DecisionPanel.jsx';
 
-function SectionBody({ section, research, attack, history, risk, structure, report, idea, onEdit }) {
+function SectionBody({ section, research, attack, history, risk, structure, report, decision, idea, onEdit }) {
   switch (section.id) {
     case 'thesis-captured':
       return <ThesisPanel idea={idea} onEdit={onEdit} />;
@@ -39,12 +40,14 @@ function SectionBody({ section, research, attack, history, risk, structure, repo
       return <TradeStructurePanel structure={structure} />;
     case 'final-report':
       return <FinalReportPanel report={report} />;
+    case 'human-decision':
+      return <DecisionPanel decision={decision} idea={idea} />;
     default:
       return null;
   }
 }
 
-export default function InvestigationPanel({ section, research, attack, history, risk, structure, report, idea, onEdit }) {
+export default function InvestigationPanel({ section, research, attack, history, risk, structure, report, decision, idea, onEdit }) {
   if (!section) return null;
 
   const isLoading = section.runtime === STAGE_RUNTIME.LOADING;
@@ -74,6 +77,7 @@ export default function InvestigationPanel({ section, research, attack, history,
             risk={risk}
             structure={structure}
             report={report}
+            decision={decision}
             idea={idea}
             onEdit={onEdit}
           />

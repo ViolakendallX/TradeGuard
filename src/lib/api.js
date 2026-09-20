@@ -274,3 +274,57 @@ export async function fetchFinalReport(context, extras = {}) {
 
   return { ok: true, data: payload };
 }
+
+/**
+ * Phase 9: record the trader's OWN decision.
+ *
+ * This is the one request in TradeGuard that does not ask for analysis — it
+ * SUBMITS a human judgement. The backend validates it (a decision must be
+ * selected and a real reason supplied) and stores it with a server-generated
+ * timestamp. TradeGuard does not choose, suggest or score the decision here.
+ *
+ * A missing decision or an empty reason comes back as a 400 with per-field
+ * errors, so they surface as validation messages rather than as a generic
+ * failure.
+ * Returns { ok, data } on success, or { ok:false, kind, errors, message } on failure.
+ */
+export async function recordHumanDecision(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/human-decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      context,
+      decision: extras.decision ?? null,
+      reason: extras.reason ?? '',
+      risk: extras.risk || null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400) {
+    return {
+      ok: false,
+      kind: 'validation',
+      errors: payload?.errors || {},
+      message: payload?.message || 'The decision could not be recorded.',
+      record: payload?.record || null,
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Decision request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}

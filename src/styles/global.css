@@ -3567,3 +3567,473 @@ textarea {
     font-size: 11px;
   }
 }
+
+/* ============================================================
+   Phase 9 — Human Decision
+   ------------------------------------------------------------
+   The stage where the trader records their OWN decision. The
+   styling deliberately borrows the report stage's language (its
+   badges, notices and caveats) so this reads as the final step
+   of the same workspace rather than a new application.
+
+   One design rule: nothing here is coloured like a verdict. The
+   recorded badge is neutral-blue (a record was stored), never
+   green (good) or red (bad) — TradeGuard does not grade the
+   trader's choice.
+   ============================================================ */
+
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.decision__status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.decision__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+
+/* "Nothing recorded yet" — an action is pending, so accent, not alarm. */
+.decision__status--required {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+  color: var(--accent);
+}
+
+/* "A decision was stored" — neutral. Deliberately NOT --ok, because a recorded
+   TAKE is not a green light and a recorded SKIP is not a red one. */
+.decision__status--recorded {
+  background: var(--bg-panel-raised);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.decision__status--offline {
+  background: var(--neutral-soft);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.decision__status-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* --- layout: report as context, decision beside it ------------------------ */
+
+.decision__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+@media (max-width: 1180px) {
+  .decision__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.decision__context,
+.decision__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.decision__context-head,
+.decision__stage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+}
+
+.decision__stage-head {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.decision__context-eyebrow,
+.decision__record-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.decision__context-title,
+.decision__stage-title {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.decision__stage-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* --- the form ------------------------------------------------------------- */
+
+.decision__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The ownership statement. This is the sentence the whole phase exists for, so
+   it gets the accent treatment rather than being buried in body copy. */
+.decision__ownership {
+  padding: 14px 16px;
+  border: 1px solid var(--accent-ring);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.decision__ownership-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.decision__ownership-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.decision__block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.decision__block-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Numbered step marker — the same device the report sections use. */
+.decision__step {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.decision__block-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.decision__block-hint {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* --- the three options ---------------------------------------------------- */
+
+.decision__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 9px;
+}
+
+.decision__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.decision__option:hover {
+  border-color: var(--accent-ring);
+  background: var(--bg-hover);
+}
+
+.decision__option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Selection is the accent — never green or red. The trader picking TAKE must
+   not be shown a green light by the interface. */
+.decision__option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.decision__radio {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-input);
+  position: relative;
+}
+
+.decision__radio.is-on {
+  border-color: var(--accent);
+}
+
+.decision__radio.is-on::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.decision__option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.decision__option-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.decision__option-hint {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* --- actions -------------------------------------------------------------- */
+
+.decision__actions,
+.decision__record-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.decision__actions-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 46ch;
+}
+
+/* --- the recorded decision ------------------------------------------------ */
+
+.decision__record {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+}
+
+.decision__record-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.decision__record-decision {
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.decision__record-decision strong {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.03em;
+}
+
+.decision__reason {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.decision__reason-label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.decision__reason-src {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+/* The trader's own words, quoted back verbatim. */
+.decision__reason-text {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-panel);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.decision__risk {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.decision__risk-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.decision__risk-src {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+.decision__risk-partial {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(245, 165, 36, 0.28);
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* --- attribution + boundary ----------------------------------------------- */
+
+.decision__attribution {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.decision__boundary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.decision__boundary-item {
+  position: relative;
+  padding: 8px 10px 8px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.decision__boundary-item::before {
+  content: '✓';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  color: var(--bg-app);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

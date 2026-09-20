@@ -10,6 +10,8 @@ import {
   lockedStageCount,
   completedStageCountFromResearch,
   reportState,
+  decisionState,
+  DECISION_STATUS,
 } from './investigation.js';
 
 const byId = (id) => stageById(id);
@@ -45,6 +47,14 @@ const REPORT_READY = { available: true, status: 'ready', statusLabel: 'REPORT RE
 const REPORT_INCOMPLETE = { available: true, status: 'incomplete', statusLabel: 'REPORT INCOMPLETE' };
 const REPORT_UNAVAIL = { available: false, statusDetail: 'backend offline' };
 
+/**
+ * Phase 9 decision fixtures — mirror the human-decision service's own statuses.
+ * Note there is no "recommended" or "good" state: a decision is either not
+ * recorded yet, or it is recorded.
+ */
+const DECISION_RECORDED = { available: true, status: 'recorded', statusLabel: 'DECISION RECORDED' };
+const DECISION_REQUIRED = { available: true, status: 'required', statusLabel: 'DECISION REQUIRED' };
+
 test('declares the expected investigation stages in order', () => {
   const ids = INVESTIGATION_STAGES.map((stage) => stage.id);
   assert.deepEqual(ids, [
@@ -56,6 +66,7 @@ test('declares the expected investigation stages in order', () => {
     'risk-assessment',
     'trade-structure',
     'final-report',
+    'human-decision',
   ]);
 });
 
@@ -336,27 +347,160 @@ test('an unavailable or incomplete report is never reported as ready', () => {
   }
 });
 
-test('every declared stage is now built; nothing in the investigation is locked', () => {
-  assert.equal(builtStageCount(), 8);
-  assert.equal(lockedStageCount(), 0);
-  assert.equal(INVESTIGATION_STAGE_COUNT, 8);
-});
+test('the human decision is now built (phase 9) and reflects the decision runtime state', () => {
+  const decision = byId('human-decision');
+  assert.equal(decision.available, true);
+  assert.equal(decision.phase, 9);
+  assert.equal(decision.label, 'Human decision');
 
-test('Phase 9+ screens remain planned and are not reachable', async () => {
-  const { NAV_ITEMS } = await import('./constants.js');
-  const future = NAV_ITEMS.filter((item) => item.phase > 8);
+  const research = { market: MARKET_OK, events: EVENTS_OK };
 
-  // The trade report is now Phase 8 and reachable; the decision, review and
-  // trader review screens are still placeholders.
-  assert.ok(future.length >= 3);
-  assert.deepEqual(
-    future.map((item) => item.id),
-    ['decision', 'trade-review', 'trader-review']
+  // No record and nothing requested yet -> loading (NOT complete).
+  assert.equal(
+    stageRuntimeState(
+      decision,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      null
+    ),
+    STAGE_RUNTIME.LOADING
   );
 
-  // Phase 8's own screen, by contrast, is now active.
-  const report = NAV_ITEMS.find((item) => item.id === 'trade-report');
-  assert.equal(report.phase, 8);
+  // The decision has not been recorded yet -> nothing to complete.
+  assert.equal(
+    stageRuntimeState(
+      decision,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_REQUIRED
+    ),
+    STAGE_RUNTIME.UNAVAILABLE
+  );
+
+  // The trader recorded a decision -> complete.
+  assert.equal(
+    stageRuntimeState(
+      decision,
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED
+    ),
+    STAGE_RUNTIME.COMPLETE
+  );
+});
+
+test('the decision stage never claims completion without a recorded decision', () => {
+  const decision = byId('human-decision');
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  for (const value of [
+    null,
+    DECISION_REQUIRED,
+    { available: true, status: 'required' }, // no statusLabel
+    { available: true, status: 'pending' }, // an unsupported status
+    { available: false, status: 'recorded' }, // the service could not be reached
+  ]) {
+    assert.notEqual(
+      stageRuntimeState(
+        decision,
+        research,
+        ATTACK_OK,
+        HISTORY_OK,
+        RISK_READY,
+        STRUCTURE_COMPLETE,
+        REPORT_READY,
+        value
+      ),
+      STAGE_RUNTIME.COMPLETE
+    );
+  }
+});
+
+test('the decision stage does not depend on market data being reachable', () => {
+  const decision = byId('human-decision');
+  // The whole market-data chain is dead, but the decision is the trader's own
+  // record — nothing about it depends on a provider being up.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+
+  assert.equal(
+    stageRuntimeState(
+      decision,
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      null,
+      null,
+      REPORT_UNAVAIL,
+      DECISION_RECORDED
+    ),
+    STAGE_RUNTIME.COMPLETE
+  );
+});
+
+test('decisionState maps only "recorded" onto complete', () => {
+  // decisionState is the single point that maps the service's own status onto a
+  // runtime state, so guard it directly.
+  assert.equal(decisionState(null), STAGE_RUNTIME.LOADING);
+  assert.equal(decisionState(DECISION_REQUIRED), STAGE_RUNTIME.UNAVAILABLE);
+  assert.equal(decisionState(DECISION_RECORDED), STAGE_RUNTIME.COMPLETE);
+  assert.equal(decisionState({ available: true, status: 'required' }), STAGE_RUNTIME.UNAVAILABLE);
+
+  // An unreachable decision service is unavailable, never complete — a status
+  // string alone must not be trusted when the record itself was not available.
+  assert.equal(decisionState({ available: false, status: 'recorded' }), STAGE_RUNTIME.UNAVAILABLE);
+
+  // Any status the service might publish that is not exactly 'recorded' is
+  // treated as not-yet-decided rather than silently promoted to complete.
+  for (const status of ['required', 'RECORDED', '', undefined, null, 'taken', 'approved']) {
+    assert.notEqual(decisionState({ available: true, status }), STAGE_RUNTIME.COMPLETE);
+  }
+});
+
+test('there are exactly two decision states and neither is a verdict', () => {
+  assert.deepEqual(Object.values(DECISION_STATUS).sort(), ['recorded', 'required']);
+
+  // The state names must never read as an opinion on the trade. TAKE, WAIT and
+  // SKIP all land on the SAME state — recording a decision is the work, and the
+  // stage does not grade which one you picked.
+  for (const label of Object.values(DECISION_STATUS)) {
+    assert.ok(!/good|bad|approve|recommend|valid|best|success/i.test(label), `${label} must not be a verdict`);
+  }
+});
+
+test('every declared stage is now built; nothing in the investigation is locked', () => {
+  assert.equal(builtStageCount(), 9);
+  assert.equal(lockedStageCount(), 0);
+  assert.equal(INVESTIGATION_STAGE_COUNT, 9);
+});
+
+test('Phase 10+ screens remain planned and are not reachable', async () => {
+  const { NAV_ITEMS } = await import('./constants.js');
+  const future = NAV_ITEMS.filter((item) => item.phase > 9);
+
+  // The decision screen is now Phase 9 and reachable; the trade review and
+  // trader review screens are still placeholders.
+  assert.ok(future.length >= 2);
+  assert.deepEqual(
+    future.map((item) => item.id),
+    ['trade-review', 'trader-review']
+  );
+
+  // Phase 9's own screen, by contrast, is now active.
+  const decision = NAV_ITEMS.find((item) => item.id === 'decision');
+  assert.equal(decision.phase, 9);
+  assert.equal(decision.label, 'Decision');
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {
@@ -371,20 +515,88 @@ test('partial data is reported as partial, not complete', () => {
   assert.equal(completedStageCountFromResearch(research, ATTACK_UNAVAIL, HISTORY_UNAVAIL), 1);
 });
 
-test('a fully researched trade with a full attack, a usable sample, a defined risk, a complete structure and a ready report marks eight stages complete', () => {
+test('a fully researched trade with a full attack, a usable sample, a defined risk, a complete structure, a ready report and a recorded decision marks nine stages complete', () => {
   const research = { market: MARKET_OK, events: EVENTS_OK };
+  assert.equal(
+    completedStageCountFromResearch(
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED
+    ),
+    9
+  );
+  assert.equal(INVESTIGATION_STAGE_COUNT, 9);
+
+  // Phase 1-8 stages are unaffected by the Phase 9 addition: with no decision
+  // recorded yet, the decision stage is not complete.
   assert.equal(
     completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE, REPORT_READY),
     8
   );
-  assert.equal(INVESTIGATION_STAGE_COUNT, 8);
-
-  // Phase 1-7 stages are unaffected by the Phase 8 addition: with no report
-  // result yet, the report stage is loading rather than complete.
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY, STRUCTURE_COMPLETE), 7);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK, RISK_READY), 6);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, HISTORY_OK), 5);
   assert.equal(completedStageCountFromResearch(research, ATTACK_OK, null), 4);
+});
+
+test('a recorded decision adds exactly one stage and never covers for a missing one', () => {
+  const research = { market: MARKET_OK, events: EVENTS_OK };
+
+  // Everything else complete -> the decision is the ninth and last stage.
+  assert.equal(
+    completedStageCountFromResearch(
+      research,
+      ATTACK_OK,
+      HISTORY_OK,
+      RISK_READY,
+      STRUCTURE_COMPLETE,
+      REPORT_READY,
+      DECISION_RECORDED
+    ) -
+      completedStageCountFromResearch(
+        research,
+        ATTACK_OK,
+        HISTORY_OK,
+        RISK_READY,
+        STRUCTURE_COMPLETE,
+        REPORT_READY
+      ),
+    1
+  );
+
+  // With the whole data chain dead, recording a decision completes only the
+  // thesis stage and the decision stage — it does not stand in for evidence.
+  const deadResearch = { market: MARKET_UNAVAIL, events: EVENTS_UNAVAIL };
+  assert.equal(
+    completedStageCountFromResearch(
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      null,
+      null,
+      REPORT_UNAVAIL,
+      DECISION_RECORDED
+    ),
+    2 // thesis-captured + human-decision
+  );
+
+  // And a not-yet-recorded decision adds nothing.
+  assert.equal(
+    completedStageCountFromResearch(
+      deadResearch,
+      ATTACK_UNAVAIL,
+      HISTORY_UNAVAIL,
+      null,
+      null,
+      REPORT_UNAVAIL,
+      DECISION_REQUIRED
+    ),
+    1
+  );
 });
 
 test('an incomplete or unavailable report adds no completion', () => {
