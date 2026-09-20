@@ -6,8 +6,8 @@
  * be sent to the Bitget Demo environment with virtual funds.
  *
  * What this screen does:
- *   - runs the same deterministic chain the decision screen runs, so the report
- *     and the risk figures behind the order are the same ones
+ *   - reads the report and the risk figures behind the order from the shared
+ *     trade session, so they are the same records the decision screen showed
  *   - evaluates the execution gate server-side and shows only what came back
  *   - requires a separate, typed confirmation before anything is submitted
  *   - shows Bitget Demo's actual returned order data, or its actual error
@@ -20,17 +20,8 @@
  *   - place a live-money order, or fall back to a live venue
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  fetchPaperExecution,
-  submitPaperExecution,
-  fetchResearch,
-  fetchThesisAttack,
-  fetchHistoricalStressTest,
-  fetchRiskAssessment,
-  fetchTradeStructure,
-  fetchFinalReport,
-} from '../lib/api.js';
+import { useCallback, useState } from 'react';
+import { submitPaperExecution } from '../lib/api.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import PaperExecutionPanel from '../components/investigation/PaperExecutionPanel.jsx';
 
@@ -55,216 +46,26 @@ function EmptyExecution({ onEdit }) {
   );
 }
 
-export default function PaperExecutionScreen({ submission, onEdit, decision, onExecutionRecorded }) {
-  const [execution, setExecution] = useState(null);
-  const [report, setReport] = useState(null);
-  const [risk, setRisk] = useState(null);
-  const [structure, setStructure] = useState(null);
+export default function PaperExecutionScreen({ submission, session, onEdit, decision, execution, onExecutionRecorded }) {
+  // The chain ran ONCE, in the shared trade session. This screen reads the
+  // records the gate is evaluated against and submits the order — it never
+  // re-runs the analysis and never recalculates risk.
+  const idea = session?.idea || submission?.idea || null;
+  const context = session?.context || null;
+  const risk = session?.risk ?? null;
+  const structure = session?.structure ?? null;
+  const report = session?.report ?? null;
+  const gate = session?.gate ?? null;
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // The venue's own answer, if this screen produced one.
+  const [venueResult, setVenueResult] = useState(null);
 
-  const idea = submission?.idea || null;
-
-  const context = useMemo(
-    () =>
-      idea
-        ? {
-            asset: idea.asset,
-            direction: idea.direction,
-            thesis: idea.thesis,
-            timeframe: idea.timeframe,
-            entryPrice: idea.entryPrice,
-            invalidationPrice: idea.invalidationPrice,
-            riskAmount: idea.riskAmount,
-            confidence: idea.confidence,
-            existingPosition: idea.existingPosition,
-          }
-        : null,
-    [idea]
-  );
-
-  /**
-   * Runs the deterministic chain so the gate is evaluated against the same
-   * report, risk and structure the trader saw when they decided.
-   *
-   * Nothing here computes risk — every figure comes from a service.
-   */
-  useEffect(() => {
-    if (!submission || !idea) return undefined;
-
-    const tradeContext = {
-      asset: idea.asset,
-      direction: idea.direction,
-      thesis: idea.thesis,
-      timeframe: idea.timeframe,
-      entryPrice: idea.entryPrice,
-      invalidationPrice: idea.invalidationPrice,
-      riskAmount: idea.riskAmount,
-      confidence: idea.confidence,
-      existingPosition: idea.existingPosition,
-    };
-
-    if (submission.offline) {
-      setExecution({
-        available: false,
-        status: 'unavailable',
-        statusLabel: 'PAPER EXECUTION UNAVAILABLE',
-        statusDetail: 'Backend offline — paper execution is evaluated server-side and requires the TradeGuard API.',
-      });
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const settled = { market: null, events: null, attack: null, history: null, risk: null, structure: null };
-    let structureRequested = false;
-    let reportRequested = false;
-    let executionRequested = false;
-
-    // The gate needs the risk result, the structure and the report. It is
-    // requested once all three settle — including on the failure paths, so it
-    // can never hang on "evaluating" when a provider dies mid-chain.
-    const requestExecution = () => {
-      if (cancelled || executionRequested) return;
-      if (!settled.risk || !settled.structure || !settled.report) return;
-      executionRequested = true;
-
-      fetchPaperExecution(tradeContext, {
-        risk: settled.risk,
-        structure: settled.structure,
-        report: settled.report,
-        decision,
-      })
-        .then((e) => {
-          if (cancelled) return;
-          setExecution(e.ok ? e.data.execution : { available: false, statusDetail: e.message });
-          onExecutionRecorded?.(e.ok ? e.data.execution : null);
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setExecution({ available: false, statusDetail: String(err?.message || err) });
-        });
-    };
-
-    const requestReport = () => {
-      if (cancelled || reportRequested) return;
-      if (Object.values(settled).some((v) => v === null)) return;
-      reportRequested = true;
-
-      fetchFinalReport(tradeContext, {
-        market: settled.market,
-        events: settled.events,
-        attack: settled.attack,
-        history: settled.history,
-        risk: settled.risk,
-        structure: settled.structure,
-      })
-        .then((r) => {
-          if (cancelled) return;
-          settled.report = r.ok ? r.data.report : { available: false, statusDetail: r.message };
-          setReport(settled.report);
-          requestExecution();
-        })
-        .catch((e) => {
-          if (cancelled) return;
-          settled.report = { available: false, statusDetail: String(e?.message || e) };
-          setReport(settled.report);
-          requestExecution();
-        });
-    };
-
-    const requestStructure = () => {
-      if (cancelled || structureRequested || !settled.risk || !settled.attack) return;
-      structureRequested = true;
-
-      fetchTradeStructure(tradeContext, { risk: settled.risk, attack: settled.attack })
-        .then((s) => {
-          if (cancelled) return;
-          settled.structure = s.ok ? s.data.structure : { available: false, statusDetail: s.message };
-          setStructure(settled.structure);
-          requestReport();
-        })
-        .catch((e) => {
-          if (cancelled) return;
-          settled.structure = { available: false, statusDetail: String(e?.message || e) };
-          setStructure(settled.structure);
-          requestReport();
-        });
-    };
-
-    fetchRiskAssessment(tradeContext)
-      .then((r) => {
-        if (cancelled) return;
-        settled.risk = r.ok ? r.data.risk : { available: false, statusDetail: r.message };
-        setRisk(settled.risk);
-        requestStructure();
-        requestReport();
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        settled.risk = { available: false, statusDetail: String(e?.message || e) };
-        setRisk(settled.risk);
-        requestStructure();
-        requestReport();
-      });
-
-    fetchResearch(tradeContext)
-      .then((r) => {
-        if (cancelled) return undefined;
-        const researchData = r.ok
-          ? r.data
-          : {
-              market: { available: false, reason: r.message },
-              events: { available: false, reason: r.message },
-            };
-        settled.market = researchData.market;
-        settled.events = researchData.events;
-
-        return fetchThesisAttack(tradeContext, { market: researchData.market, events: researchData.events })
-          .then((a) => {
-            if (cancelled) return undefined;
-            settled.attack = a.ok ? a.data.analysis : { available: false, reason: a.message };
-            requestStructure();
-
-            return fetchHistoricalStressTest(tradeContext, {
-              market: researchData.market,
-              events: researchData.events,
-            })
-              .then((h) => {
-                if (cancelled) return;
-                settled.history = h.ok ? h.data.history : { available: false, reason: h.message };
-                requestReport();
-              })
-              .catch((e) => {
-                if (cancelled) return;
-                settled.history = { available: false, reason: String(e?.message || e) };
-                requestReport();
-              });
-          })
-          .catch((e) => {
-            if (cancelled) return;
-            const message = String(e?.message || e);
-            settled.attack = { available: false, reason: message };
-            settled.history = { available: false, reason: message };
-            requestStructure();
-            requestReport();
-          });
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        const message = String(e?.message || e);
-        settled.market = { available: false, reason: message };
-        settled.events = { available: false, reason: message };
-        settled.attack = { available: false, reason: message };
-        settled.history = { available: false, reason: message };
-        requestStructure();
-        requestReport();
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [submission, idea, decision]);
+  // What ACTUALLY happened outranks a fresh gate read — and because the record
+  // is held in App state, a submitted order is still on screen after navigating
+  // away and back.
+  const shownExecution = venueResult || execution || gate;
 
   /**
    * Submit the paper order.
@@ -291,12 +92,12 @@ export default function PaperExecutionScreen({ submission, onEdit, decision, onE
         });
 
         if (!result.ok) {
-          if (result.execution) setExecution(result.execution);
+          if (result.execution) setVenueResult(result.execution);
           setError(result.message);
           return;
         }
 
-        setExecution(result.data.execution);
+        setVenueResult(result.data.execution);
         onExecutionRecorded?.(result.data.execution);
       } catch (e) {
         setError(String(e?.message || e));
@@ -328,7 +129,7 @@ export default function PaperExecutionScreen({ submission, onEdit, decision, onE
 
         <div className="exec__stage">
           <PaperExecutionPanel
-            execution={execution}
+            execution={shownExecution}
             idea={idea}
             onExecute={handleExecute}
             submitting={submitting}

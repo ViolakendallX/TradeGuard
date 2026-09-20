@@ -2150,6 +2150,57 @@ textarea {
   align-self: center;
 }
 
+/* --- workspace section navigator (Final Report, Trade Review) -------------
+   A compact horizontal strip used to move between the sections of a focused
+   workspace. It reuses the investigation pill look (inv-nav__item) so the
+   selected state and state dots are identical everywhere, and simply wraps when
+   it does not fit rather than forcing a horizontal scrollbar. */
+.ws-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.ws-nav__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.ws-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 2px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ws-nav__li {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ws-nav__badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  background: var(--bg-panel);
+}
+
 /* --- 3. main analysis workspace ----------------------------------------- */
 
 .inv-panel {
@@ -3300,6 +3351,108 @@ textarea {
   line-height: 1.7;
 }
 
+/* --- Trade Review (Phase 11) --- */
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review__status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.review__status-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.review__section-body {
+  font-size: 12.5px;
+}
+
+.review__thesis {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.review__reason {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border-strong);
+  background: var(--bg-panel);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.review__known-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.review__known-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.review__known-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.review__known-text.is-empty {
+  color: var(--text-muted);
+}
+
+.review__src-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.review__limits {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review__limit {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.review__disclaimer {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.5;
+}
+
 .report__interpretation {
   display: flex;
   flex-direction: column;
@@ -3712,6 +3865,39 @@ textarea {
 .decision__status-note {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+/* --- decision workspace: a compact brief + the form (no inline report) ---- */
+.decision__workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.decision__brief-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.decision__counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.decision__brief-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
 /* --- layout: report as context, decision beside it ------------------------ */

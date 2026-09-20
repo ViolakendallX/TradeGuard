@@ -5,18 +5,19 @@
  * thesis, research, attack, stress test, risk, structure, final report — and the
  * trader now records what THEY are going to do about it.
  *
- * The screen is the natural final step after reading the Final Trade Report, so
- * it renders that report above the decision form. The report is CONTEXT: it is
- * what the trader is deciding against. The decision itself sits below it and
- * clearly belongs to the trader.
+ * INFORMATION ARCHITECTURE: this screen answers exactly one question —
+ * "what am I deciding, and what do I need immediately before deciding?"
+ * It shows a compact decision brief (report status, quick summary, investigation
+ * status), the original thesis, the risk figures, and the decision form. It does
+ * NOT render the entire Final Trade Report inline any more; a "View full report →"
+ * action opens the dedicated, navigable report workspace. The report is not
+ * removed — it is separated from the act of deciding.
  *
  * What this screen does:
  *   - runs the same deterministic chain the investigation screen runs, so the
- *     report the trader reads here is the same report, from the same services
- *   - fetches the current decision record (if any) so a recorded decision
- *     survives navigation
- *   - sends the trader's decision to the backend and shows exactly what was
- *     stored
+ *     report status and the investigation status are the same ones, from the same
+ *     services
+ *   - sends the trader's decision to the backend and shows exactly what was stored
  *
  * What it does NOT do:
  *   - choose, suggest, score or predict the decision
@@ -25,19 +26,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  recordHumanDecision,
-  fetchResearch,
-  fetchThesisAttack,
-  fetchHistoricalStressTest,
-  fetchRiskAssessment,
-  fetchTradeStructure,
-  fetchFinalReport,
-} from '../lib/api.js';
-import { buildSectionNav } from '../lib/investigationView.js';
+import { recordHumanDecision } from '../lib/api.js';
+import { STAGE_RUNTIME } from '../lib/investigation.js';
+import { buildSectionNav, fmt } from '../lib/investigationView.js';
+import { TIMEFRAME_LABELS } from '../lib/constants.js';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
-import InvestigationPanel from '../components/investigation/InvestigationPanel.jsx';
 import DecisionPanel from '../components/investigation/DecisionPanel.jsx';
+import { DataRow, UnavailableNotice } from '../components/investigation/primitives.jsx';
+
+const DIRECTION_LABELS = { bullish: 'Bullish', bearish: 'Bearish', neutral: 'Neutral' };
 
 function EmptyDecision({ onEdit }) {
   return (
@@ -60,183 +57,23 @@ function EmptyDecision({ onEdit }) {
   );
 }
 
-export default function DecisionScreen({ submission, onEdit, decision, onDecisionRecorded }) {
-  const [report, setReport] = useState(null);
-  // The Phase 6 risk result, kept so the decision record can carry the defined
-  // risk through with it. Held here rather than inside the report chain because
-  // the decision needs it independently of whether the report finished.
-  const [risk, setRisk] = useState(null);
-  const [showReport, setShowReport] = useState(true);
+export default function DecisionScreen({ submission, session, onEdit, decision, onDecisionRecorded, onNavigate }) {
+  // Every analysis input comes from the shared trade session — the chain ran
+  // once, when the trade was submitted. Recording a decision therefore does NOT
+  // re-run it: only the execution gate and the review depend on the decision,
+  // and both are cheap server-side assemblies with no providers behind them.
+  const idea = session?.idea || submission?.idea || null;
+  const context = session?.context || null;
+  const research = session?.research ?? null;
+  const attack = session?.attack ?? null;
+  const history = session?.history ?? null;
+  const risk = session?.risk ?? null;
+  const structure = session?.structure ?? null;
+  const report = session?.report ?? null;
+
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [localErrors, setLocalErrors] = useState({});
-
-  const idea = submission?.idea || null;
-
-  // --- build the report context, exactly as the investigation screen does -----
-  // The decision screen renders the Phase 8 report so the trader decides against
-  // something real. It is the same deterministic chain: no new analysis, no new
-  // provider, no new arithmetic.
-  useEffect(() => {
-    if (!submission || !idea) return undefined;
-
-    const context = {
-      asset: idea.asset,
-      direction: idea.direction,
-      thesis: idea.thesis,
-      timeframe: idea.timeframe,
-      entryPrice: idea.entryPrice,
-      invalidationPrice: idea.invalidationPrice,
-      riskAmount: idea.riskAmount,
-      confidence: idea.confidence,
-      existingPosition: idea.existingPosition,
-    };
-
-    if (submission.offline) {
-      setReport({
-        available: false,
-        statusLabel: 'REPORT UNAVAILABLE',
-        statusDetail: 'Backend offline — the final report is assembled server-side and requires the TradeGuard API.',
-      });
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    // The report is a synthesis of the whole investigation, so it needs every
-    // earlier result. We run the same deterministic chain the investigation
-    // screen runs — the same services, the same order, the same dependencies —
-    // so the report shown here is the same report, not a second opinion.
-    const settled = {
-      market: null,
-      events: null,
-      attack: null,
-      history: null,
-      risk: null,
-      structure: null,
-    };
-    let reportRequested = false;
-    let structureRequested = false;
-
-    // The structure depends on the risk result and the attack, so it fires once
-    // both are in — including on the failure paths, so it can never hang on
-    // "loading" when a provider dies mid-chain.
-    const requestStructure = () => {
-      if (cancelled || structureRequested || !settled.risk || !settled.attack) return;
-      structureRequested = true;
-
-      fetchTradeStructure(context, { risk: settled.risk, attack: settled.attack })
-        .then((s) => {
-          if (cancelled) return;
-          settled.structure = s.ok ? s.data.structure : { available: false, statusDetail: s.message };
-          requestReport();
-        })
-        .catch((e) => {
-          if (cancelled) return;
-          settled.structure = { available: false, statusDetail: String(e?.message || e) };
-          requestReport();
-        });
-    };
-
-    const requestReport = () => {
-      if (cancelled || reportRequested) return;
-      if (Object.values(settled).some((v) => v === null)) return;
-      reportRequested = true;
-
-      fetchFinalReport(context, {
-        market: settled.market,
-        events: settled.events,
-        attack: settled.attack,
-        history: settled.history,
-        risk: settled.risk,
-        structure: settled.structure,
-      })
-        .then((r) => {
-          if (!cancelled) setReport(r.ok ? r.data.report : { available: false, statusDetail: r.message });
-        })
-        .catch((e) => {
-          if (!cancelled) setReport({ available: false, statusDetail: String(e?.message || e) });
-        });
-    };
-
-    // The risk engine is pure arithmetic on the trader's own levels, so it runs
-    // outside the market-data chain and still resolves when providers are down.
-    fetchRiskAssessment(context)
-      .then((r) => {
-        if (cancelled) return;
-        settled.risk = r.ok ? r.data.risk : { available: false, statusDetail: r.message };
-        setRisk(settled.risk);
-        requestStructure();
-        requestReport();
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        settled.risk = { available: false, statusDetail: String(e?.message || e) };
-        setRisk(settled.risk);
-        requestStructure();
-        requestReport();
-      });
-
-    fetchResearch(context)
-      .then((r) => {
-        if (cancelled) return undefined;
-        const researchData = r.ok
-          ? r.data
-          : {
-              market: { available: false, reason: r.message },
-              events: { available: false, reason: r.message },
-            };
-        settled.market = researchData.market;
-        settled.events = researchData.events;
-
-        return fetchThesisAttack(context, {
-          market: researchData.market,
-          events: researchData.events,
-        })
-          .then((a) => {
-            if (cancelled) return undefined;
-            settled.attack = a.ok ? a.data.analysis : { available: false, reason: a.message };
-            requestStructure();
-
-            return fetchHistoricalStressTest(context, {
-              market: researchData.market,
-              events: researchData.events,
-            })
-              .then((h) => {
-                if (cancelled) return;
-                settled.history = h.ok ? h.data.history : { available: false, reason: h.message };
-                requestReport();
-              })
-              .catch((e) => {
-                if (cancelled) return;
-                settled.history = { available: false, reason: String(e?.message || e) };
-                requestReport();
-              });
-          })
-          .catch((e) => {
-            if (cancelled) return;
-            const message = String(e?.message || e);
-            settled.attack = { available: false, reason: message };
-            settled.history = { available: false, reason: message };
-            requestStructure();
-            requestReport();
-          });
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        const message = String(e?.message || e);
-        settled.market = { available: false, reason: message };
-        settled.events = { available: false, reason: message };
-        settled.attack = { available: false, reason: message };
-        settled.history = { available: false, reason: message };
-        requestStructure();
-        requestReport();
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [submission, idea]);
 
   // A new submission clears any errors from the previous one.
   useEffect(() => {
@@ -245,35 +82,32 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
   }, [submission]);
 
   // Prefer the freshly calculated Phase 6 result; fall back to the risk already
-  // stored on a recorded decision when this is an edit and the fetch has not
-  // settled yet. Either way the figures are the ENGINE's — nothing here computes.
+  // stored on a recorded decision when this is an edit. Either way the figures
+  // are the ENGINE's — nothing here computes.
   const riskContext = risk || decision?.risk || null;
 
-  const context = useMemo(
-    () =>
-      idea
-        ? {
-            asset: idea.asset,
-            direction: idea.direction,
-            thesis: idea.thesis,
-            timeframe: idea.timeframe,
-            entryPrice: idea.entryPrice,
-            invalidationPrice: idea.invalidationPrice,
-            riskAmount: idea.riskAmount,
-            confidence: idea.confidence,
-            existingPosition: idea.existingPosition,
-          }
-        : null,
-    [idea]
-  );
+  // Investigation status: how many analysis stages produced usable data, from the
+  // SAME stage model the investigation rail uses. No new computation.
+  const investigationCounts = useMemo(() => {
+    const sections = buildSectionNav(research, attack, history, risk, structure, report, decision).filter(
+      (s) => s.id !== 'human-decision' && s.id !== 'paper-execution'
+    );
+    const count = (runtime) => sections.filter((s) => s.runtime === runtime).length;
+    return {
+      total: sections.length,
+      available: count(STAGE_RUNTIME.COMPLETE),
+      partial: count(STAGE_RUNTIME.PARTIAL),
+      unavailable:
+        count(STAGE_RUNTIME.UNAVAILABLE) + count(STAGE_RUNTIME.LOCKED) + count(STAGE_RUNTIME.LOADING),
+    };
+  }, [research, attack, history, risk, structure, report, decision]);
 
   /**
    * Record the trader's decision.
    *
    * A local pre-check runs first so the trader gets an immediate answer on the
    * two things the backend will certainly reject — no decision selected, or an
-   * empty reason — but the BACKEND remains authoritative: whatever it says is
-   * what is displayed.
+   * empty reason — but the BACKEND remains authoritative.
    */
   const handleRecord = useCallback(
     async ({ decision: chosen, reason }) => {
@@ -302,7 +136,6 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
         });
 
         if (!result.ok) {
-          // Server-side validation is the source of truth.
           if (result.kind === 'validation') setErrors(result.errors || {});
           else setErrors({ general: result.message });
           return;
@@ -322,9 +155,8 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
     return <EmptyDecision onEdit={onEdit} />;
   }
 
-  const sections = buildSectionNav(null, null, null, null, null, report, decision);
-  const reportSection = sections.find((section) => section.id === 'final-report');
-  const decisionSection = sections.find((section) => section.id === 'human-decision');
+  const reportReady = report && report.available !== false;
+  const riskReady = risk && risk.available !== false && Boolean(risk.calculation);
 
   return (
     <>
@@ -332,8 +164,8 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
         <div className="page-head__eyebrow">Step 4 — Decision</div>
         <h1 className="page-head__title">Your decision</h1>
         <p className="page-head__lede">
-          The investigation is done. Read the final report, then record the decision you are making
-          — TAKE, WAIT or SKIP — with your own reason. TradeGuard does not choose this for you, does
+          Everything you need immediately before deciding is on this screen. Record the decision you are
+          making — TAKE, WAIT or SKIP — with your own reason. TradeGuard does not choose this for you, does
           not suggest an option, and does not execute anything. It records what you decided.
         </p>
       </div>
@@ -341,50 +173,109 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
       <div className="inv-workspace">
         <TradeHeader idea={idea} offline={Boolean(submission.offline)} onEdit={onEdit} />
 
-        <div className="decision__layout">
-          {/* --- the report, as context --- */}
-          <div className="decision__context">
-            <div className="decision__context-head">
-              <div>
-                <div className="decision__context-eyebrow">Context</div>
-                <div className="decision__context-title">The final trade report you are deciding on</div>
-              </div>
-              <button
-                type="button"
-                className="btn btn--ghost"
-                onClick={() => setShowReport((v) => !v)}
-                data-decision-toggle-report="true"
+        <div className="decision__workspace">
+          {/* --- YOUR DECISION: the decision brief --------------------------- */}
+          <section className="report__section" data-decision-brief="true">
+            <div className="report__section-title">
+              <span className="report__section-label">Your decision</span>
+            </div>
+
+            <div className="decision__brief-top">
+              <span
+                className={`report__badge report__badge--${reportReady ? report.status : 'unavailable'}`}
+                data-decision-report-status="true"
               >
-                {showReport ? 'Hide report' : 'Show report'}
-              </button>
+                {reportReady ? report.statusLabel : 'REPORT UNAVAILABLE'}
+              </span>
+              {onNavigate && (
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => onNavigate('trade-report')}
+                  data-decision-view-report="true"
+                >
+                  View full report →
+                </button>
+              )}
             </div>
 
-            {showReport && reportSection && (
-              <InvestigationPanel
-                section={{ ...reportSection }}
-                research={null}
-                attack={null}
-                history={null}
-                risk={null}
-                structure={null}
-                report={report}
-                decision={decision}
-                idea={idea}
-                onEdit={onEdit}
+            <div className="report__sub-label">Quick summary</div>
+            <dl className="data-grid">
+              <DataRow label="Asset" value={idea.asset || '—'} />
+              <DataRow label="Direction" value={DIRECTION_LABELS[idea.direction] || idea.direction || '—'} />
+              <DataRow
+                label="Timeframe"
+                value={TIMEFRAME_LABELS[idea.timeframe] || idea.timeframe || 'Not specified'}
               />
-            )}
-          </div>
+              <DataRow label="Entry" value={fmt(idea.entryPrice)} />
+              <DataRow label="Invalidation / stop" value={fmt(idea.invalidationPrice)} />
+              <DataRow label="Risk" value={fmt(idea.riskAmount)} />
+              <DataRow label="Confidence" value={idea.confidence != null ? `${idea.confidence} / 10` : '—'} />
+            </dl>
 
-          {/* --- the decision --- */}
-          <div className="decision__stage">
-            <div className="decision__stage-head">
-              <h2 className="decision__stage-title">Record your decision</h2>
-              <p className="decision__stage-desc">
-                This is your call, not TradeGuard&apos;s. Recording it stores what you decided and
-                why — nothing more.
-              </p>
+            <div className="report__sub-label">Investigation status</div>
+            <div className="decision__counts" data-decision-investigation-status="true">
+              <span className="report__count report__count--available">
+                <strong>{investigationCounts.available}</strong> available
+              </span>
+              <span className="report__count report__count--partial">
+                <strong>{investigationCounts.partial}</strong> partial
+              </span>
+              <span className="report__count report__count--unavailable">
+                <strong>{investigationCounts.unavailable}</strong> unavailable
+              </span>
+              <span className="report__count report__count--total">of {investigationCounts.total} sections</span>
             </div>
+            <p className="report__footnote">
+              The full investigation and the consolidated report remain available — this brief is only what
+              you need to decide.
+            </p>
+          </section>
 
+          {/* --- THESIS ------------------------------------------------------ */}
+          <section className="report__section" data-decision-thesis="true">
+            <div className="report__section-title">
+              <span className="report__section-label">Thesis</span>
+            </div>
+            <blockquote className="report__thesis">{idea.thesis}</blockquote>
+            <p className="report__footnote">Your own words, unchanged.</p>
+          </section>
+
+          {/* --- RISK -------------------------------------------------------- */}
+          <section className="report__section" data-decision-risk-section="true">
+            <div className="report__section-title">
+              <span className="report__section-label">Risk</span>
+            </div>
+            {riskReady ? (
+              <dl className="data-grid">
+                <DataRow label="Entry" value={fmt(risk.inputs?.entryPrice ?? idea.entryPrice)} />
+                <DataRow
+                  label="Invalidation / stop"
+                  value={fmt(risk.inputs?.invalidationPrice ?? idea.invalidationPrice)}
+                />
+                <DataRow label="Risk budget" value={fmt(risk.calculation?.riskBudget)} />
+                <DataRow label="Price risk / unit" value={fmt(risk.calculation?.priceRiskPerUnit)} />
+                <DataRow label="Position size" value={`${fmt(risk.calculation?.positionSize)} units`} />
+                <DataRow label="Defined risk" value={fmt(risk.calculation?.definedRisk)} />
+              </dl>
+            ) : (
+              <UnavailableNotice reason={risk?.statusDetail || 'The risk assessment is not available.'} />
+            )}
+            <p className="report__footnote">
+              Calculated by the Phase 6 risk engine from your own entry, invalidation and risk budget — not
+              recalculated here.
+            </p>
+          </section>
+
+          {/* --- DECISION ---------------------------------------------------- */}
+          <section className="report__section" data-decision-form-section="true">
+            <div className="report__section-title">
+              <span className="report__section-label">Record your decision</span>
+            </div>
+            <p className="decision__stage-desc">
+              This is your call, not TradeGuard&apos;s. Recording it stores what you decided and why —
+              nothing more.
+            </p>
             <DecisionPanel
               decision={decision}
               idea={idea}
@@ -393,7 +284,23 @@ export default function DecisionScreen({ submission, onEdit, decision, onDecisio
               errors={{ ...errors, ...localErrors }}
               onEditDecision={() => onDecisionRecorded?.(null)}
             />
-          </div>
+          </section>
+
+          {onNavigate && (
+            <div className="decision__brief-foot">
+              <button
+                type="button"
+                className="btn btn--inline"
+                onClick={() => onNavigate('trade-report')}
+                data-decision-view-report-foot="true"
+              >
+                View full report →
+              </button>
+              <span className="decision__actions-note">
+                Opens the navigable Final Trade Report. It stays available whether or not you decide now.
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </>

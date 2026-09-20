@@ -4,9 +4,12 @@ import TradeIdeaScreen from './screens/TradeIdeaScreen.jsx';
 import InvestigationScreen from './screens/InvestigationScreen.jsx';
 import DecisionScreen from './screens/DecisionScreen.jsx';
 import PaperExecutionScreen from './screens/PaperExecutionScreen.jsx';
+import TradeReportScreen from './screens/TradeReportScreen.jsx';
+import TradeReviewScreen from './screens/TradeReviewScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
+import useTradeSession from './lib/useTradeSession.js';
 
 const DEFAULT_SCREEN = 'trade-idea';
 const SCREEN_IDS = NAV_ITEMS.map((item) => item.id);
@@ -31,6 +34,16 @@ export default function App() {
   // submitted order is still visible after the trader navigates back into the
   // investigation.
   const [execution, setExecution] = useState(null);
+  // Phase 11: trader-entered review notes. Held here so they survive navigation
+  // within the session. TradeGuard never auto-fills or learns from them.
+  const [reviewNotes, setReviewNotes] = useState('');
+
+  // The current trade's server-side records (research, attack, history, risk,
+  // structure, report, the execution gate, and the trade review). Fetched ONCE
+  // per trade here, at the level that owns the trade — so switching between
+  // workspaces reuses what is already loaded instead of re-running the chain,
+  // and a new trade resets the session to empty.
+  const session = useTradeSession(submission, decision, execution);
 
   useEffect(() => {
     const onHashChange = () => setScreen(readScreenFromHash());
@@ -64,9 +77,10 @@ export default function App() {
       setDraft(form);
       // A different trade is a different decision and a different execution:
       // neither previous record may carry over and be mistaken for one about
-      // this trade.
+      // this trade. The same goes for any review notes from a prior trade.
       setDecision(null);
       setExecution(null);
+      setReviewNotes('');
       navigate('investigation');
     },
     [navigate]
@@ -100,10 +114,14 @@ export default function App() {
       ? 'Submit the trade you are considering.'
       : screen === 'investigation'
       ? 'TradeGuard is examining your thesis before you risk capital.'
+      : screen === 'trade-report'
+      ? 'The whole investigation consolidated into one navigable report. A synthesis, not a verdict.'
       : screen === 'decision'
       ? 'Record the decision you are making. TradeGuard records it — it does not make it.'
       : screen === 'paper-execution'
       ? 'Confirm, or do not, that this trade goes to Bitget Demo with virtual funds.'
+      : screen === 'trade-review'
+      ? 'This review describes what happened after the decision you already made. It does not tell you what to do next.'
       : 'Not built in this phase.';
 
   return (
@@ -119,24 +137,40 @@ export default function App() {
       ) : screen === 'investigation' ? (
         <InvestigationScreen
           submission={submission}
+          session={session}
           onEdit={handleEdit}
           decision={decision}
           execution={execution}
           onNavigate={navigate}
         />
+      ) : screen === 'trade-report' ? (
+        <TradeReportScreen submission={submission} session={session} onEdit={handleEdit} onNavigate={navigate} />
       ) : screen === 'decision' ? (
         <DecisionScreen
           submission={submission}
+          session={session}
           onEdit={handleEdit}
           decision={decision}
           onDecisionRecorded={handleDecisionRecorded}
+          onNavigate={navigate}
         />
       ) : screen === 'paper-execution' ? (
         <PaperExecutionScreen
           submission={submission}
+          session={session}
           onEdit={handleEdit}
           decision={decision}
           onExecutionRecorded={handleExecutionRecorded}
+        />
+      ) : screen === 'trade-review' ? (
+        <TradeReviewScreen
+          submission={submission}
+          session={session}
+          onEdit={handleEdit}
+          decision={decision}
+          execution={execution}
+          notes={reviewNotes}
+          onNotesChange={setReviewNotes}
         />
       ) : (
         <PlaceholderScreen screenId={screen} onNavigate={navigate} />

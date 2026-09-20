@@ -2,7 +2,7 @@ import { NAV_ITEMS } from '../lib/constants.js';
 
 // Phases that are actually built. Everything at or below this is interactive;
 // later phases remain disabled until their phase lands.
-const CURRENT_PHASE = 10;
+const CURRENT_PHASE = 11;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
   return (
@@ -44,12 +44,14 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 10 — Paper execution. The Devil's Advocate challenges your thesis, history shows what followed
+          Phase 11 — Trade Review. The Devil's Advocate challenges your thesis, history shows what followed
           similar past setups, the risk engine calculates the defined risk from your own entry, invalidation
           and risk budget, the trade structure brings it all together into one plan, the final report
           consolidates the whole investigation into a single report, you record your own decision —
           TradeGuard records it, it does not make it — and only then can you confirm paper execution, which
-          sends the trade to Bitget Demo with virtual funds. No live-money order is ever placed.
+          sends the trade to Bitget Demo with virtual funds. Trade Review then assembles those verified
+          records into one read-only view of what happened. No live-money order is ever placed, and no
+          profit, loss or fill is ever shown unless it was actually verified.
         </div>
       </div>
     </aside>

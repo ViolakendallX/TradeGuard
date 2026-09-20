@@ -6,7 +6,7 @@
 
 TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined, consolidates the whole investigation into one report — and then you record the decision yourself.
 
-**Status:** Phases 1–9 complete · Phases 10–13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–11 complete · Phases 12–13 planned. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,7 +14,7 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does nine things:
+It does eleven things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
@@ -24,6 +24,8 @@ It does nine things:
 - **Brings the trade together into one structured plan** — asset, direction, timeframe, entry, invalidation, risk and thesis conditions collected into a single view, reusing the risk engine's numbers rather than recomputing them, or reported as an explicit incomplete state.
 - **Consolidates everything into one final report** — the setup, the thesis and its evidence, the market and event context, the attack, the historical comparison, the defined risk and the invalidation conditions collected into one scannable report, with every section marked available, partial or unavailable and the remaining information gaps listed.
 - **Records the decision you make, but never makes it** — you choose TAKE, WAIT or SKIP and give your own reason, and TradeGuard stores that decision with the time it was recorded and the trade and risk context behind it. It does not suggest which one to pick, does not write the reason, and does not execute anything.
+- **Sends a confirmed paper order to the Bitget Demo environment, and nowhere else** — only after you recorded TAKE, only after a separate typed confirmation, and only with virtual funds. It evaluates the execution gate server-side first, shows you exactly what would be submitted, and reports the venue's own response or its actual error. There is no live-money path in the product.
+- **Reviews what happened after your decision** — it assembles the records TradeGuard already produced (your thesis, the risk and structure you saw, your recorded decision, and the paper-execution outcome) into one read-only review, and answers *what happened after I made this decision?* It never tells you what to do next, and never shows a profit, loss or fill unless one was actually verified.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -52,10 +54,10 @@ THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
        →  TRADE STRUCTURE  →  FINAL REPORT  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  LEARN
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT → HUMAN DECISION.
-**Still on the roadmap:** PAPER EXECUTION, REVIEW, LEARN.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT → HUMAN DECISION → PAPER EXECUTION → REVIEW.
+**Still on the roadmap:** LEARN.
 
-Later stages are planned, not built. Nothing after Phase 9 is presented as working.
+Later stages are planned, not built. Nothing after Phase 11 is presented as working.
 
 ---
 
@@ -72,7 +74,13 @@ Trade Idea  →  Investigation  →  Market Context
                               →  Trade Structure
                               →  Final Trade Report
                               →  Human Decision            (recorded by you)
+           →  Trade Report      (the final report as its own navigable workspace)
+           →  Decision          (record your TAKE / WAIT / SKIP and your reason)
+           →  Paper Execution   (Bitget Demo only, after a typed confirmation)
+           →  Trade Review      (what happened after your decision)
 ```
+
+Every one of those screens is a **workspace**, not a long scrolling page: a persistent trade header, a compact section navigator, and one section on screen at a time. Once a trade's records are loaded they are held for that trade, so moving between screens and between sections is immediate and does not re-run any analysis.
 
 **You submit:** asset, direction, thesis, timeframe, entry price, invalidation / stop price, risk amount, confidence, and existing position.
 
@@ -93,15 +101,21 @@ Trade Idea  →  Investigation  →  Market Context
 - state explicitly that the report is a summary of the trade and the evidence, and that the final decision remains with the trader
 - record the decision **you** make — TAKE, WAIT or SKIP — together with the reason you write for it, the time it was recorded, and the trade and risk context it was made against
 - keep that recorded decision visible next to the report it was made from, so you can see the evidence and your own call in the same place
+- evaluate the paper-execution gate server-side — PAPER EXECUTION LOCKED / READY / UNAVAILABLE — and show exactly what would be submitted, without sending anything to any venue
+- submit a paper order to the **Bitget Demo** environment with virtual funds, but only after you recorded TAKE and typed a separate confirmation token, and then report the venue's own returned order data or its actual error
+- assemble the post-decision **trade review** from the records TradeGuard already produced — the thesis, the risk and structure you saw, your recorded decision and the paper-execution outcome — without re-running any analysis
+- report honestly when there is no verified profit, loss or fill, instead of inferring one
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
 
-Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there. The Human Decision stage follows the same rule from the other direction: it is complete only once **you** have actually recorded a decision, so it stays in **DECISION REQUIRED** until a decision exists rather than assuming one.
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there. The Human Decision stage follows the same rule from the other direction: it is complete only once **you** have actually recorded a decision, so it stays in **DECISION REQUIRED** until a decision exists rather than assuming one. Paper Execution follows the same rule once more: it reports **EXECUTION LOCKED** until you have recorded TAKE, and even then it does not claim a result — it shows the gate as evaluated, and a submitted order is only ever shown as submitted because the venue actually returned one. Trade Review applies the rule to the whole record: it is **REVIEW READY** only when the records it reviews actually exist, **REVIEW INCOMPLETE** when some are missing, and **REVIEW UNAVAILABLE** when it cannot be assembled at all — and it reports an outcome of NOT-EXECUTED rather than inventing a fill or a profit.
 
 One distinction matters for the final report. A report whose sections are honestly marked **unavailable** is still a real report: it tells you which evidence is missing and why. What it never does is dress an incomplete investigation up as a complete one, or substitute generic commentary, assumed prices or invented events for evidence it does not have.
 
 The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, stop, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
+
+The same workspace pattern carries through every later screen. **Trade Report** presents the ten-section report as a navigable workspace (Summary is the landing section) instead of one long document. **Decision** shows a compact brief — the report status, a quick summary, the investigation status, your thesis and the risk figures — with a **View full report →** action that opens the report workspace, so the act of deciding is not buried under the whole report. **Paper Execution** is a focused workspace for the gate, the structure, the risk context and the venue's response. **Trade Review** is a navigable workspace of its own. Switching sections inside any of these is local UI state: it issues no network request and re-runs no analysis. The records themselves are fetched **once per trade** and held for that trade, so moving between screens — and returning to a screen you already loaded — reuses what is already there rather than re-running the investigation. A new trade starts from an empty session; the previous trade's records are never shown against it.
 
 ---
 
@@ -118,12 +132,14 @@ The Investigation screen presents all of this as a single workspace rather than 
 | Phase 7 — Trade Structuring | The trader's own setup combined with the risk engine's result, the thesis context and the invalidation conditions into one structured trade plan, with explicit STRUCTURE COMPLETE / STRUCTURE INCOMPLETE / TRADE STRUCTURE UNAVAILABLE states | ✅ Complete |
 | Phase 8 — Final Trade Report | The whole investigation consolidated into one scannable report, with per-section AVAILABLE / PARTIAL / UNAVAILABLE evidence states, the Phase 6 risk engine's numbers reused without recalculation, consolidated information gaps and limitations, and the explicit human decision boundary, under REPORT READY / REPORT INCOMPLETE / REPORT UNAVAILABLE states | ✅ Complete |
 | Phase 9 — Human Decision | The trader's own decision recorded against the trade — TAKE / WAIT / SKIP with a required trader-written reason, a system-generated timestamp, deterministic server-side validation, and the trade and risk context attached, under DECISION REQUIRED / DECISION RECORDED states. TradeGuard records the decision; it does not make it, recommend it, score it or execute it | ✅ Complete |
-| Phase 10 — Paper Execution | Paper order submission, execution status, trade record | ⏳ Planned |
-| Phase 11 — Trade Memory | Persistent trade journal | ⏳ Planned |
-| Phase 12 — Post-Trade Review | Before/after comparison, AI warnings, outcome, lesson | ⏳ Planned |
+| Phase 10 — Paper Execution | A paper order submitted to the Bitget Demo environment with virtual funds — the execution gate (PAPER EXECUTION LOCKED / READY / UNAVAILABLE), a separate typed confirmation token, the venue's own returned order data or its actual error, and the standing guarantee that no live-money order is ever placed, under EXECUTION LOCKED / EXECUTION READY / PAPER ORDER SUBMITTED / PAPER ORDER FAILED / PAPER EXECUTION UNAVAILABLE states | ✅ Complete |
+| Phase 11 — Trade Review | The post-decision review assembled from the records TradeGuard already produced — the thesis, the Phase 6/7 risk and structure, the Phase 9 decision and the Phase 10 execution outcome — presented as a navigable workspace with the trader's own review notes, under REVIEW LOCKED / READY / INCOMPLETE / UNAVAILABLE states. It reports what happened; it does not tell you what to do next, and it never shows a profit, loss or fill that was not actually verified | ✅ Complete |
+| Phase 12 — Trade Memory | Persistent trade journal across sessions (storage of thesis, warnings, decision, trade and outcome) | ⏳ Planned |
 | Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
 
-Phases 10–13 are not implemented in any form. The screens they will occupy (Trade Review, Trader Review) exist only as explicit placeholders marked "not built in this phase", and they remain disabled in the navigation. All nine investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure, Final Trade Report and Human Decision — are now active; nothing in the investigation is locked.
+Phases 12–13 are not implemented in any form. The screen Phase 13 will occupy (Trader Review) exists only as an explicit placeholder marked "not built in this phase", and it remains disabled in the navigation. All nine investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure, Final Trade Report and Human Decision — are active, and the Paper Execution and Trade Review steps are now real screens; nothing in the workflow is locked.
+
+**A note on phase numbering.** The original plan (see [`TradeGuard.md`](./TradeGuard.md)) called Phase 11 "Trade Memory" — a persistent trade journal — and Phase 12 "Post-Trade Review". What was actually built in the Phase 11 slot is the **post-decision Trade Review**: the review the original plan placed at Phase 12. It is deliberately **session-scoped and read-only** — it assembles records that already exist in the current trade session and writes only your own notes; TradeGuard still has no database. The persistent journal across sessions is therefore listed above as the remaining Phase 12 work, and the numbering here follows the build rather than the original plan.
 
 ---
 
@@ -143,7 +159,7 @@ It holds to a few rules that matter more than the feature list:
 - **It distinguishes "absence of evidence" from "evidence against the trade."** With no usable data, the honest conclusion is that the thesis is *unconfirmed* — not that it is supported, and not that it is refuted.
 - **Insufficient evidence is never treated as confirmation.** When there is nothing to classify, the evidence-strength label degrades to `insufficient evidence` and the strongest counter-argument states that the thesis cannot currently be validated.
 - **It emits no trade instruction.** There is no BUY, SELL, or PASS anywhere in the analysis output, and no arbitrary confidence score.
-- **It never executes anything.** TradeGuard has no execution path at all.
+- **It never executes anything.** The thesis attack has no execution path, and no analysis stage does. TradeGuard's only order path is the demo-only [Paper Execution](#phase-10--paper-execution) step, which runs later and only on your explicit confirmation.
 
 Evidence strength is reported as one of four evidence-derived labels — `supported`, `mixed`, `weak`, or `insufficient evidence` — each with a stated basis. It is not a probability and not a model score.
 
@@ -437,7 +453,93 @@ If the backend cannot be reached while recording, the stage says so plainly, sta
 - **It never executes anything.** No order, no exchange call, no paper trade, no wallet action, no automation, no autonomous execution. Recording that you decided to TAKE is a note about your intention, not an instruction to act — and every record states explicitly that nothing was executed.
 - **It never presents a recorded decision as a successful, validated or endorsed trade.**
 
-**Boundary:** TradeGuard records the decision you make and the reason you give for it. It does not make the decision, does not recommend one of the options, does not score the trade, and does not tell you whether this is a good or bad trade. What is stored is your judgement, written by you. [Paper execution](#roadmap) is a later phase and is not built.
+**Boundary:** TradeGuard records the decision you make and the reason you give for it. It does not make the decision, does not recommend one of the options, does not score the trade, and does not tell you whether this is a good or bad trade. What is stored is your judgement, written by you. [Paper execution](#phase-10--paper-execution) is the next step, and it acts only on an explicit confirmation you give there.
+
+---
+
+## Phase 10 — Paper Execution
+
+Phase 10 answers one question: **"What exactly would be sent to the venue, and did I actually confirm it?"**
+
+It is **not** the question *"should I execute this?"* You already answered that by recording TAKE. Phase 10 is the one place in the product where a confirmed intention becomes an order, and it is deliberately narrow.
+
+### Bitget Demo only
+
+Paper execution trades **virtual funds in the Bitget Demo environment**. There is no live-money path anywhere in the product: the provider module talks only to the demo endpoint, and the service refuses to run at all if a live-trading variable is present in the environment (`TRADEGUARD_LIVE_TRADING`, `TRADEGUARD_ENABLE_LIVE`, `TRADEGUARD_BITGET_LIVE_API_KEY`, `TRADEGUARD_BITGET_LIVE_API_SECRET`, `TRADEGUARD_BITGET_LIVE_PASSPHRASE`). There is no fallback from demo to live — a failure is reported, never upgraded into a real order.
+
+### Two separate steps
+
+| Step | Endpoint | What it does |
+| ---- | -------- | ------------ |
+| **Evaluate the gate** | `POST /api/paper-execution` | Reports whether paper execution is permitted for this trade and, if so, exactly what would be submitted. It **sends nothing** to any venue |
+| **Submit** | `POST /api/paper-execution/submit` | Sends the order — but only with the confirmation token |
+
+### The confirmation token
+
+Recording TAKE sends nothing, and the screen never acts on its own initiative. Before an order can leave, you must type the exact confirmation token — **`PAPER EXECUTE`** — into the confirmation field. The check is enforced **server-side**: a missing or mismatched token returns **HTTP 400** and nothing is sent. A client that bypassed the form cannot talk the API into placing an order.
+
+### The five states
+
+| State | Meaning |
+| ----- | ------- |
+| **EXECUTION LOCKED** | The gate is not satisfied — no TAKE recorded, or the risk/structure the order would be built on is not ready. The specific reason is named, never a generic refusal |
+| **READY FOR PAPER EXECUTION** | The gate is satisfied and the order that would be submitted is shown, awaiting your explicit confirmation |
+| **PAPER ORDER SUBMITTED** | The demo venue accepted an order and returned an order ID. This means the *demo* venue accepted it — it is not a fill, not a position, and not a successful trade |
+| **PAPER ORDER FAILED** | The venue rejected the order or could not be reached. The venue's own error is reported |
+| **PAPER EXECUTION UNAVAILABLE** | The venue cannot be used at all — no demo credentials configured, or no symbol could be resolved for the asset |
+
+### What it never does
+
+- **It never places a live-money order.** The only venue in the path is Bitget Demo, and the live-trading variables are a refusal condition rather than a configuration.
+- **It never executes on its own initiative.** Nothing is sent because a screen was opened, because the gate passed, or because TAKE was recorded. The trader's typed confirmation is the only trigger.
+- **It never fabricates an order.** When credentials are absent there is no order ID, no fill, no position and no P&L — the stage reports PAPER EXECUTION UNAVAILABLE and names the missing configuration instead.
+- **It never recalculates risk.** The figures behind the order are the [Phase 6](#phase-6--risk-assessment) engine's, read unchanged.
+- **It never manages the position afterwards.** It records that a demo order was accepted; it does not track, close, resize or advise on the position.
+- **It never leaks a credential.** Credentials are read server-side from the environment and no credential value is ever returned in a response or written to a log.
+- **It never presents an accepted demo order as a successful trade.** Every record carries the standing notice that demo results do not reflect real execution — fills, slippage, fees and liquidity in a demo are not real.
+
+---
+
+## Phase 11 — Trade Review
+
+Phase 11 answers one question: **"What happened after I made this decision?"**
+
+It is a **review tool**, not a recommendation engine. It assembles the records TradeGuard already produced — your thesis, the Phase 6/7 risk and structure you saw, your Phase 9 decision, and the Phase 10 paper-execution outcome — into one read-only view. Like Phases 7 and 8 it adds **no new analysis**: it performs no market research, calls no model, and computes no new figure.
+
+### What it presents
+
+| Section | Contents |
+| ------- | -------- |
+| **Review summary** | The review status, the trade it concerns, and what the review is made of |
+| **Your decision** | The decision you recorded, your verbatim reason, and the system-generated timestamp — attributed to you, never to TradeGuard |
+| **Execution record** | The paper-execution outcome, the order the demo venue actually returned, or an explicit not-executed state |
+| **Trade plan** | The Phase 7 structure and the Phase 6 risk figures, read unchanged |
+| **Outcome status** | Whether the trade was executed, and — only when a verified outcome exists — what it was |
+| **What was known before the decision** | The Phase 3 research, Phase 4 attack and Phase 5 history, condensed as the context you had at the time |
+| **Review notes** | Your own notes on the trade, stored exactly as written |
+
+### The four review states
+
+| State | Meaning |
+| ----- | ------- |
+| **REVIEW LOCKED** | No decision has been recorded yet, so there is nothing to review |
+| **REVIEW READY** | The records the review is built from exist and the review was assembled |
+| **REVIEW INCOMPLETE** | The review is here, but some of the records behind it are missing. It names which |
+| **REVIEW UNAVAILABLE** | The review could not be assembled at all, and it says so rather than showing a partial one |
+
+### No fabricated profit or loss
+
+This is the phase where inventing a number would be easiest and most damaging, so the rule is absolute: **profit and loss are never calculated.** A P&L figure appears only if a *verified* execution outcome actually reports one — and a demo submission is not a fill. When there is no verified outcome the review reports **NOT-EXECUTED** and states plainly that the outcome is not yet available, rather than inferring a result from the decision or the order.
+
+### What it never does
+
+- **It never tells you what to do next.** No BUY, SELL, HOLD or EXIT, no instruction to change position size, no verdict on whether the decision was right.
+- **It never predicts, scores or ranks.** No probability, no confidence score, no expected return, no price target, no "this trade worked out".
+- **It never recalculates risk.** The figures come from the Phase 6 engine, verbatim. There is no second risk engine anywhere in the codebase.
+- **It never runs new research.** The market, event, attack and historical material it shows is the material already produced for this trade, condensed — not re-fetched.
+- **It never fabricates a fill or a P&L.** No invented order ID, no assumed outcome, no profit or loss the venue did not report.
+- **It never writes your notes for you.** The review notes are your text, stored verbatim. TradeGuard does not draft, complete or generate them.
+- **It never submits anything.** It is read-only; the only write in the whole stage is your own note.
 
 ---
 
@@ -472,6 +574,14 @@ The risk assessment uses **no external data source at all**. It is arithmetic on
 
 The human decision stage uses **no external data source and no model**. It validates the trader's own submission and builds the record in the backend; the timestamp comes from the server clock. It neither reads nor recalculates risk — it carries the Phase 6 engine's figures through unchanged — so it also resolves with every provider unreachable. There is no execution path: recording a decision contacts no exchange and places nothing.
 
+### Paper execution
+
+Paper execution is the **only** stage with a write path to a venue, and it is confined to one: the **Bitget Demo** endpoint, with virtual funds. It needs demo credentials in the environment (`TRADEGUARD_BITGET_DEMO_API_KEY`, `TRADEGUARD_BITGET_DEMO_API_SECRET`, `TRADEGUARD_BITGET_DEMO_PASSPHRASE`); without them it reports `PAPER EXECUTION UNAVAILABLE` and names what is missing rather than guessing. The gate evaluation itself reads no market data — it is a deterministic check over the decision, the risk result, the structure and the report — so it resolves with every data provider unreachable. The order that would be submitted is built from the Phase 6 risk figures and the Phase 7 structure, never recalculated here. Provider knowledge is isolated in `server/services/providers/bitgetDemo.js`, exactly as market data is in `bitget.js`, and the live-trading environment variables are treated as a refusal condition rather than a fallback.
+
+### Trade review
+
+Trade Review uses **no external data source at all**. It is assembled server-side from records the client already holds — the thesis, the risk and structure results, the recorded decision, the execution record and the earlier investigation — and it reads the Phase 6 figures through the same helper the paper-execution stage uses, so the two can never disagree. It performs no market call, no model call and no calculation, which is why it resolves instantly and with every provider unreachable. There is no storage layer behind it: the review exists for the current trade session, and the only thing it writes is your own note.
+
 ### Provider availability
 
 External provider availability directly affects live research, and TradeGuard is built to be honest about that. If Bitget is unreachable from the network the backend is running on — a restricted sandbox, a corporate proxy, an outage — market context reports **Data unavailable** with the reason. The integration is real; it simply is not guaranteed to return data on every run, and the UI never pretends otherwise.
@@ -503,14 +613,18 @@ These are enforced in the code, not aspirational:
 - **No execution.** Recording a decision places no order, contacts no exchange and performs no wallet action. Every record states that nothing was executed.
 - **Research output is not a trading instruction.** Every analysis carries a disclaimer to that effect, and the final report states its boundary explicitly: the report summarises the trade and the evidence available, and the final decision remains with the trader.
 - **The human remains responsible for the final decision.**
-- **No autonomous live trading.** TradeGuard cannot place an order, and paper execution is not built yet.
+- **No autonomous live trading.** TradeGuard's only write path to a venue is the Bitget **Demo** environment, it is triggered solely by a trader-typed confirmation token, and the presence of any live-trading environment variable makes the stage refuse rather than fall back to live.
+- **No order that was not actually returned.** When the demo venue is unconfigured or unreachable, the execution record carries no order ID, no fill and no position — the stage reports the honest state and the missing configuration instead.
+- **No fabricated profit or loss.** P&L is never calculated anywhere in the product. It appears only if a verified execution outcome actually reports it, and a demo submission is not a fill. Without a verified outcome, Trade Review reports the outcome as not yet available.
+- **No review verdict.** Trade Review describes what happened after a decision. It does not say whether the decision was right, does not recommend a next action, and produces no BUY / SELL / HOLD / EXIT, probability, score, ranking, expected return or price target.
+- **No review notes written for you.** The notes stored in Trade Review are your own text, kept verbatim. TradeGuard does not draft, complete or generate them.
 - **Provider credentials stay server-side.** API keys are read from the backend environment and never reach the browser.
 
 ---
 
 ## Analysis architecture
 
-The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure and the Phase 8 final report all run entirely in the backend as deterministic pipelines. The thesis attack:
+The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure, the Phase 8 final report, the Phase 9 human decision, the Phase 10 paper execution and the Phase 11 trade review all run entirely in the backend as deterministic pipelines. The thesis attack:
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
               ↓
@@ -600,6 +714,45 @@ TRADER'S DECISION  +  TRADER'S REASON  +  TRADE CONTEXT  +  PHASE 6 RISK RESULT
 
 Its validation is the mirror image of the analysis stages: where the risk engine proves that a number is derived, this service proves that a decision is **not**. There is no default path, no branch that picks an option, and no code that could write a reason — the decision and the reason both arrive as trader input, and the only thing the service adds is the timestamp and the standing guarantees. There is no provider, no model and no network call in the path; the risk figures it carries are the Phase 6 engine's own output, asserted in the test suite to be identical to it. An invalid submission produces no record at all, which is why this route answers 400 where the analysis routes answer 200.
 
+The paper-execution service (Phase 10) is the one place where the backend talks to a venue, and it is written so that it cannot talk to the wrong one:
+
+```
+TRADER'S RECORDED DECISION  +  PHASE 6 RISK  +  PHASE 7 STRUCTURE  +  PHASE 8 REPORT
+                        ↓
+   GATE EVALUATION  (TAKE recorded? risk READY? structure complete? symbol resolvable?)
+                        ↓
+   LIVE-TRADING GUARD  (any live-trading env var present → refuse, never fall back)
+                        ↓
+   EXECUTION LOCKED  /  READY FOR PAPER EXECUTION  /  PAPER EXECUTION UNAVAILABLE
+                        ↓
+   CONFIRMATION TOKEN CHECK  ('PAPER EXECUTE', enforced server-side)
+                        ↓
+   BITGET DEMO SUBMIT  (virtual funds only)
+                        ↓
+   PAPER ORDER SUBMITTED  /  PAPER ORDER FAILED  (+ the venue's own response)
+                        ↓
+   METHOD NOTE · LIMITATIONS · DISCLAIMER · DEMO-ONLY NOTICE
+```
+
+The trade review service (Phase 11) is a pure read-only assembly — no provider, no model and no storage:
+
+```
+THESIS  +  PHASE 3 RESEARCH  +  PHASE 4 ATTACK  +  PHASE 5 HISTORY
+        +  PHASE 6 RISK  +  PHASE 7 STRUCTURE  +  PHASE 9 DECISION  +  PHASE 10 EXECUTION
+                        ↓
+   COMPLETENESS CHECK  (which of the records it reviews actually exist?)
+                        ↓
+   REVIEW LOCKED  /  READY  /  INCOMPLETE  /  UNAVAILABLE
+                        ↓
+   SUMMARY · DECISION · EXECUTION · PLAN · OUTCOME · KNOWN-BEFORE · NOTES
+                        ↓
+   OUTCOME STATE  (verified, or NOT-EXECUTED — never an inferred profit or loss)
+                        ↓
+   METHOD NOTE · LIMITATIONS · DISCLAIMER · P&L NOT COMPUTED
+```
+
+It reads the Phase 6 figures through the **same `readRiskFigures` helper the paper-execution service uses**, which is what makes it structurally impossible for the review to disagree with the risk panel. Its API response documents `pnl.computed` as `false`.
+
 Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, a detail from your own submission, or a decision you recorded. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
@@ -614,17 +767,17 @@ This is deliberately a **clean seam**. The evidence classification and the numbe
 TRADEGUARD
 │
 ├── src/                          React + Vite frontend
-│   ├── screens/                  Trade Idea, Investigation, Decision, placeholder screens for later phases
+│   ├── screens/                  Trade Idea, Investigation, Trade Report, Decision, Paper Execution, Trade Review, Trader Review placeholder
 │   ├── components/               App shell, sidebar, trade-idea components
-│   │   └── investigation/        Investigation workspace: trade header, section nav, analysis panels
-│   ├── lib/                      API client, constants, stage model, investigation view model, validation
+│   │   └── investigation/        Workspace components: trade header, investigation rail, section navigator, analysis panels
+│   ├── lib/                      API client, constants, stage model, investigation view model, validation, the per-trade session hook
 │   └── styles/                   Design tokens and styles
 │
 └── server/                       Express backend
     ├── index.js                  App wiring, /api/health
-    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure, finalReport, humanDecision
-    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure, finalReport, humanDecision
-    │   └── providers/            bitget (isolated provider knowledge)
+    ├── routes/                   tradeIdeas, research, thesisAttack, historicalStressTest, riskAssessment, tradeStructure, finalReport, humanDecision, paperExecution, tradeReview
+    ├── services/                 marketData, eventData, thesisAttack, historicalStressTest, riskEngine, tradeStructure, finalReport, humanDecision, bitgetDemoExecution, tradeReview
+    │   └── providers/            bitget (market data) + bitgetDemo (paper execution) — isolated provider knowledge
     ├── lib/                      Trade idea validation
     └── tests/                    Node test runner suites
 ```
@@ -644,8 +797,11 @@ TRADEGUARD
 | `POST /api/trade-structure` | The trade setup, risk result, thesis context and invalidation conditions combined into one structured trade plan |
 | `POST /api/final-report` | The ten-section final report consolidating Phases 1–7, with per-section evidence states and the explicit decision boundary |
 | `POST /api/human-decision` | Records the trader's own decision — TAKE / WAIT / SKIP with a required trader-written reason — against the trade, with a system-generated timestamp and the trade and risk context attached. Returns 400 and a DECISION REQUIRED record when the submission is invalid; the route's execution output is documented as *"None"* |
+| `POST /api/paper-execution` | Evaluates the paper-execution gate for the trade — EXECUTION LOCKED / READY FOR PAPER EXECUTION / PAPER EXECUTION UNAVAILABLE — and returns exactly what would be submitted. **Sends nothing** to any venue |
+| `POST /api/paper-execution/submit` | Submits a paper order to the Bitget **Demo** environment with virtual funds. Requires the confirmation token `PAPER EXECUTE`, enforced server-side — a missing or wrong token returns 400 and nothing is sent. Never returns 500: a venue rejection is a 200 carrying PAPER ORDER FAILED, because the venue refusing an order is a real outcome to report |
+| `POST /api/trade-review` | Assembles the post-decision review from the records TradeGuard already produced. Performs no new analysis and submits nothing, and always returns 200 — a locked, incomplete or unavailable review is a real answer, not an error. Its `pnl.computed` output is documented as `false` |
 
-Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors. The human decision route sits outside the provider structure for the same reason, and depends only on the risk engine to carry its figures through; it is the one route that returns **400** on a bad request, because an absent decision or an unwritten reason is a validation failure rather than an analysis outcome, and there is no honest record to build from it.
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors. The human decision route sits outside the provider structure for the same reason, and depends only on the risk engine to carry its figures through; it is the one route that returns **400** on a bad request, because an absent decision or an unwritten reason is a validation failure rather than an analysis outcome, and there is no honest record to build from it. The paper-execution route is the only route with a venue behind it, and that venue is isolated in its own provider module (`providers/bitgetDemo.js`) with demo-only credentials and a live-trading refusal guard; its gate evaluation reads no market data, and only the `/submit` path can reach the venue at all. The trade-review route depends on nothing but the records it is handed and the shared `readRiskFigures` helper, so it has no provider, no model and no storage, and like the analysis routes it always answers 200.
 
 ---
 
@@ -664,8 +820,10 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Trade structure | TradeGuard's own deterministic synthesis layer — reuses the risk engine's result, adds no provider and no model |
 | Final trade report | TradeGuard's own deterministic consolidation layer — restates Phases 1–7, reuses the risk engine's result unchanged, and adds no provider and no model |
 | Human decision recording | TradeGuard's own deterministic recording layer — validates the trader's own submission, generates the timestamp server-side, and carries the risk engine's figures through unchanged. No provider, no model, no execution |
+| Paper execution | Bitget **Demo** API — virtual funds only, isolated in its own provider module and gated by a server-enforced confirmation token plus a live-trading refusal guard. Never a live venue |
+| Trade review | TradeGuard's own deterministic read-only assembly — restates the records Phases 1–10 already produced, reads the risk engine's figures through the same helper the execution stage uses, and adds no provider, no model and no storage |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
-| Browser verification | Playwright (`playwright-core`) driving headless Chrome — used to verify the flow during development, not a declared project dependency |
+| Browser verification | Headless Chrome driven over the Chrome DevTools Protocol from Node's built-ins — no declared dependency. Earlier phases also used Playwright (`playwright-core`). Development verification only, not a project dependency |
 
 **Future work (not currently implemented):** historical market data storage, defined-risk options structuring, persistent trade storage, and optional LLM-based explanation of deterministic findings.
 
@@ -722,7 +880,12 @@ cp .env.example .env
 | `TRADEGUARD_EVENTS_PROVIDER` | No | Event provider. Defaults to `fmp`. |
 | `TRADEGUARD_EVENTS_API_BASE` | For event research | Base URL of the events provider. Empty → event research reports Data unavailable. |
 | `TRADEGUARD_EVENTS_API_KEY` | For event research | API key for the events provider. Empty → event research reports Data unavailable. |
+| `TRADEGUARD_BITGET_DEMO_API_KEY` | For paper execution | Bitget **Demo** API key. Empty → paper execution reports PAPER EXECUTION UNAVAILABLE and names what is missing. |
+| `TRADEGUARD_BITGET_DEMO_API_SECRET` | For paper execution | Bitget **Demo** API secret. |
+| `TRADEGUARD_BITGET_DEMO_PASSPHRASE` | For paper execution | Bitget **Demo** passphrase. |
 | `PORT` | No | Backend port. Defaults to `8787`. |
+
+Paper execution is **demo-only by construction**. There is no live-trading variable to configure: `TRADEGUARD_LIVE_TRADING`, `TRADEGUARD_ENABLE_LIVE`, `TRADEGUARD_BITGET_LIVE_API_KEY`, `TRADEGUARD_BITGET_LIVE_API_SECRET` and `TRADEGUARD_BITGET_LIVE_PASSPHRASE` are treated as **refusal conditions** — if any of them is present, the paper-execution stage refuses to run rather than falling back to a real venue. Never set them.
 
 Never commit a real `.env` file or real API keys. The default contract for the events provider is:
 
@@ -739,11 +902,17 @@ npm test        # unit + integration tests
 npm run build   # production build
 ```
 
-**Verified state of the Phase 9 build:**
+**Verified state of the Phase 11 build:**
 
-- **241/241 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, the human-decision service, and the frontend stage model.
+- **309/309 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, the human-decision service, the paper-execution service and its demo provider, the trade-review service, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
-- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, including recording a real TAKE decision with a trader-written reason on a worked example (rNVDA, bullish, entry 100, invalidation 95, risk 50) and confirming the stored record carried the correct timestamp, the verbatim reason, the trade context and the risk engine's own figures (5 per unit, 10 units, defined risk 50), alongside the DECISION REQUIRED state before recording and the DECISION RECORDED state after, and the confirmation that no verdict, score, probability, prediction or recommendation appears anywhere.
+- **Browser verification completed successfully** — the full flow was exercised in a real browser against the running app, end to end: submitting a trade idea (rNVDA, bullish, entry 100, invalidation 95, risk 50), the investigation's eight stages, the ten-section report workspace, recording a real TAKE decision with a trader-written reason, the paper-execution gate reporting an honest `PAPER EXECUTION UNAVAILABLE` because no demo credentials are configured, and the Trade Review assembling from those records — with the review notes surviving navigation, the outcome reported as **not executed** rather than as a fabricated P&L, and **zero console errors**.
+- **Navigation performance verified with network instrumentation** — every workspace entry, every return to an already-loaded screen, and every section switch issues **zero** API requests and completes in well under 200 ms, and a full demo pass makes 17 API calls rather than the 69 it made before the session layer existed.
+- **Cross-trade isolation verified** — submitting a second, different trade leaves no trace of the first: no stale asset, thesis or decision is visible on any screen, including while the new trade's data is still loading.
+
+The paper-execution stage has dedicated coverage across its required scenarios: the gate locked without a recorded TAKE, locked when the risk assessment is not ready, locked when the structure is incomplete, ready when the gate is satisfied, unavailable without demo credentials, unavailable when no symbol resolves, the confirmation token being required, a wrong token being rejected, and the guarantee that a missing or wrong token sends nothing. Its guards assert the things that must never happen: no order ID or fill is fabricated when the venue is unconfigured, no credential value leaks into a response, no live-trading path exists, and a venue rejection is reported as PAPER ORDER FAILED rather than being dressed up as a success.
+
+The trade-review stage has dedicated coverage across its required scenarios: a ready review over complete records, a locked review with no decision, an incomplete review when records are missing, an unavailable review when it cannot be assembled, the plan being `null` rather than partially fabricated when the underlying result is unavailable, the thesis being preserved verbatim, and the risk figures being read through the same helper the execution stage uses. Its guards assert that the review carries no recommendation, signal, prediction, score or ranking field, that no profit or loss is computed (`pnl.computed` is `false`), and that no BUY / SELL / HOLD / EXIT vocabulary appears in the review's own content.
 
 The human decision stage has dedicated coverage across its required scenarios: recording each of the three decisions, the required reason, an empty or whitespace-only reason being rejected, the reason being stored verbatim and never swapped for the thesis, a missing decision never defaulting to an option, unsupported values (`BUY`, `SELL`, `PASS`, `HOLD`, `MAYBE` and malformed payloads) being rejected, malformed bodies and contexts not throwing, the system-generated timestamp, a client-supplied timestamp being ignored, the trade context being preserved in full, the risk figures being identical to the Phase 6 engine's own output, a partial or unavailable risk assessment being recorded honestly rather than filled with zeros, the decision being attributed to the trader, the standing limitations always being attached, `executed: false`, determinism across repeated runs, purity, and the absence of any score, probability, prediction or recommendation. Its guards are worth noting: the suite asserts that the stage **names** the concepts it refuses to produce only in order to deny them — the boundary copy says the decision is "not a TradeGuard recommendation" and that TradeGuard "does not tell you whether this is a good or bad trade" — so the scan is negation-aware rather than a naive substring ban, and it separately asserts that those phrases never become a positive instruction, and that no `BUY`, `SELL` or `PASS` vocabulary appears in the trader-facing options.
 
@@ -772,11 +941,9 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phases 10–13, in order. All are planned and none are implemented:
+Phases 12–13, in order. Both are planned and neither is implemented:
 
-- **Phase 10 — Paper Execution.** Simulated order submission, execution status, and trade record.
-- **Phase 11 — Trade Memory.** Persist the full decision context — what you believed, why, what TradeGuard warned about, what you decided, and what happened.
-- **Phase 12 — Post-Trade Review.** Before/after comparison, the original warnings, the outcome, and the lesson.
+- **Phase 12 — Trade Memory.** Persist the full decision context across sessions — what you believed, why, what TradeGuard warned about, what you decided, and what happened.
 - **Phase 13 — Trader Review & Polish.** Recurring pattern detection from your own trade history, plus error states, loading states, responsive UI, and the end-to-end demo flow.
 
 ---
@@ -795,7 +962,7 @@ TradeGuard is being built for the **Bitget AI Hackathon S2**, under the **AI Tra
 4. **Human in the loop.** The trader makes the decision; TradeGuard never makes it for them.
 5. **Deterministic risk controls.** Critical calculations and classifications do not depend on a language model.
 6. **Transparent uncertainty.** Supported, mixed, weak, and insufficient evidence are distinct, stated outcomes.
-7. **No autonomous live trading.** TradeGuard has no execution capability in the current product.
+7. **No autonomous live trading.** TradeGuard's only order path is the Bitget **Demo** environment, triggered solely by a trader-typed confirmation token, with the live-trading environment variables acting as a refusal condition. It cannot place a live-money order, and no stage executes on its own initiative.
 
 ---
 

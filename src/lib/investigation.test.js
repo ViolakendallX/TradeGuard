@@ -710,26 +710,30 @@ test('every declared stage is now built; nothing in the investigation is locked'
   assert.equal(INVESTIGATION_STAGE_COUNT, 10);
 });
 
-test('Phase 11+ screens remain planned and are not reachable', async () => {
+test('Trade Review (Phase 11) is now built and reachable; Trader Review stays planned', async () => {
   const { NAV_ITEMS } = await import('./constants.js');
-  const future = NAV_ITEMS.filter((item) => item.phase > 10);
 
-  // Paper execution is now Phase 10 and reachable; the trade review and trader
-  // review screens are still placeholders.
-  assert.ok(future.length >= 2);
+  // Trade Review is now Phase 11 and reachable; the trader review screen is the
+  // only still-planned item after it.
+  const review = NAV_ITEMS.find((item) => item.id === 'trade-review');
+  assert.equal(review.phase, 11);
+  assert.equal(review.label, 'Trade Review');
+
+  const future = NAV_ITEMS.filter((item) => item.phase > 11);
   assert.deepEqual(
     future.map((item) => item.id),
-    ['trade-review', 'trader-review']
+    ['trader-review']
   );
 
-  // Phase 10's own screen, by contrast, is now active — and it sits directly
-  // after the decision, which is what unlocks it.
+  // Paper execution is Phase 10 and sits directly after the decision, which is
+  // what unlocks it. Trade Review sits directly after paper execution.
   const execution = NAV_ITEMS.find((item) => item.id === 'paper-execution');
   assert.equal(execution.phase, 10);
   assert.equal(execution.label, 'Paper Execution');
 
   const ids = NAV_ITEMS.map((item) => item.id);
   assert.equal(ids.indexOf('paper-execution'), ids.indexOf('decision') + 1);
+  assert.equal(ids.indexOf('trade-review'), ids.indexOf('paper-execution') + 1);
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {

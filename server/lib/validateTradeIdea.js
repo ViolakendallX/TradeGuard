@@ -173,6 +173,7 @@ export function buildCaptureResponse(value) {
       { step: 'Final report', phase: 8, available: true },
       { step: 'Human decision', phase: 9, available: true },
       { step: 'Paper execution', phase: 10, available: true },
+      { step: 'Trade Review', phase: 11, available: true },
     ],
     message:
       'Thesis captured. TradeGuard has recorded what you believe and why. ' +
@@ -181,6 +182,8 @@ export function buildCaptureResponse(value) {
       'whole trade together into one structured plan, and consolidate the whole investigation into a ' +
       'final trade report. You then record your own decision — TradeGuard records it, it does not make it. ' +
       'If you record TAKE you can then confirm paper execution, which sends the trade to the Bitget Demo ' +
-      'environment using virtual funds. No live-money order is ever placed.',
+      'environment using virtual funds. Trade Review then assembles those verified records into one ' +
+      'read-only view of what happened. No live-money order is ever placed, and no profit, loss or fill ' +
+      'is shown unless it was actually verified.',
   };
 }

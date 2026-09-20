@@ -372,6 +372,54 @@ export async function submitPaperExecution(context, extras = {}) {
 }
 
 /**
+ * Phase 11: assemble the post-decision Trade Review from the verified records.
+ *
+ * This request SENDS the records TradeGuard already produced — the thesis, the
+ * Phase 6/7 risk and structure, the Phase 9 decision, the Phase 10 execution
+ * record, and the Phase 3/4/5 investigation — and the backend assembles them
+ * into one read-only review. It performs NO new analysis and SUBMITS NOTHING.
+ *
+ * A locked, incomplete, or unavailable review is a real answer, not an error, so
+ * this always resolves with { ok:true, data } and the caller reads data.status.
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function fetchTradeReview(context, extras = {}) {
+  const response = await fetch(`${API_BASE}/trade-review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idea: context,
+      risk: extras.risk || null,
+      structure: extras.structure || null,
+      report: extras.report || null,
+      decision: extras.decision || null,
+      execution: extras.execution || null,
+      research: extras.research || null,
+      attack: extras.attack || null,
+      history: extras.history || null,
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Trade Review request failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
  * Phase 9: record the trader's OWN decision.
  *
  * This is the one request in TradeGuard that does not ask for analysis — it

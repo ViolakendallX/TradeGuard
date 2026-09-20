@@ -5,6 +5,14 @@
  * arithmetic, no derivation and no estimation in this file: every figure is the
  * one an earlier stage produced, restated.
  *
+ * INFORMATION ARCHITECTURE: this is a navigable report workspace, not one giant
+ * document. The ten report sections are shown ONE AT A TIME behind a horizontal
+ * navigator (SUMMARY | THESIS | MARKET | EVENTS | ATTACK | HISTORY | RISK |
+ * STRUCTURE | GAPS | BOUNDARY), and SUMMARY is the default landing section. Every
+ * section, state, disclaimer and footnote is preserved — only the presentation
+ * changed, so the trader no longer has to scroll the whole report to reach one
+ * part of it.
+ *
  * Three honest states, straight from the service:
  *   REPORT READY       — the investigation was consolidated in full
  *   REPORT INCOMPLETE  — the report exists but part of the investigation is missing
@@ -18,9 +26,11 @@
  * explicitly hands the decision back to the trader.
  */
 
+import { useEffect, useState } from 'react';
 import { fmt, pct, bucketLabel } from '../../lib/investigationView.js';
 import { TIMEFRAME_LABELS, EXISTING_POSITION_LABELS } from '../../lib/constants.js';
 import { DataRow, UnavailableNotice } from './primitives.jsx';
+import WorkspaceNav from './WorkspaceNav.jsx';
 
 /** Plain-language headline for each report status. */
 const STATUS_TITLE = {
@@ -39,6 +49,23 @@ const SIDE_TONE = { long: 'bullish', short: 'bearish' };
 const STATE_MODIFIER = { available: 'available', partial: 'partial', unavailable: 'unavailable' };
 const STATE_LABELS = { available: 'AVAILABLE', partial: 'PARTIAL', unavailable: 'UNAVAILABLE' };
 
+/** Report-section state -> workspace-nav dot modifier (nav reuses the inv-nav classes). */
+const NAV_MODIFIER = { available: 'complete', partial: 'partial', unavailable: 'unavailable' };
+
+/** The ten report sections, in order. `state` is resolved per report below. */
+const REPORT_TABS = [
+  { id: 'summary', label: 'Summary', index: 1, title: 'Executive summary' },
+  { id: 'thesis', label: 'Thesis', index: 2, title: 'Trade thesis' },
+  { id: 'market', label: 'Market', index: 3, title: 'Market context' },
+  { id: 'events', label: 'Events', index: 4, title: 'Events & catalysts' },
+  { id: 'attack', label: 'Attack', index: 5, title: "Devil's Advocate" },
+  { id: 'history', label: 'History', index: 6, title: 'Historical stress test' },
+  { id: 'risk', label: 'Risk', index: 7, title: 'Risk assessment' },
+  { id: 'structure', label: 'Structure', index: 8, title: 'Trade structure' },
+  { id: 'gaps', label: 'Gaps', index: 9, title: 'Information gaps & limitations' },
+  { id: 'boundary', label: 'Boundary', index: 10, title: 'Final decision boundary' },
+];
+
 /** A small AVAILABLE / PARTIAL / UNAVAILABLE chip. */
 function StateBadge({ state }) {
   if (!state) return null;
@@ -50,7 +77,7 @@ function StateBadge({ state }) {
 }
 
 /** A numbered report section with its own availability badge. */
-function ReportSection({ index, title, state, children, note }) {
+function ReportSection({ index, title, state, children }) {
   return (
     <section className="report__section" data-report-section={title}>
       <div className="report__section-title">
@@ -59,7 +86,6 @@ function ReportSection({ index, title, state, children, note }) {
         <StateBadge state={state} />
       </div>
       {children}
-      {note && <p className="report__footnote">{note}</p>}
     </section>
   );
 }
@@ -77,6 +103,13 @@ function SectionUnavailable({ reason, what }) {
 }
 
 export default function FinalReportPanel({ report }) {
+  const [activeId, setActiveId] = useState('summary');
+
+  // A different report (a different trade) starts back on the summary.
+  useEffect(() => {
+    setActiveId('summary');
+  }, [report]);
+
   if (!report) return null;
 
   // The service could not produce a report at all (backend unreachable).
@@ -152,188 +185,205 @@ export default function FinalReportPanel({ report }) {
     },
   ];
 
-  return (
-    <div className="report">
-      <div className="report__status">
-        <span className={`report__badge report__badge--${report.status}`}>{report.statusLabel}</span>
-        <span className="report__status-note">{STATUS_TITLE[report.status] || ''}</span>
-      </div>
+  // Per-section availability, used for both the nav dots and the section badge.
+  const stateOf = {
+    thesis: thesis.state,
+    market: market.state,
+    events: events.state,
+    attack: da.state,
+    history: historical.state,
+    risk: risk.state,
+    structure: structure.state,
+  };
 
-      {report.statusDetail && <p className="report__detail">{report.statusDetail}</p>}
+  const navItems = REPORT_TABS.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    index: tab.index,
+    mod: NAV_MODIFIER[stateOf[tab.id]],
+  }));
 
-      {/* The availability roll-up: what the trader actually has. */}
-      <div className="report__roll-up">
-        <div className="report__roll-up-counts">
-          <span className="report__count report__count--available">
-            <strong>{summary.available}</strong> available
-          </span>
-          <span className="report__count report__count--partial">
-            <strong>{summary.partial}</strong> partial
-          </span>
-          <span className="report__count report__count--unavailable">
-            <strong>{summary.unavailable}</strong> unavailable
-          </span>
-          <span className="report__count report__count--total">of {summary.total} sections</span>
-        </div>
-        <ul className="report__roll-up-list">
-          {(summary.sections || []).map((s) => (
-            <li key={s.id} className={`report__roll-up-item report__roll-up-item--${STATE_MODIFIER[s.state]}`}>
-              <span className="report__roll-up-label">{s.label}</span>
-              <StateBadge state={s.state} />
-            </li>
-          ))}
-        </ul>
-      </div>
+  const active = REPORT_TABS.find((tab) => tab.id === activeId) || REPORT_TABS[0];
 
-      {caveats.length > 0 && (
-        <ul className="report__caveats">
-          {caveats.map((c, i) => (
-            <li key={i} className="report__caveat">
-              {c}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {report.status !== 'ready' && (
-        <div className="report__notice">
-          TradeGuard does not present an incomplete investigation as a complete one. The gaps are named in
-          the sections below and consolidated in section 9.
-        </div>
-      )}
-
-      {/* ---------------------------------------------------------------- */}
-      {/* 1. Executive summary                                              */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={1} title="Executive summary">
-        <div className="data-grid">
-          {summaryRows.map((row) => (
-            <DataRow key={row.key} label={row.label} value={row.value} tone={row.tone} />
-          ))}
-        </div>
-        <div className="report__meta-row">
-          <span className="report__meta-label">Side</span>
-          <span className={`report__meta-value${SIDE_TONE[exec.side] ? ` is-${SIDE_TONE[exec.side]}` : ''}`}>
-            {SIDE_LABELS[exec.side] || SIDE_LABELS.none}
-          </span>
-          <span className="report__meta-label">Investigation status</span>
-          <span className="report__meta-value">{report.statusLabel}</span>
-        </div>
-        <p className="report__footnote">
-          These are the values you supplied, restated. TradeGuard did not derive the entry or the
-          invalidation from the market price, from historical data, or from a reading of your thesis.
-          {missingSet.size > 0 && ' The parameters marked as not supplied are why this report is incomplete.'}
-        </p>
-      </ReportSection>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* 2. Trade thesis                                                   */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={2} title="Trade thesis" state={thesis.state}>
-        <div className="report__sub-label">Your thesis</div>
-        {thesis.traderThesisPresent ? (
-          <blockquote className="report__thesis">{thesis.traderThesis}</blockquote>
-        ) : (
-          <p className="report__empty">No thesis text was supplied.</p>
-        )}
-
-        {/* Kept clearly distinct from the trader's own words. */}
-        {thesis.interpretation ? (
-          <div className="report__interpretation">
-            <div className="report__sub-label">How TradeGuard read your thesis</div>
-            <p className="report__interpretation-text">{thesis.interpretation}</p>
-            {thesis.interpretationNote && (
-              <p className="report__interpretation-note">{thesis.interpretationNote}</p>
-            )}
-          </div>
-        ) : (
-          <p className="report__footnote">
-            No interpretation of your thesis is shown, because the Devil&apos;s Advocate analysis it comes
-            from is unavailable.
-          </p>
-        )}
-
-        {thesis.evidenceStrength && (
-          <div className="report__strength">
-            <span className="report__sub-label">Evidence strength</span>
-            <span className={`da__badge da__badge--${String(thesis.evidenceStrength.label).replace(/\s+/g, '-')}`}>
-              {thesis.evidenceStrength.label}
-            </span>
-            {thesis.evidenceStrength.basis && (
-              <span className="report__strength-basis">{thesis.evidenceStrength.basis}</span>
-            )}
-          </div>
-        )}
-
-        <div className="report__two-col">
-          <div className="report__mini da__section--support">
-            <div className="report__mini-title">
-              Supporting evidence
-              <span className="da__count">{thesis.supportingTotal || 0}</span>
-            </div>
-            {thesis.supporting && thesis.supporting.length > 0 ? (
-              <ul className="da__list">
-                {thesis.supporting.map((it, i) => (
-                  <li key={it.id || `sup-${i}`} className="da__item">
-                    <div className="da__item-title">{it.title}</div>
-                    <p className="da__item-detail">{it.detail}</p>
+  /** The content of exactly one report section, selected by the navigator. */
+  const renderBody = () => {
+    switch (active.id) {
+      /* ---------------------------------------------------------------- */
+      /* 1. Executive summary + the availability roll-up (the landing tab)  */
+      /* ---------------------------------------------------------------- */
+      case 'summary':
+        return (
+          <>
+            {/* The availability roll-up: what the trader actually has. */}
+            <div className="report__roll-up">
+              <div className="report__roll-up-counts">
+                <span className="report__count report__count--available">
+                  <strong>{summary.available}</strong> available
+                </span>
+                <span className="report__count report__count--partial">
+                  <strong>{summary.partial}</strong> partial
+                </span>
+                <span className="report__count report__count--unavailable">
+                  <strong>{summary.unavailable}</strong> unavailable
+                </span>
+                <span className="report__count report__count--total">of {summary.total} sections</span>
+              </div>
+              <ul className="report__roll-up-list">
+                {(summary.sections || []).map((s) => (
+                  <li key={s.id} className={`report__roll-up-item report__roll-up-item--${STATE_MODIFIER[s.state]}`}>
+                    <span className="report__roll-up-label">{s.label}</span>
+                    <StateBadge state={s.state} />
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="da__empty">
-                {thesis.state === 'available'
-                  ? 'No supporting market or event signal was found in the data retrieved.'
-                  : 'Not assessable — no usable evidence was available to classify supporting signals.'}
-              </p>
-            )}
-          </div>
-
-          <div className="report__mini da__section--contradict">
-            <div className="report__mini-title">
-              Contradicting evidence
-              <span className="da__count">{thesis.contradictingTotal || 0}</span>
             </div>
-            {thesis.contradicting && thesis.contradicting.length > 0 ? (
-              <ul className="da__list">
-                {thesis.contradicting.map((it, i) => (
-                  <li key={it.id || `con-${i}`} className="da__item">
-                    <div className="da__item-title">{it.title}</div>
-                    <p className="da__item-detail">{it.detail}</p>
+
+            {caveats.length > 0 && (
+              <ul className="report__caveats">
+                {caveats.map((c, i) => (
+                  <li key={i} className="report__caveat">
+                    {c}
                   </li>
                 ))}
               </ul>
+            )}
+
+            {report.status !== 'ready' && (
+              <div className="report__notice">
+                TradeGuard does not present an incomplete investigation as a complete one. The gaps are named
+                in the sections below and consolidated in the Gaps section.
+              </div>
+            )}
+
+            <div className="data-grid">
+              {summaryRows.map((row) => (
+                <DataRow key={row.key} label={row.label} value={row.value} tone={row.tone} />
+              ))}
+            </div>
+            <div className="report__meta-row">
+              <span className="report__meta-label">Side</span>
+              <span className={`report__meta-value${SIDE_TONE[exec.side] ? ` is-${SIDE_TONE[exec.side]}` : ''}`}>
+                {SIDE_LABELS[exec.side] || SIDE_LABELS.none}
+              </span>
+              <span className="report__meta-label">Investigation status</span>
+              <span className="report__meta-value">{report.statusLabel}</span>
+            </div>
+            <p className="report__footnote">
+              These are the values you supplied, restated. TradeGuard did not derive the entry or the
+              invalidation from the market price, from historical data, or from a reading of your thesis.
+              {missingSet.size > 0 && ' The parameters marked as not supplied are why this report is incomplete.'}
+            </p>
+          </>
+        );
+
+      /* ---------------------------------------------------------------- */
+      /* 2. Trade thesis                                                   */
+      /* ---------------------------------------------------------------- */
+      case 'thesis':
+        return (
+          <>
+            <div className="report__sub-label">Your thesis</div>
+            {thesis.traderThesisPresent ? (
+              <blockquote className="report__thesis">{thesis.traderThesis}</blockquote>
             ) : (
-              <p className="da__empty">
-                {thesis.state === 'available'
-                  ? 'No contradicting market or event signal was found in the data retrieved.'
-                  : 'Not assessable — no usable evidence was available to classify contradicting signals.'}
+              <p className="report__empty">No thesis text was supplied.</p>
+            )}
+
+            {/* Kept clearly distinct from the trader's own words. */}
+            {thesis.interpretation ? (
+              <div className="report__interpretation">
+                <div className="report__sub-label">How TradeGuard read your thesis</div>
+                <p className="report__interpretation-text">{thesis.interpretation}</p>
+                {thesis.interpretationNote && (
+                  <p className="report__interpretation-note">{thesis.interpretationNote}</p>
+                )}
+              </div>
+            ) : (
+              <p className="report__footnote">
+                No interpretation of your thesis is shown, because the Devil&apos;s Advocate analysis it comes
+                from is unavailable.
               </p>
             )}
-          </div>
-        </div>
 
-        {thesis.state !== 'available' && thesis.reason && (
-          <p className="report__footnote">{thesis.reason}</p>
-        )}
+            {thesis.evidenceStrength && (
+              <div className="report__strength">
+                <span className="report__sub-label">Evidence strength</span>
+                <span className={`da__badge da__badge--${String(thesis.evidenceStrength.label).replace(/\s+/g, '-')}`}>
+                  {thesis.evidenceStrength.label}
+                </span>
+                {thesis.evidenceStrength.basis && (
+                  <span className="report__strength-basis">{thesis.evidenceStrength.basis}</span>
+                )}
+              </div>
+            )}
 
-        {thesis.supportingShown < thesis.supportingTotal ||
-        thesis.contradictingShown < thesis.contradictingTotal ? (
-          <p className="report__footnote">
-            Showing a concise subset. The full classified list is in the Devil&apos;s Advocate section.
-          </p>
-        ) : null}
-      </ReportSection>
+            <div className="report__two-col">
+              <div className="report__mini da__section--support">
+                <div className="report__mini-title">
+                  Supporting evidence
+                  <span className="da__count">{thesis.supportingTotal || 0}</span>
+                </div>
+                {thesis.supporting && thesis.supporting.length > 0 ? (
+                  <ul className="da__list">
+                    {thesis.supporting.map((it, i) => (
+                      <li key={it.id || `sup-${i}`} className="da__item">
+                        <div className="da__item-title">{it.title}</div>
+                        <p className="da__item-detail">{it.detail}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="da__empty">
+                    {thesis.state === 'available'
+                      ? 'No supporting market or event signal was found in the data retrieved.'
+                      : 'Not assessable — no usable evidence was available to classify supporting signals.'}
+                  </p>
+                )}
+              </div>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 3. Market context                                                 */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={3} title="Market context" state={market.state}>
-        {market.state === 'unavailable' ? (
-          <SectionUnavailable
-            reason={market.reason}
-            what="No market readings are shown."
-          />
+              <div className="report__mini da__section--contradict">
+                <div className="report__mini-title">
+                  Contradicting evidence
+                  <span className="da__count">{thesis.contradictingTotal || 0}</span>
+                </div>
+                {thesis.contradicting && thesis.contradicting.length > 0 ? (
+                  <ul className="da__list">
+                    {thesis.contradicting.map((it, i) => (
+                      <li key={it.id || `con-${i}`} className="da__item">
+                        <div className="da__item-title">{it.title}</div>
+                        <p className="da__item-detail">{it.detail}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="da__empty">
+                    {thesis.state === 'available'
+                      ? 'No contradicting market or event signal was found in the data retrieved.'
+                      : 'Not assessable — no usable evidence was available to classify contradicting signals.'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {thesis.state !== 'available' && thesis.reason && (
+              <p className="report__footnote">{thesis.reason}</p>
+            )}
+
+            {thesis.supportingShown < thesis.supportingTotal ||
+            thesis.contradictingShown < thesis.contradictingTotal ? (
+              <p className="report__footnote">
+                Showing a concise subset. The full classified list is in the Devil&apos;s Advocate section.
+              </p>
+            ) : null}
+          </>
+        );
+
+      /* ---------------------------------------------------------------- */
+      /* 3. Market context                                                 */
+      /* ---------------------------------------------------------------- */
+      case 'market':
+        return market.state === 'unavailable' ? (
+          <SectionUnavailable reason={market.reason} what="No market readings are shown." />
         ) : (
           <>
             <div className="data-grid">
@@ -353,14 +403,13 @@ export default function FinalReportPanel({ report }) {
               {market.state === 'partial' && ' Some derived readings were unavailable, so this summary is partial.'}
             </p>
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 4. Events & catalysts                                             */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={4} title="Events & catalysts" state={events.state}>
-        {events.state === 'unavailable' ? (
+      /* ---------------------------------------------------------------- */
+      /* 4. Events & catalysts                                             */
+      /* ---------------------------------------------------------------- */
+      case 'events':
+        return events.state === 'unavailable' ? (
           <SectionUnavailable reason={events.reason} what="No events or catalysts are shown." />
         ) : (
           <>
@@ -384,14 +433,13 @@ export default function FinalReportPanel({ report }) {
                 ` Showing ${events.itemsShown} of ${events.itemCount} events.`}
             </p>
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 5. Devil's Advocate                                               */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={5} title="Devil's Advocate" state={da.state}>
-        {da.state === 'unavailable' ? (
+      /* ---------------------------------------------------------------- */
+      /* 5. Devil's Advocate                                               */
+      /* ---------------------------------------------------------------- */
+      case 'attack':
+        return da.state === 'unavailable' ? (
           <SectionUnavailable
             reason={da.reason}
             what="No counterargument, classified evidence or key risks are shown."
@@ -511,14 +559,13 @@ export default function FinalReportPanel({ report }) {
               </div>
             )}
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 6. Historical stress test                                         */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={6} title="Historical stress test" state={historical.state}>
-        {historical.state === 'unavailable' ? (
+      /* ---------------------------------------------------------------- */
+      /* 6. Historical stress test                                         */
+      /* ---------------------------------------------------------------- */
+      case 'history':
+        return historical.state === 'unavailable' ? (
           <SectionUnavailable
             reason={historical.reason}
             what="No comparable past setups or observed outcomes are shown."
@@ -528,10 +575,7 @@ export default function FinalReportPanel({ report }) {
             <div className="data-grid">
               <DataRow label="Comparable setups found" value={fmt(historical.matchedCount)} />
               <DataRow label="Usable sample" value={historical.sampleSize != null ? `${fmt(historical.sampleSize)} bars` : '—'} />
-              <DataRow
-                label="Granularity"
-                value={historical.profile?.granularityLabel || '—'}
-              />
+              <DataRow label="Granularity" value={historical.profile?.granularityLabel || '—'} />
               <DataRow
                 label="Window / horizon"
                 value={
@@ -604,14 +648,13 @@ export default function FinalReportPanel({ report }) {
               a win rate or an expected return.
             </p>
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 7. Risk assessment                                                */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={7} title="Risk assessment" state={risk.state}>
-        {risk.ready ? (
+      /* ---------------------------------------------------------------- */
+      /* 7. Risk assessment                                                */
+      /* ---------------------------------------------------------------- */
+      case 'risk':
+        return risk.ready ? (
           <>
             <div className="data-grid">
               <DataRow label="Entry" value={fmt(risk.entryPrice)} />
@@ -645,18 +688,15 @@ export default function FinalReportPanel({ report }) {
                 ))}
               </ul>
             )}
-            <p className="report__footnote">
-              Nothing has been assumed in place of the missing numbers.
-            </p>
+            <p className="report__footnote">Nothing has been assumed in place of the missing numbers.</p>
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 8. Trade structure                                                */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={8} title="Trade structure" state={structure.state}>
-        {structure.state === 'unavailable' ? (
+      /* ---------------------------------------------------------------- */
+      /* 8. Trade structure                                                */
+      /* ---------------------------------------------------------------- */
+      case 'structure':
+        return structure.state === 'unavailable' ? (
           <SectionUnavailable reason={structure.reason} what="No consolidated plan is shown." />
         ) : (
           <>
@@ -732,63 +772,92 @@ export default function FinalReportPanel({ report }) {
               context, assumptions and the complete conditions list — is in the Trade Structure section.
             </p>
           </>
-        )}
-      </ReportSection>
+        );
 
-      {/* ---------------------------------------------------------------- */}
-      {/* 9. Information gaps & limitations                                 */}
-      {/* ---------------------------------------------------------------- */}
-      <ReportSection index={9} title="Information gaps & limitations">
-        {gaps.length === 0 ? (
-          <p className="report__empty">
-            None — every investigation section produced a usable result for this trade.
-          </p>
-        ) : (
-          <ul className="report__gaps">
-            {gaps.map((g) => (
-              <li key={g.id} className="report__gap">
-                <div className="report__gap-head">
-                  <StateBadge state={g.state} />
-                  <span className="report__gap-title">{g.title}</span>
-                  <span className="report__gap-stage">
-                    {g.stage} · Phase {g.phase}
-                  </span>
-                </div>
-                <p className="report__gap-detail">{g.detail}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="report__footnote">
-          Only gaps the underlying stages actually reported are listed. TradeGuard does not add generic
-          caveats to pad this section.
-        </p>
+      /* ---------------------------------------------------------------- */
+      /* 9. Information gaps & limitations                                 */
+      /* ---------------------------------------------------------------- */
+      case 'gaps':
+        return (
+          <>
+            {gaps.length === 0 ? (
+              <p className="report__empty">
+                None — every investigation section produced a usable result for this trade.
+              </p>
+            ) : (
+              <ul className="report__gaps">
+                {gaps.map((g) => (
+                  <li key={g.id} className="report__gap">
+                    <div className="report__gap-head">
+                      <StateBadge state={g.state} />
+                      <span className="report__gap-title">{g.title}</span>
+                      <span className="report__gap-stage">
+                        {g.stage} · Phase {g.phase}
+                      </span>
+                    </div>
+                    <p className="report__gap-detail">{g.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="report__footnote">
+              Only gaps the underlying stages actually reported are listed. TradeGuard does not add generic
+              caveats to pad this section.
+            </p>
 
-        {limitations.length > 0 && (
-          <div className="report__block report__block--limits">
-            <div className="report__mini-title">Important limitations</div>
-            <ul className="report__limits">
-              {limitations.map((l, i) => (
-                <li key={i}>{l}</li>
-              ))}
-            </ul>
+            {limitations.length > 0 && (
+              <div className="report__block report__block--limits">
+                <div className="report__mini-title">Important limitations</div>
+                <ul className="report__limits">
+                  {limitations.map((l, i) => (
+                    <li key={i}>{l}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="report">
+      <div className="report__status">
+        <span className={`report__badge report__badge--${report.status}`}>{report.statusLabel}</span>
+        <span className="report__status-note">{STATUS_TITLE[report.status] || ''}</span>
+      </div>
+
+      {report.statusDetail && <p className="report__detail">{report.statusDetail}</p>}
+
+      <WorkspaceNav
+        title="Final trade report"
+        meta={`${summary.available} of ${summary.total} sections available`}
+        items={navItems}
+        activeId={active.id}
+        onSelect={setActiveId}
+        ariaLabel="Final trade report sections"
+      />
+
+      {active.id === 'boundary' ? (
+        /* 10. Final decision boundary */
+        <section className="report__section report__section--boundary" data-report-section="Final decision boundary">
+          <div className="report__section-title">
+            <span className="report__section-index">10</span>
+            <span className="report__section-label">Final decision boundary</span>
           </div>
-        )}
-      </ReportSection>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* 10. Final decision boundary                                       */}
-      {/* ---------------------------------------------------------------- */}
-      <section className="report__section report__section--boundary" data-report-section="Final decision boundary">
-        <div className="report__section-title">
-          <span className="report__section-index">10</span>
-          <span className="report__section-label">Final decision boundary</span>
-        </div>
-        <div className="report__boundary">{report.decisionBoundary}</div>
-        {report.decisionBoundaryDetail && (
-          <p className="report__boundary-detail">{report.decisionBoundaryDetail}</p>
-        )}
-      </section>
+          <div className="report__boundary">{report.decisionBoundary}</div>
+          {report.decisionBoundaryDetail && (
+            <p className="report__boundary-detail">{report.decisionBoundaryDetail}</p>
+          )}
+        </section>
+      ) : (
+        <ReportSection index={active.index} title={active.title} state={stateOf[active.id]}>
+          {renderBody()}
+        </ReportSection>
+      )}
 
       {report.method && (
         <section className="report__section">

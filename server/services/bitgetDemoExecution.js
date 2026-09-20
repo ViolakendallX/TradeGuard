@@ -144,8 +144,11 @@ function num(v) {
  * The numbers are READ, never computed. Both shapes are supported because the
  * trade structure embeds the engine's result and also projects it into
  * `riskStructure`; either way it is the same engine's output.
+ *
+ * Exported so Phase 11 (Trade Review) can reuse the exact Phase 6 figures for
+ * its Trade Plan section — the review never recalculates risk.
  */
-function readRiskFigures(risk, structure) {
+export function readRiskFigures(risk, structure) {
   const fromRisk = isObj(risk) ? risk : null;
   const calc = fromRisk && isObj(fromRisk.calculation) ? fromRisk.calculation : null;
   const inputs = fromRisk && isObj(fromRisk.inputs) ? fromRisk.inputs : {};
