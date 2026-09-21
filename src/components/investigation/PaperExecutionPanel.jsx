@@ -163,8 +163,7 @@ function ConfirmationStep({ token, notice, onConfirm, submitting, error }) {
       <div className="exec__confirm-actions">
         <button
           type="button"
-          className="btn btn--primary"
-          style={{ width: 'auto' }}
+          className="btn btn--primary btn--auto"
           disabled={!matches || submitting}
           onClick={() => onConfirm(typed)}
           data-exec-confirm-button="true"
@@ -387,8 +386,7 @@ export default function PaperExecutionPanel({
             <div className="exec__retry" data-exec-retry="true">
               <button
                 type="button"
-                className="btn btn--ghost"
-                style={{ width: 'auto' }}
+                className="btn btn--ghost btn--auto"
                 onClick={() => onExecute(execution.confirmationToken)}
                 disabled={submitting}
               >

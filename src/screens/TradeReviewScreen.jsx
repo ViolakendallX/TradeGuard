@@ -29,13 +29,13 @@ function EmptyReview({ onEdit }) {
     <div className="card">
       <div className="card__body">
         <div className="empty-state">
-          <div className="card__title" style={{ marginBottom: 8 }}>
+          <div className="card__title">
             Nothing to review yet
           </div>
           Submit a trade idea, let TradeGuard investigate it, and record your own decision. Trade Review
           becomes available only after you have recorded a decision.
-          <div style={{ marginTop: 16 }}>
-            <button type="button" className="btn btn--primary" style={{ width: 'auto' }} onClick={onEdit}>
+          <div className="empty-state__actions">
+            <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
               Submit a trade idea
             </button>
           </div>

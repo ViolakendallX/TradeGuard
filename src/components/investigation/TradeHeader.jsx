@@ -85,11 +85,16 @@ export default function TradeHeader({ idea, offline, onEdit, innerRef }) {
         </div>
       </dl>
 
-      <div className="inv-head__actions">
-        <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
-          Edit thesis
-        </button>
-      </div>
+      {/* Only offered while there is a thesis being worked on. Trader Review can
+          show a trade that is already saved in Trade Memory, and an "Edit thesis"
+          button there would be a dead control — a saved record is not editable. */}
+      {onEdit && (
+        <div className="inv-head__actions">
+          <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
+            Edit thesis
+          </button>
+        </div>
+      )}
 
       {offline && (
         <p className="inv-head__note">

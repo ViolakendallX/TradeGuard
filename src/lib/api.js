@@ -423,9 +423,9 @@ export async function fetchTradeReview(context, extras = {}) {
  * Phase 12: save the current trade to Trade Memory.
  *
  * This SENDS the records TradeGuard already produced — the submitted trade, the
- * Phase 9 decision, the Phase 10 execution state and the Phase 11 review — and
- * the backend stores them in a local JSON file. It performs NO new analysis and
- * submits NOTHING to any venue.
+ * Phase 9 decision, the Phase 10 execution state, the Phase 11 review and the
+ * trader's own Phase 13 reflection — and the backend stores them in a local JSON
+ * file. It performs NO new analysis and submits NOTHING to any venue.
  *
  * `sessionId` is what makes a save an upsert: saving the same trade again updates
  * the same record instead of creating a duplicate.
@@ -444,6 +444,13 @@ export async function saveJournalRecord(sessionId, extras = {}) {
       execution: extras.execution || null,
       review: extras.review || null,
       notes: typeof extras.notes === 'string' ? extras.notes : null,
+      // Phase 13: the trader's own reflection. Sent as an object so that clearing
+      // it (an empty string) is distinguishable from not carrying it at all — an
+      // ordinary save must never wipe a reflection the trader wrote.
+      traderReview:
+        extras.traderReview && typeof extras.traderReview === 'object'
+          ? { notes: typeof extras.traderReview.notes === 'string' ? extras.traderReview.notes : '' }
+          : null,
     }),
   });
 
@@ -474,6 +481,78 @@ export async function saveJournalRecord(sessionId, extras = {}) {
 
   // A 200 carrying "unavailable" is the honest answer when the journal file
   // cannot be written — it is not a success, so it is reported as a failure.
+  if (payload?.status !== 'saved') {
+    return {
+      ok: false,
+      kind: 'unavailable',
+      errors: {},
+      message: payload?.message || 'Trade Memory could not be written.',
+    };
+  }
+
+  return { ok: true, data: payload };
+}
+
+/**
+ * Phase 13: save ONLY the trader's reflection on an ALREADY-SAVED trade.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM `saveJournalRecord`
+ * ---------------------------------------------------
+ * Trader Review can look back at any trade in Trade Memory, not just the one
+ * currently open. Editing a reflection on an older trade must therefore be
+ * possible without re-sending that trade's thesis, decision, execution or
+ * review — this screen does not hold them, and re-sending stale copies would be
+ * a way to silently rewrite history.
+ *
+ * So this sends the reflection and NOTHING ELSE. The backend's upsert is
+ * group-scoped: a group is only replaced when the request actually carried it,
+ * so the stored trade, decision, execution, review and notes are left exactly as
+ * they were. It cannot create a record either — the id must already exist for
+ * Trader Review to offer this editor at all, and the caller only ever passes an
+ * id it read from Trade Memory.
+ *
+ * It runs no analysis and contacts no provider: it is one write of the trader's
+ * own words.
+ *
+ * Returns { ok, data } on success, or { ok:false, kind, message } on failure.
+ */
+export async function saveJournalReflection(id, notes) {
+  const response = await fetch(`${API_BASE}/journal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      // The ONLY group carried. Every other group is deliberately absent so the
+      // server keeps what is already stored.
+      traderReview: { notes: typeof notes === 'string' ? notes : '' },
+    }),
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 400) {
+    return {
+      ok: false,
+      kind: 'validation',
+      errors: payload?.errors || {},
+      message: payload?.message || 'This reflection could not be saved.',
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      errors: {},
+      message: payload?.message || `Trade Memory request failed (${response.status}).`,
+    };
+  }
+
   if (payload?.status !== 'saved') {
     return {
       ok: false,

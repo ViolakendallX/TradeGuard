@@ -4968,3 +4968,244 @@ textarea {
 .journal__detail .review__known {
   margin-top: 12px;
 }
+
+/* ==========================================================================
+   Phase 13 — Trader Review + final polish
+   ========================================================================== */
+
+/* --- sidebar: the two halves of the workflow ------------------------------ */
+
+/* The sidebar labels its two groups and gives each a one-line caption, so the
+   whole loop is legible without adding a second navigation. Spacing between
+   groups is what makes them read as separate stages of the workflow. */
+.nav__group + .nav__group {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.nav__caption {
+  padding: 0 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* --- Trader Review -------------------------------------------------------- */
+
+.trader {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* The reflection editor. Same surface as every other textarea in the app, but
+   taller by default — this is the one place the trader writes prose. */
+.trader__reflection {
+  width: 100%;
+  min-height: 190px;
+  line-height: 1.7;
+}
+
+.trader__reflection-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.trader__save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* A dot rather than a colour change alone, so the state is not carried by
+   colour only. */
+.trader__save-state::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--neutral);
+}
+
+.trader__save-state--pending::before {
+  background: var(--warn);
+}
+
+.trader__save-state--saved::before {
+  background: var(--down);
+}
+
+.trader__save-state--failed {
+  color: var(--up);
+}
+
+.trader__save-state--failed::before {
+  background: var(--up);
+}
+
+.trader__reflection-at {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --- Trade Memory: the reflection marker in the journal table ------------- */
+
+.journal__reflect {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.journal__reflect.is-empty {
+  color: var(--text-muted);
+}
+
+/* --- consistent empty-state actions --------------------------------------- */
+
+/* Empty states across the app offer their actions in the same place, with the
+   same spacing, instead of each screen inventing its own inline margin. */
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* The empty-state title always needs a gap below it; it was repeated as an
+   inline style in every screen. Stated once here instead. */
+.empty-state .card__title {
+  margin-bottom: 8px;
+}
+
+/* An action button that sits in a row and must shrink to its own label. It was
+   written as an inline `style={{ width: 'auto' }}` in three panels; the
+   behaviour is identical, it is just stated once. */
+.btn--auto {
+  width: auto;
+}
+
+/* The Trade Review notes editor. Same surface as the Trader Review reflection,
+   a little shorter — the review note is a summary, the reflection is the full
+   look back. */
+.review__notes-input {
+  width: 100%;
+  min-height: 120px;
+  line-height: 1.7;
+}
+
+/* --- Trader Review: the saved-trade picker -------------------------------- */
+
+/* Trader Review reviews a trade that has already been decided, so it must be
+   able to open ANY trade in Trade Memory — not only the one currently open. This
+   is the list that makes that possible. It mirrors Trade Memory's own vocabulary
+   (asset · direction · decision · execution · reflection · last saved) so the two
+   screens cannot disagree about what was recorded. */
+.picker {
+  margin-bottom: 16px;
+}
+
+.picker__lede {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 76ch;
+}
+
+.picker__list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.picker__li {
+  margin: 0;
+}
+
+.picker__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.picker__row:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.picker__row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.picker__row.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.picker__row-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.picker__row-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.picker__fact strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.picker__fact--when {
+  margin-left: auto;
+}
+
+/* "Current trade" is a fact about the session, not a judgement about the trade. */
+.picker__tag {
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.picker__empty {
+  margin-top: 12px;
+}
+
+@media (max-width: 720px) {
+  .picker__fact--when {
+    margin-left: 0;
+  }
+}

@@ -196,8 +196,7 @@ function DecisionForm({ onSave, saving, errors, onClearError }) {
       <div className="decision__actions">
         <button
           type="submit"
-          className="btn btn--primary"
-          style={{ width: 'auto' }}
+          className="btn btn--primary btn--auto"
           disabled={!canSubmit}
           data-decision-save="true"
         >

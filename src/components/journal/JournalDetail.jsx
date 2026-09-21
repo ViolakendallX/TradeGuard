@@ -1,11 +1,11 @@
 /**
- * Journal detail (Phase 12).
+ * Journal detail (Phase 12, extended in Phase 13).
  *
  * One saved trade, opened. INFORMATION ARCHITECTURE: like the Trade Report and
  * the Trade Review, this is a NAVIGABLE workspace rather than one long page — the
  * record is read one section at a time behind a horizontal navigator:
  *
- *   SUMMARY | DECISION | EXECUTION | PLAN | REVIEW | NOTES | NOT AVAILABLE
+ *   SUMMARY | DECISION | EXECUTION | PLAN | REVIEW | NOTES | REFLECTION | NOT AVAILABLE
  *
  * Everything here comes from the STORED record. Opening an old trade re-runs
  * nothing: no research, no thesis attack, no historical stress test, no risk
@@ -47,7 +47,8 @@ const TABS = [
   { id: 'plan', label: 'Plan', index: 4, title: 'Thesis and trade plan' },
   { id: 'review', label: 'Review', index: 5, title: 'Trade review' },
   { id: 'notes', label: 'Notes', index: 6, title: 'Review notes' },
-  { id: 'gaps', label: 'Not available', index: 7, title: 'What is not available in this record' },
+  { id: 'reflection', label: 'Reflection', index: 7, title: 'Your reflection' },
+  { id: 'gaps', label: 'Not available', index: 8, title: 'What is not available in this record' },
 ];
 
 function Section({ index, title, children }) {
@@ -113,6 +114,14 @@ export default function JournalDetail({ record }) {
               <DataRow label="Execution" value={execution.statusLabel || '—'} />
               <DataRow label="Investigation" value={investigation.statusLabel || '—'} />
               <DataRow label="Review" value={review?.statusLabel || 'Not recorded'} />
+              <DataRow
+                label="Reflection"
+                value={
+                  record.traderReview?.status === 'recorded'
+                    ? `Recorded ${formatTimestamp(record.traderReview.recordedAt)}`
+                    : 'Not recorded'
+                }
+              />
               <DataRow label="Saved at" value={formatTimestamp(record.createdAt)} />
               <DataRow label="Last updated" value={formatTimestamp(record.updatedAt)} />
             </dl>
@@ -338,6 +347,29 @@ export default function JournalDetail({ record }) {
             No review notes were written for this trade.
           </p>
         );
+
+      /* ------------------------------------------------------------------ */
+      /* REFLECTION — the trader's own closing note (Phase 13)               */
+      /* ------------------------------------------------------------------ */
+      case 'reflection': {
+        const traderReview = record.traderReview || { status: 'not-recorded' };
+        return traderReview.status === 'recorded' ? (
+          <>
+            <blockquote className="journal__note-text" data-journal-reflection-text="true">
+              {traderReview.notes}
+            </blockquote>
+            <p className="report__notice report__notice--muted">
+              Recorded {formatTimestamp(traderReview.recordedAt)}. Written by you in Trader Review and
+              stored verbatim — TradeGuard never generates, scores or grades it.
+            </p>
+          </>
+        ) : (
+          <p className="review__known-text is-empty" data-journal-no-reflection="true">
+            No reflection was written for this trade. Trade Memory records the gap rather than filling
+            it in with a conclusion of its own.
+          </p>
+        );
+      }
 
       /* ------------------------------------------------------------------ */
       /* GAPS — everything this record does not have                         */

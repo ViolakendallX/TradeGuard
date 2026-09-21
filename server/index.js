@@ -1,16 +1,17 @@
 /**
  * TradeGuard backend.
  *
- * Phases 1–12 are built: thesis capture, the investigation flow, market/event
+ * Phases 1–13 are built: thesis capture, the investigation flow, market/event
  * research, the Devil's Advocate thesis attack, the historical stress test, the
  * deterministic risk engine, the trade structure that synthesises them into one
  * plan, the final trade report that consolidates the whole investigation, the
  * human decision that records the trader's own choice, paper execution — which
  * submits to the Bitget DEMO environment only, and only after an explicit human
  * confirmation on a trade the trader already decided to TAKE — Trade Review,
- * which assembles those verified records into one post-decision review, and
- * Trade Memory, which saves a completed trade to a local JSON file so it can be
- * read back after navigation, a page reload, or a frontend restart.
+ * which assembles those verified records into one post-decision review, Trade
+ * Memory, which saves a completed trade to a local JSON file so it can be read
+ * back after navigation, a page reload, or a frontend restart, and Trader
+ * Review, where the trader writes their own reflection on the completed trade.
  *
  * Still one Express process. Trade Memory is a plain JSON file on this server —
  * no database, no migrations, no cache server, no cloud storage. There is still
@@ -49,7 +50,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'tradeguard-api',
-    phase: 12,
+    phase: 13,
     time: new Date().toISOString(),
   });
 });

@@ -100,6 +100,14 @@ export default function JournalList({ records, selectedId, onSelect }) {
                   ) : (
                     <span className="journal__none">No notes</span>
                   )}
+                  {/* Phase 13: whether the trader wrote their own reflection on
+                      this trade. A marker, never a judgement about the trade. */}
+                  <span
+                    className={`journal__reflect${row.hasReflection ? '' : ' is-empty'}`}
+                    data-journal-reflection={row.hasReflection ? 'recorded' : 'not-recorded'}
+                  >
+                    {row.hasReflection ? 'Reflection recorded' : 'No reflection'}
+                  </span>
                 </td>
 
                 <td className="journal__cell journal__cell--when">{formatTimestamp(row.updatedAt)}</td>

@@ -7,6 +7,7 @@ import PaperExecutionScreen from './screens/PaperExecutionScreen.jsx';
 import TradeReportScreen from './screens/TradeReportScreen.jsx';
 import TradeReviewScreen from './screens/TradeReviewScreen.jsx';
 import TradeMemoryScreen from './screens/TradeMemoryScreen.jsx';
+import TraderReviewScreen from './screens/TraderReviewScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
@@ -44,6 +45,13 @@ export default function App() {
   // regenerated for every new trade — so a new trade can never overwrite the
   // previous one in the journal.
   const [sessionId, setSessionId] = useState(null);
+  // Phase 13: the trader's own reflection on the completed trade, written in
+  // Trader Review. Held here so it survives navigation, and saved with the trade
+  // in Trade Memory. `reflectionTouched` matters: until the trader has actually
+  // written or cleared a reflection, the save carries no reflection at all — so
+  // an ordinary save can never overwrite a reflection that is already stored.
+  const [reflection, setReflection] = useState('');
+  const [reflectionTouched, setReflectionTouched] = useState(false);
 
   // The current trade's server-side records (research, attack, history, risk,
   // structure, report, the execution gate, and the trade review). Fetched ONCE
@@ -56,14 +64,15 @@ export default function App() {
   // describe it change. This writes only what the app already holds — it runs no
   // analysis and sends nothing to any venue. The gate evaluation is used when no
   // order was submitted, so the journal remembers LOCKED / READY / UNAVAILABLE
-  // honestly rather than as a blank.
-  useJournalSync({
+  // honestly rather than as a blank. Phase 13 adds the trader's own reflection.
+  const journalSync = useJournalSync({
     sessionId,
     idea: session.idea,
     decision,
     execution: execution || session.gate || null,
     review: session.review,
     notes: reviewNotes,
+    traderReview: reflectionTouched ? { notes: reflection } : null,
   });
 
   useEffect(() => {
@@ -103,6 +112,8 @@ export default function App() {
       setDecision(null);
       setExecution(null);
       setReviewNotes('');
+      setReflection('');
+      setReflectionTouched(false);
       setSessionId(newSessionId());
       navigate('investigation');
     },
@@ -123,6 +134,14 @@ export default function App() {
   // venue's own response. Nothing was submitted unless this carries a result.
   const handleExecutionRecorded = useCallback((record) => {
     setExecution(record || null);
+  }, []);
+
+  // Phase 13: the trader's reflection. Marked as touched on the first keystroke
+  // (including the keystroke that empties it), which is what lets a deliberate
+  // clear be saved while an untouched reflection leaves the stored one alone.
+  const handleReflectionChange = useCallback((value) => {
+    setReflection(value);
+    setReflectionTouched(true);
   }, []);
 
   // Return the trader to the Trade Idea screen with the previous submission restored.
@@ -147,7 +166,9 @@ export default function App() {
       ? 'This review describes what happened after the decision you already made. It does not tell you what to do next.'
       : screen === 'trade-memory'
       ? 'The trades you have saved. Open one to see what you originally recorded — no analysis is re-run.'
-      : 'Not built in this phase.';
+      : screen === 'trader-review'
+      ? 'Look back at a trade you have recorded and write your own reflection. TradeGuard does not score it or draw conclusions from it.'
+      : 'This screen is not part of the TradeGuard workflow.';
 
   return (
     <AppShell
@@ -199,6 +220,17 @@ export default function App() {
         />
       ) : screen === 'trade-memory' ? (
         <TradeMemoryScreen onNavigate={navigate} />
+      ) : screen === 'trader-review' ? (
+        <TraderReviewScreen
+          submission={submission}
+          session={session}
+          sessionId={sessionId}
+          reflection={reflection}
+          onReflectionChange={handleReflectionChange}
+          sync={journalSync}
+          onEdit={handleEdit}
+          onNavigate={navigate}
+        />
       ) : (
         <PlaceholderScreen screenId={screen} onNavigate={navigate} />
       )}

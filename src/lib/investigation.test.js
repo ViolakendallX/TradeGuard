@@ -710,11 +710,9 @@ test('every declared stage is now built; nothing in the investigation is locked'
   assert.equal(INVESTIGATION_STAGE_COUNT, 10);
 });
 
-test('Trade Review (Phase 11) and Trade Memory (Phase 12) are built; Trader Review stays planned', async () => {
+test('Trade Review (11), Trade Memory (12) and Trader Review (13) are all built, in workflow order', async () => {
   const { NAV_ITEMS } = await import('./constants.js');
 
-  // Trade Review is Phase 11 and Trade Memory is Phase 12; the trader review
-  // screen is the only still-planned item after them.
   const review = NAV_ITEMS.find((item) => item.id === 'trade-review');
   assert.equal(review.phase, 11);
   assert.equal(review.label, 'Trade Review');
@@ -723,15 +721,24 @@ test('Trade Review (Phase 11) and Trade Memory (Phase 12) are built; Trader Revi
   assert.equal(memory.phase, 12);
   assert.equal(memory.label, 'Trade Memory');
 
-  const future = NAV_ITEMS.filter((item) => item.phase > 12);
+  // Phase 13 landed the last screen, so nothing in the navigation is planned any
+  // more — every declared phase has an implementation behind it.
+  const trader = NAV_ITEMS.find((item) => item.id === 'trader-review');
+  assert.equal(trader.phase, 13);
+  assert.equal(trader.label, 'Trader Review');
   assert.deepEqual(
-    future.map((item) => item.id),
-    ['trader-review']
+    NAV_ITEMS.filter((item) => item.phase > 13),
+    [],
+    'no screen is left unimplemented'
+  );
+  assert.deepEqual(
+    NAV_ITEMS.map((item) => item.phase),
+    [1, 2, 8, 9, 10, 11, 12, 13],
+    'the phases that own a screen are exactly the ones that are built'
   );
 
   // Paper execution is Phase 10 and sits directly after the decision, which is
-  // what unlocks it. Trade Review sits directly after paper execution, and Trade
-  // Memory directly after the review.
+  // what unlocks it. The post-decision screens follow in workflow order.
   const execution = NAV_ITEMS.find((item) => item.id === 'paper-execution');
   assert.equal(execution.phase, 10);
   assert.equal(execution.label, 'Paper Execution');
@@ -740,6 +747,45 @@ test('Trade Review (Phase 11) and Trade Memory (Phase 12) are built; Trader Revi
   assert.equal(ids.indexOf('paper-execution'), ids.indexOf('decision') + 1);
   assert.equal(ids.indexOf('trade-review'), ids.indexOf('paper-execution') + 1);
   assert.equal(ids.indexOf('trade-memory'), ids.indexOf('trade-review') + 1);
+  assert.equal(ids.indexOf('trader-review'), ids.indexOf('trade-memory') + 1);
+});
+
+test('the sidebar groups partition the workflow exactly — every screen once, in order', async () => {
+  const { NAV_ITEMS, NAV_GROUPS } = await import('./constants.js');
+
+  const grouped = NAV_GROUPS.flatMap((group) => group.items);
+
+  assert.deepEqual(
+    grouped,
+    NAV_ITEMS.map((item) => item.id),
+    'the groups list every screen exactly once, in navigation order'
+  );
+  assert.equal(new Set(grouped).size, grouped.length, 'no screen appears in two groups');
+
+  // The two halves are labelled, and each carries a caption that names the work
+  // it contains — that is what makes the whole loop legible from the sidebar.
+  assert.equal(NAV_GROUPS.length, 2);
+  for (const group of NAV_GROUPS) {
+    assert.ok(group.label, `${group.id} has a label`);
+    assert.ok(group.caption, `${group.id} has a caption`);
+  }
+
+  // The investigation group holds the analysis half; the second group holds the
+  // post-decision half, starting at the decision itself.
+  assert.deepEqual(NAV_GROUPS[0].items, ['trade-idea', 'investigation', 'trade-report']);
+  assert.deepEqual(NAV_GROUPS[1].items, [
+    'decision',
+    'paper-execution',
+    'trade-review',
+    'trade-memory',
+    'trader-review',
+  ]);
+
+  // Every analysis stage is named in the first caption, so the sidebar does not
+  // have to repeat the eight-stage rail to communicate the workflow.
+  for (const stage of ['Thesis', 'Market', 'Events', 'Attack', 'History', 'Risk', 'Structure', 'Report']) {
+    assert.match(NAV_GROUPS[0].caption, new RegExp(stage), `the investigation caption names ${stage}`);
+  }
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {

@@ -1,10 +1,13 @@
-import { NAV_ITEMS } from '../lib/constants.js';
+import { NAV_ITEMS, NAV_GROUPS } from '../lib/constants.js';
 
-// Phases that are actually built. Everything at or below this is interactive;
-// later phases remain disabled until their phase lands.
-const CURRENT_PHASE = 12;
+// Phases that are actually built. Every phase through 13 has landed, so nothing
+// in the sidebar is locked — the mechanism stays because it is the honest way to
+// mark a screen that does not exist yet, rather than pretending it works.
+const CURRENT_PHASE = 13;
 
 export default function Sidebar({ activeId, onNavigate, apiOnline }) {
+  const byId = new Map(NAV_ITEMS.map((item) => [item.id, item]));
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -16,26 +19,37 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
       </div>
 
       <nav className="nav" aria-label="Main navigation">
-        <div className="nav__label">Decision flow</div>
-        {NAV_ITEMS.map((item, index) => {
-          const isActive = item.id === activeId;
-          const isAvailable = item.phase <= CURRENT_PHASE;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={`nav__item${isActive ? ' is-active' : ''}`}
-              onClick={() => onNavigate(item.id)}
-              disabled={!isAvailable}
-              aria-current={isActive ? 'page' : undefined}
-              title={isAvailable ? item.label : `${item.label} — not built yet (phase ${item.phase})`}
-            >
-              <span className="nav__index">{index + 1}</span>
-              <span className="nav__text">{item.label}</span>
-              {!isAvailable && <span className="nav__badge">Phase {item.phase}</span>}
-            </button>
-          );
-        })}
+        {NAV_GROUPS.map((group) => (
+          <div className="nav__group" key={group.id}>
+            <div className="nav__label">{group.label}</div>
+            {group.caption && <div className="nav__caption">{group.caption}</div>}
+
+            {group.items.map((id, index) => {
+              const item = byId.get(id);
+              if (!item) return null;
+
+              const isActive = item.id === activeId;
+              const isAvailable = item.phase <= CURRENT_PHASE;
+              const step = NAV_ITEMS.findIndex((entry) => entry.id === item.id) + 1;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`nav__item${isActive ? ' is-active' : ''}`}
+                  onClick={() => onNavigate(item.id)}
+                  disabled={!isAvailable}
+                  aria-current={isActive ? 'page' : undefined}
+                  title={isAvailable ? item.label : `${item.label} — available from phase ${item.phase}`}
+                >
+                  <span className="nav__index">{step}</span>
+                  <span className="nav__text">{item.label}</span>
+                  {!isAvailable && <span className="nav__badge">Phase {item.phase}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="sidebar__footer">
@@ -44,15 +58,9 @@ export default function Sidebar({ activeId, onNavigate, apiOnline }) {
           <span className={`status-dot${apiOnline ? '' : ' is-offline'}`} />
           {apiOnline ? 'Backend connected' : 'Backend offline'}
           <br />
-          Phase 12 — Trade Memory. The Devil's Advocate challenges your thesis, history shows what
-          followed similar past setups, the risk engine calculates the defined risk from your own entry,
-          invalidation and risk budget, the trade structure brings it all together into one plan, the
-          final report consolidates the whole investigation into a single report, you record your own
-          decision — TradeGuard records it, it does not make it — and only then can you confirm paper
-          execution, which sends the trade to Bitget Demo with virtual funds. Trade Review then assembles
-          those verified records into one read-only view of what happened, and Trade Memory saves the
-          completed trade so you can come back to it later. No live-money order is ever placed, and no
-          profit, loss or fill is ever shown unless it was actually verified.
+          Phases 1–13 complete. TradeGuard challenges your trade thesis before you risk capital — and
+          stops there. The decision is always yours, no live-money order is ever placed, and no profit
+          or loss is shown unless a venue actually reported one.
         </div>
       </div>
     </aside>

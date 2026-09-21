@@ -936,3 +936,494 @@ test('R3 — GET /api/journal on a fresh install is an honest empty state', asyn
   assert.equal(body.count, 0);
   assert.match(body.message, /No trades have been saved/);
 });
+
+// ============================================================================
+// Phase 13 — the trader's own reflection (Trader Review)
+//
+// Additive to the Phase 12 journal: one optional group on the stored record.
+// These tests cover the Phase 13 spec — the reflection persists, can be edited,
+// can be cleared, survives a save that does not carry it, stays isolated between
+// trades, and reads back honestly on a record written before the field existed.
+// ============================================================================
+
+/** A Phase-12-era record, written before `traderReview` existed. */
+function legacyRecord() {
+  const src = completedSources({ id: 'sess-legacy' });
+  const record = normalizeRecord(src, new Date('2026-09-19T18:10:00.000Z'));
+  delete record.traderReview; // exactly what the Phase 12 build wrote
+  delete record.unavailable;
+  return record;
+}
+
+test('T1 — a reflection written in Trader Review is stored and read back verbatim', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  const saved = store.upsert(
+    completedSources({
+      traderReview: {
+        notes: 'I sized this correctly but entered before the retest completed.\nSecond line stays.',
+      },
+    }),
+    new Date('2026-09-20T10:00:00.000Z')
+  );
+
+  assert.equal(saved.ok, true);
+  assert.equal(saved.record.traderReview.status, 'recorded');
+  assert.equal(saved.record.traderReview.statusLabel, 'REFLECTION RECORDED');
+  assert.equal(
+    saved.record.traderReview.notes,
+    'I sized this correctly but entered before the retest completed.\nSecond line stays.',
+    'the reflection is stored exactly as written — newlines and all'
+  );
+  assert.equal(saved.record.traderReview.recordedAt, '2026-09-20T10:00:00.000Z');
+
+  // A fresh store (a page reload / a server restart) reads the same thing back.
+  const reread = createJournalStore({ filePath: file }).get('sess-A').record;
+  assert.equal(reread.traderReview.notes, saved.record.traderReview.notes);
+  assert.equal(reread.traderReview.recordedAt, '2026-09-20T10:00:00.000Z');
+});
+
+test('T2 — the reflection can be edited, and when it was first recorded is preserved', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  store.upsert(
+    completedSources({ traderReview: { notes: 'First version.' } }),
+    new Date('2026-09-20T10:00:00.000Z')
+  );
+
+  const edited = store.upsert(
+    completedSources({ traderReview: { notes: 'Second, better version.' } }),
+    new Date('2026-09-20T11:30:00.000Z')
+  );
+
+  assert.equal(edited.record.traderReview.notes, 'Second, better version.');
+  assert.equal(
+    edited.record.traderReview.recordedAt,
+    '2026-09-20T10:00:00.000Z',
+    'editing a reflection must not re-stamp when it was first recorded'
+  );
+  assert.equal(edited.record.updatedAt, '2026-09-20T11:30:00.000Z', 'the record itself was updated');
+});
+
+test('T3 — a reflection can be cleared, and clearing it is recorded as not-recorded', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  store.upsert(completedSources({ traderReview: { notes: 'Something.' } }));
+  const cleared = store.upsert(completedSources({ traderReview: { notes: '' } }));
+
+  assert.equal(cleared.record.traderReview.status, 'not-recorded');
+  assert.equal(cleared.record.traderReview.notes, null);
+  assert.equal(cleared.record.traderReview.recordedAt, null);
+
+  // Whitespace is not a reflection either.
+  const blank = store.upsert(completedSources({ traderReview: { notes: '   \n  ' } }));
+  assert.equal(blank.record.traderReview.status, 'not-recorded');
+  assert.equal(blank.record.traderReview.notes, null);
+});
+
+test('T4 — a save that does not carry a reflection cannot erase the stored one', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  store.upsert(completedSources({ traderReview: { notes: 'Do not lose me.' } }));
+
+  // An ordinary later save — a decision change, a notes edit — carries no
+  // traderReview at all. It must leave the reflection alone.
+  const src = completedSources({ traderReview: null });
+  const after = store.upsert(src);
+
+  assert.equal(after.record.traderReview.status, 'recorded');
+  assert.equal(after.record.traderReview.notes, 'Do not lose me.');
+
+  // And the route does not invent one either.
+  const legacySrc = completedSources({ traderReview: undefined });
+  assert.equal(
+    store.upsert(legacySrc).record.traderReview.notes,
+    'Do not lose me.',
+    'omitting the group entirely keeps the previous reflection'
+  );
+});
+
+test('T5 — a Phase 12 record with no reflection key still reads back honestly', () => {
+  const file = tempJournalFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ version: JOURNAL_VERSION, records: [legacyRecord()] }), 'utf8');
+
+  const loaded = createJournalStore({ filePath: file }).get('sess-legacy');
+
+  assert.equal(loaded.ok, true, 'a pre-Phase-13 record is not an error');
+  assert.ok(loaded.record, 'the record is still readable');
+  assert.equal(loaded.record.traderReview.status, 'not-recorded');
+  assert.equal(loaded.record.traderReview.notes, null);
+  assert.equal(loaded.record.traderReview.recordedAt, null);
+  assert.equal(loaded.record.traderReview.statusLabel, 'REFLECTION NOT RECORDED');
+
+  // The rest of the legacy record is untouched by the new field.
+  assert.equal(loaded.record.trade.asset, 'RNVDA');
+  assert.equal(loaded.record.decision.decision, 'TAKE');
+  assert.equal(loaded.record.notes, 'Waited too long to enter — next time take the first pullback.');
+  assert.equal(loaded.record.execution.orderId, 'DEMO-ORDER-123');
+
+  // Adding a reflection to a legacy record works without losing the old data.
+  const updated = createJournalStore({ filePath: file }).upsert(
+    completedSources({ id: 'sess-legacy', traderReview: { notes: 'Looking back, the entry was early.' } })
+  );
+  assert.equal(updated.created, false, 'it updates the existing legacy record, it does not duplicate it');
+  assert.equal(updated.record.traderReview.status, 'recorded');
+  assert.equal(updated.record.notes, 'Waited too long to enter — next time take the first pullback.');
+});
+
+test('T6 — the reflection is never trimmed, rewritten or summarised', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  const exact = '  leading and trailing spaces are the trader’s own  ';
+  const saved = store.upsert(completedSources({ traderReview: { notes: exact } }));
+
+  assert.equal(saved.record.traderReview.notes, exact, 'stored verbatim, not trimmed');
+  assert.equal(createJournalStore({ filePath: file }).get('sess-A').record.traderReview.notes, exact);
+});
+
+test('T7 — reflections stay isolated between two trades', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  store.upsert(completedSources({ id: 'sess-A', traderReview: { notes: 'A reflection.' } }));
+  store.upsert(
+    completedSources({
+      id: 'sess-B',
+      idea: { ...completedSources().idea, asset: 'rETH', direction: 'bearish' },
+      traderReview: { notes: 'B reflection.' },
+    })
+  );
+
+  const a = store.get('sess-A').record;
+  const b = store.get('sess-B').record;
+
+  assert.equal(a.traderReview.notes, 'A reflection.');
+  assert.equal(b.traderReview.notes, 'B reflection.');
+  assert.equal(b.trade.asset, 'RETH');
+  assert.equal(a.trade.asset, 'RNVDA');
+
+  // Editing B's reflection leaves A's byte-for-byte intact.
+  const beforeA = JSON.stringify(a);
+  store.upsert(
+    completedSources({
+      id: 'sess-B',
+      idea: { ...completedSources().idea, asset: 'rETH', direction: 'bearish' },
+      traderReview: { notes: 'B reflection, edited.' },
+    })
+  );
+  assert.equal(JSON.stringify(store.get('sess-A').record), beforeA);
+});
+
+test('T8 — a malformed reflection input is handled safely, never coerced into text', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  for (const bad of [42, true, ['a'], { nested: 'x' }]) {
+    const saved = store.upsert(completedSources({ traderReview: bad }));
+    assert.equal(saved.ok, true, `traderReview=${JSON.stringify(bad)} must not throw`);
+    assert.equal(saved.record.traderReview.status, 'not-recorded');
+    assert.equal(saved.record.traderReview.notes, null);
+  }
+
+  // A string is not an object, so it is ignored rather than becoming a note.
+  const asString = store.upsert(completedSources({ traderReview: 'I am not an object' }));
+  assert.equal(asString.record.traderReview.status, 'not-recorded');
+});
+
+test('T9 — a reflection never grows a score, rating, grade or verdict field', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  const record = store.upsert(
+    completedSources({
+      traderReview: {
+        notes: 'A reflection.',
+        // A client trying to smuggle a judgement in alongside the note.
+        score: 9,
+        rating: 'A+',
+        grade: 'good trade',
+        winRate: 0.75,
+        verdict: 'SUCCESS',
+        lesson: 'Be patient.',
+      },
+    })
+  ).record;
+
+  const keys = allKeys(record.traderReview);
+  for (const banned of ['score', 'rating', 'grade', 'winRate', 'verdict', 'lesson', 'outcome']) {
+    assert.equal(keys.has(banned), false, `the reflection must not carry a "${banned}" field`);
+  }
+  assert.deepEqual(
+    Object.keys(record.traderReview).sort(),
+    ['notes', 'recordedAt', 'status', 'statusLabel'],
+    'the reflection group has exactly four fields'
+  );
+});
+
+test('T10 — a hand-edited file cannot smuggle a judgement into the reflection', () => {
+  const file = tempJournalFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+
+  const tampered = legacyRecord();
+  tampered.traderReview = { status: 'recorded', notes: 'ok', score: 10, grade: 'excellent', verdict: 'WIN' };
+  fs.writeFileSync(file, JSON.stringify({ version: JOURNAL_VERSION, records: [tampered] }), 'utf8');
+
+  const record = createJournalStore({ filePath: file }).get('sess-legacy').record;
+  const keys = allKeys(record.traderReview);
+
+  assert.equal(keys.has('score'), false);
+  assert.equal(keys.has('grade'), false);
+  assert.equal(keys.has('verdict'), false);
+  assert.equal(record.traderReview.notes, 'ok');
+});
+
+test('T11 — a missing reflection is named in the honest gaps, not shown as a blank', () => {
+  const without = normalizeRecord(completedSources({ traderReview: null }), new Date('2026-09-20T10:00:00.000Z'));
+  assert.match(
+    without.unavailable.join(' | '),
+    /Trader reflection: none was recorded/,
+    'a reflection nobody wrote is a stated gap'
+  );
+
+  const withReflection = normalizeRecord(
+    completedSources({ traderReview: { notes: 'A reflection.' } }),
+    new Date('2026-09-20T10:00:00.000Z')
+  );
+  assert.equal(
+    withReflection.unavailable.some((g) => /Trader reflection/.test(g)),
+    false,
+    'a recorded reflection is not reported as a gap'
+  );
+});
+
+test('T12 — normalising a stored record twice returns the same record (idempotent)', () => {
+  const once = normalizeRecord(
+    completedSources({ traderReview: { notes: 'Stable.' } }),
+    new Date('2026-09-20T10:00:00.000Z')
+  );
+  const twice = normalizeRecord(once, new Date('2026-09-20T12:00:00.000Z'));
+
+  assert.deepEqual(twice.traderReview, once.traderReview);
+  assert.deepEqual(twice.unavailable, once.unavailable);
+});
+
+test('T13 — the journal list reports whether a reflection was recorded', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  store.upsert(completedSources({ id: 'sess-A', traderReview: { notes: 'Reflected.' } }));
+  store.upsert(completedSources({ id: 'sess-B', traderReview: null }));
+
+  const rows = store.list().summaries;
+  const a = rows.find((r) => r.id === 'sess-A');
+  const b = rows.find((r) => r.id === 'sess-B');
+
+  assert.equal(a.hasReflection, true);
+  assert.ok(a.reflectionAt);
+  assert.equal(b.hasReflection, false);
+  assert.equal(b.reflectionAt, null);
+});
+
+test('T14 — POST /api/journal carries the reflection through and reports it in meta', async (t) => {
+  const file = tempJournalFile();
+  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
+  process.env.TRADEGUARD_JOURNAL_FILE = file;
+
+  const app = express();
+  app.use(express.json({ limit: '128kb' }));
+  app.use('/api', journalRouter);
+  const server = createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  t.after(() => {
+    server.close();
+    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
+    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  });
+
+  const post = async (body) =>
+    (
+      await fetch(`${base}/api/journal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    ).json();
+
+  const created = await post(
+    completedSources({ traderReview: { notes: 'Written in Trader Review.' } })
+  );
+  assert.equal(created.status, 'saved');
+  assert.equal(created.record.traderReview.notes, 'Written in Trader Review.');
+  assert.equal(created.traderReview.phase, 13, 'meta reports the reflection as the Phase 13 addition');
+  assert.equal(created.phase, 12, 'the journal itself is still the Phase 12 feature');
+  assert.ok(created.traderReview.statuses.recorded);
+  assert.match(created.traderReview.note, /never generates/i);
+
+  // A later save with no reflection leaves it in place.
+  const plain = await post(completedSources({ traderReview: null }));
+  assert.equal(plain.record.traderReview.notes, 'Written in Trader Review.');
+
+  // The read-back route returns it too.
+  const one = await (await fetch(`${base}/api/journal/sess-A`)).json();
+  assert.equal(one.record.traderReview.notes, 'Written in Trader Review.');
+
+  // And the list marks it as reflected on.
+  const list = await (await fetch(`${base}/api/journal`)).json();
+  assert.equal(list.records[0].hasReflection, true);
+});
+
+// ---------------------------------------------------------------------------
+// T15+ — looking back at an OLDER saved trade
+//
+// Trader Review can open any trade in Trade Memory, not only the one currently
+// open, and the trader can write their reflection on it there. That write must
+// carry the reflection and nothing else, so it is impossible for looking back at
+// a trade to rewrite its thesis, decision, execution or review.
+// ---------------------------------------------------------------------------
+
+test('T15 — a reflection-only save changes the reflection and nothing else', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  const first = store.upsert(completedSources(), new Date('2026-09-20T10:00:00.000Z'));
+  assert.equal(first.ok, true);
+  const before = first.record;
+
+  // Exactly what Trader Review sends for an older trade: the id it read from
+  // Trade Memory, and the reflection. No trade, no decision, no execution, no
+  // review, no notes.
+  const after = store.upsert(
+    { id: before.id, traderReview: { notes: 'Looking back: I entered before the retest completed.' } },
+    new Date('2026-09-20T12:00:00.000Z')
+  );
+
+  assert.equal(after.ok, true);
+  assert.equal(after.created, false, 'an existing trade is updated, never duplicated');
+  assert.equal(after.record.traderReview.notes, 'Looking back: I entered before the retest completed.');
+  assert.equal(after.record.traderReview.status, 'recorded');
+
+  // The safety property: every other group is byte-identical to what it was.
+  for (const group of ['trade', 'decision', 'execution', 'review', 'notes', 'investigation']) {
+    assert.deepEqual(after.record[group], before[group], `${group} must be untouched`);
+  }
+  assert.equal(after.record.createdAt, before.createdAt, 'the trade was not recreated');
+
+  // `unavailable` is the one thing that legitimately changes: the missing
+  // reflection was a gap, and it no longer is.
+  assert.ok(
+    before.unavailable.some((line) => /reflection/i.test(line)),
+    'the missing reflection was listed as a gap before it was written'
+  );
+  assert.ok(
+    !after.record.unavailable.some((line) => /reflection/i.test(line)),
+    'writing the reflection closes that gap and adds no other'
+  );
+
+  // And it survives a re-read from disk.
+  const reread = store.get(before.id);
+  assert.equal(reread.record.traderReview.notes, 'Looking back: I entered before the retest completed.');
+  assert.equal(reread.record.trade.thesis, before.trade.thesis);
+});
+
+test('T16 — a reflection-only save for a trade that is not saved creates no record', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  // A reflection with no trade behind it has nothing to attach to. It must be
+  // refused rather than allowed to create an empty row in Trade Memory.
+  const result = store.upsert({ id: 'sess-ghost', traderReview: { notes: 'Nowhere to go.' } }, new Date());
+
+  assert.equal(result.ok, false);
+  assert.equal(result.created, false);
+  assert.equal(result.record, null);
+  assert.match(result.problem, /no longer in Trade Memory/i);
+
+  const listed = store.list();
+  assert.equal(listed.ok, true);
+  assert.equal(listed.records.length, 0, 'no junk row was created');
+});
+
+test('T17 — a reflection-only save cannot disturb a second trade', () => {
+  const file = tempJournalFile();
+  const store = createJournalStore({ filePath: file });
+
+  const a = store.upsert(completedSources({ id: 'sess-A' }), new Date('2026-09-20T10:00:00.000Z')).record;
+  const b = store.upsert(
+    completedSources({
+      id: 'sess-B',
+      idea: { ...completedSources().idea, asset: 'rAAPL', direction: 'bearish' },
+    }),
+    new Date('2026-09-20T10:05:00.000Z')
+  ).record;
+
+  store.upsert({ id: 'sess-A', traderReview: { notes: 'A only.' } }, new Date('2026-09-20T11:00:00.000Z'));
+
+  const rereadA = store.get('sess-A').record;
+  const rereadB = store.get('sess-B').record;
+
+  assert.equal(rereadA.traderReview.notes, 'A only.');
+  assert.equal(rereadB.traderReview.status, 'not-recorded', "B's reflection is untouched");
+  assert.deepEqual(rereadB.trade, b.trade, "B's trade is untouched");
+  assert.equal(rereadB.trade.asset, 'RAAPL');
+  assert.equal(JSON.stringify(rereadB).includes('A only.'), false, "A's reflection never leaks into B");
+});
+
+test('T18 — POST /api/journal with only a reflection updates only the reflection', async (t) => {
+  const file = tempJournalFile();
+  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
+  process.env.TRADEGUARD_JOURNAL_FILE = file;
+
+  const app = express();
+  app.use(express.json({ limit: '128kb' }));
+  app.use('/api', journalRouter);
+  const server = createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  t.after(() => {
+    server.close();
+    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
+    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  });
+
+  const post = async (body) =>
+    (
+      await fetch(`${base}/api/journal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    ).json();
+
+  const created = await post(completedSources({ id: 'sess-A' }));
+  assert.equal(created.status, 'saved');
+
+  // The reflection-only request Trader Review sends for an older trade.
+  const reflected = await post({ id: 'sess-A', traderReview: { notes: 'Written looking back.' } });
+  assert.equal(reflected.status, 'saved');
+  assert.equal(reflected.created, false);
+  assert.equal(reflected.record.traderReview.notes, 'Written looking back.');
+
+  // Read back: the reflection landed, everything else is as it was.
+  const one = await (await fetch(`${base}/api/journal/sess-A`)).json();
+  assert.equal(one.record.traderReview.notes, 'Written looking back.');
+  assert.deepEqual(one.record.trade, created.record.trade);
+  assert.deepEqual(one.record.decision, created.record.decision);
+  assert.deepEqual(one.record.execution, created.record.execution);
+
+  // And an unknown id is refused rather than creating an empty row.
+  const ghost = await post({ id: 'sess-ghost', traderReview: { notes: 'Nowhere to go.' } });
+  assert.equal(ghost.status, 'unavailable');
+  assert.match(ghost.message, /no longer in Trade Memory/i);
+
+  const list = await (await fetch(`${base}/api/journal`)).json();
+  assert.equal(list.count, 1, 'the refused write created no record');
+});

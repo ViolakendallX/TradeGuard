@@ -1,11 +1,16 @@
 /**
- * Trade Memory journal routes (Phase 12).
+ * Trade Memory journal routes (Phase 12, extended in Phase 13).
  *
  *   POST /api/journal       — save (create or update) one trade in Trade Memory.
  *   GET  /api/journal       — list the saved trades, newest first (summaries).
  *   GET  /api/journal/:id   — read one saved trade in full.
  *
- * Body for POST: { id, idea, decision, execution, review, notes }
+ * Phase 13 added one optional group to the stored record — the trader's own
+ * reflection, written in Trader Review. It is additive: a record saved by the
+ * Phase 12 build (no `traderReview` key) still reads back correctly, as an
+ * honest "not recorded" rather than an error or a repaired guess.
+ *
+ * Body for POST: { id, idea, decision, execution, review, notes, traderReview }
  *   - id        REQUIRED. The trade session id. It is what makes a save an UPSERT
  *               rather than a duplicate: saving the same session twice updates the
  *               same record. It is validated, never trusted.
@@ -15,6 +20,16 @@
  *   - execution the Phase 10 paper-execution record, if one exists.
  *   - review    the Phase 11 assembled review, if one exists.
  *   - notes     the trader's own review notes, stored verbatim.
+ *   - traderReview  the trader's own reflection (Phase 13) — `{ notes }`, stored
+ *               verbatim. Omitted or null keeps whatever was stored before, so a
+ *               save that does not carry it can never erase it.
+ *
+ * Every group except `id` is OPTIONAL and group-scoped: whatever the request does
+ * not carry is left exactly as it was. That is what lets Trader Review look back
+ * at an older trade and save ONLY a reflection — `{ id, traderReview }` — without
+ * re-sending, and so without any chance of rewriting, that trade's thesis,
+ * decision, execution or review. Such a write is refused for an id that is not
+ * already saved, so it can never create a record that has no trade in it.
  *
  * Design rules:
  *   - This is MEMORY, not analysis. Nothing here runs the chain: no market call,
@@ -43,6 +58,8 @@ import {
   JOURNAL_DISCLAIMER,
   JOURNAL_LIMITATIONS,
   JOURNAL_STATE_LABELS,
+  TRADER_REVIEW_STATUS_LABELS,
+  TRADER_REFLECTION_NOTE,
   DEFAULT_JOURNAL_FILE,
   JOURNAL_FILE_ENV,
 } from '../services/tradeJournal.js';
@@ -82,6 +99,15 @@ export function meta() {
       execution: 'Phase 10 paper-execution state and result — read only, never re-submitted',
       review: 'Phase 11 assembled review, stored as a compact projection',
       notes: 'Written by the trader — never generated, completed or edited by TradeGuard',
+      traderReview: 'Phase 13 trader reflection — written by the trader, stored verbatim',
+    },
+    // The journal itself is the Phase 12 feature; the trader's own reflection was
+    // added in Phase 13. Both are reported rather than one number overwriting the
+    // other, so neither phase's contract becomes ambiguous.
+    traderReview: {
+      phase: 13,
+      statuses: { ...TRADER_REVIEW_STATUS_LABELS },
+      note: TRADER_REFLECTION_NOTE,
     },
     derived: {
       pnl: null,
@@ -107,6 +133,9 @@ function readSources(body) {
     review: pick(b.review),
     // Notes are raw text and may legitimately be the empty string.
     notes: typeof b.notes === 'string' ? b.notes : null,
+    // The Phase 13 reflection. Left null when the client does not carry one, so
+    // an ordinary save cannot silently wipe a reflection the trader wrote.
+    traderReview: pick(b.traderReview),
   };
 }
 

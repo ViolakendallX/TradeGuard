@@ -6,7 +6,7 @@
 
 TradeGuard is not a signal service and not an autonomous trading bot. You bring a trade idea; TradeGuard investigates it, attacks it, stress-tests it against history, calculates the risk you have actually defined, consolidates the whole investigation into one report — and then you record the decision yourself.
 
-**Status:** Phases 1–12 complete · Phase 13 planned. See [Current development status](#current-development-status).
+**Status:** Phases 1–13 complete. See [Current development status](#current-development-status).
 
 ---
 
@@ -14,7 +14,7 @@ TradeGuard is not a signal service and not an autonomous trading bot. You bring 
 
 TradeGuard is a trading decision desk for discretionary traders. It takes a thesis you already have and investigates it *before* capital is put at risk.
 
-It does twelve things:
+It does thirteen things:
 
 - **Challenges your thesis** — it actively searches for evidence that could break it, rather than collecting reasons to agree with you.
 - **Researches market and event context** — price, trend, volatility, and upcoming catalysts for the asset you are trading.
@@ -27,6 +27,7 @@ It does twelve things:
 - **Sends a confirmed paper order to the Bitget Demo environment, and nowhere else** — only after you recorded TAKE, only after a separate typed confirmation, and only with virtual funds. It evaluates the execution gate server-side first, shows you exactly what would be submitted, and reports the venue's own response or its actual error. There is no live-money path in the product.
 - **Reviews what happened after your decision** — it assembles the records TradeGuard already produced (your thesis, the risk and structure you saw, your recorded decision, and the paper-execution outcome) into one read-only review, and answers *what happened after I made this decision?* It never tells you what to do next, and never shows a profit, loss or fill unless one was actually verified.
 - **Remembers your trades** — it saves each completed trade so you can come back to it later and read back what you originally recorded: the thesis, your decision and the reason you gave, what was (or was not) executed, the review, and your own notes. It survives a page reload and a restart of the frontend. It is memory, not analysis — opening an old trade re-runs nothing and computes no profit, loss, win rate or score.
+- **Lets you reflect on a saved trade** — it opens any trade you have already recorded, with or without a trade in progress, shows you what you knew, what you recorded and what is not available, and gives you a place to write your own reflection on it. It re-runs no analysis, works the same whether the trade is today's or months old, and never scores the trade, grades the decision or draws a conclusion in hindsight.
 - **Identifies risks, invalidation conditions, and missing information** — including saying plainly when there is not enough data to judge.
 
 The human trader stays responsible for the final decision. TradeGuard does not place trades, does not tell you to buy or sell, and does not predict prices.
@@ -52,12 +53,12 @@ TradeGuard exists to answer those questions in a structured way before the money
 
 ```
 THESIS  →  RESEARCH  →  CHALLENGE  →  STRESS TEST  →  RISK CHECK
-       →  TRADE STRUCTURE  →  FINAL REPORT  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  MEMORY
+       →  TRADE STRUCTURE  →  FINAL REPORT  →  HUMAN DECISION  →  PAPER EXECUTION  →  REVIEW  →  MEMORY  →  REFLECT
 ```
 
-**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT → HUMAN DECISION → PAPER EXECUTION → REVIEW → MEMORY.
+**Implemented today:** THESIS → RESEARCH → CHALLENGE → STRESS TEST → RISK CHECK → TRADE STRUCTURE → FINAL REPORT → HUMAN DECISION → PAPER EXECUTION → REVIEW → MEMORY → REFLECT.
 
-Later stages are planned, not built. Nothing after Phase 12 is presented as working.
+The workflow described in the original plan is now built end to end. Nothing beyond it is presented as working, and no further phase is planned.
 
 ---
 
@@ -79,6 +80,7 @@ Trade Idea  →  Investigation  →  Market Context
            →  Paper Execution   (Bitget Demo only, after a typed confirmation)
            →  Trade Review      (what happened after your decision)
            →  Trade Memory      (the saved trades — open one to read back what you recorded)
+           →  Trader Review     (reflect on any saved trade, with or without a trade in progress)
 ```
 
 Every one of those screens is a **workspace**, not a long scrolling page: a persistent trade header, a compact section navigator, and one section on screen at a time. Once a trade's records are loaded they are held for that trade, so moving between screens and between sections is immediate and does not re-run any analysis.
@@ -106,18 +108,19 @@ Every one of those screens is a **workspace**, not a long scrolling page: a pers
 - submit a paper order to the **Bitget Demo** environment with virtual funds, but only after you recorded TAKE and typed a separate confirmation token, and then report the venue's own returned order data or its actual error
 - assemble the post-decision **trade review** from the records TradeGuard already produced — the thesis, the risk and structure you saw, your recorded decision and the paper-execution outcome — without re-running any analysis
 - save a completed trade to **Trade Memory** so it can be read back after navigating away, reloading the page, or restarting the frontend, and list the saved trades so you can open one and see what was originally recorded
+- open any saved trade in **Trader Review** — even when no trade is currently in progress — and read back what was known before the decision, what you recorded and what is not available, then write your own reflection on it
 - report honestly when there is no verified profit, loss or fill, instead of inferring one
 - identify missing information
 - identify invalidation conditions when there is enough data to derive them
 - explicitly report insufficient or data-limited states instead of inventing evidence to fill the gap
 
-Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there. The Human Decision stage follows the same rule from the other direction: it is complete only once **you** have actually recorded a decision, so it stays in **DECISION REQUIRED** until a decision exists rather than assuming one. Paper Execution follows the same rule once more: it reports **EXECUTION LOCKED** until you have recorded TAKE, and even then it does not claim a result — it shows the gate as evaluated, and a submitted order is only ever shown as submitted because the venue actually returned one. Trade Review applies the rule to the whole record: it is **REVIEW READY** only when the records it reviews actually exist, **REVIEW INCOMPLETE** when some are missing, and **REVIEW UNAVAILABLE** when it cannot be assembled at all — and it reports an outcome of NOT-EXECUTED rather than inventing a fill or a profit.
+Each stage reports its own runtime state — complete, partial, or unavailable — based on what the underlying work actually produced. A stage is never marked complete just because it ran. An incomplete or invalid risk assessment is reported as **partial**, because the stage ran but the defined risk it exists to produce does not exist. The same rule applies to the trade structure: an incomplete structure is reported as **partial**. The same rule applies once more to the final report: a report assembled over an investigation with a missing provider is reported as **partial**, because the thing the stage exists to produce — the whole investigation consolidated — is not fully there. The Human Decision stage follows the same rule from the other direction: it is complete only once **you** have actually recorded a decision, so it stays in **DECISION REQUIRED** until a decision exists rather than assuming one. Paper Execution follows the same rule once more: it reports **EXECUTION LOCKED** until you have recorded TAKE, and even then it does not claim a result — it shows the gate as evaluated, and a submitted order is only ever shown as submitted because the venue actually returned one. Trade Review applies the rule to the whole record: it is **REVIEW READY** only when the records it reviews actually exist, **REVIEW INCOMPLETE** when some are missing, and **REVIEW UNAVAILABLE** when it cannot be assembled at all — and it reports an outcome of NOT-EXECUTED rather than inventing a fill or a profit. Trader Review applies the rule one last time to your reflection: it reports **REFLECTION NOT RECORDED** until you actually write one, and **REFLECTION RECORDED** once a non-blank note exists — a whitespace-only note is never counted as a reflection, and a missing reflection is listed among the record's gaps rather than passed over.
 
 One distinction matters for the final report. A report whose sections are honestly marked **unavailable** is still a real report: it tells you which evidence is missing and why. What it never does is dress an incomplete investigation up as a complete one, or substitute generic commentary, assumed prices or invented events for evidence it does not have.
 
 The Investigation screen presents all of this as a single workspace rather than one long stacked page. A persistent trade header keeps the trade context (asset, direction, timeframe, entry, stop, risk, confidence, existing position) and the **Edit thesis** action visible at the top; a section navigation rail lists every investigation stage with its current runtime state and lets you move between them; and the selected section is rendered in one analysis panel beside the rail. Navigation is a presentation concern only — it does not change when, whether, or how any analysis runs.
 
-The same workspace pattern carries through every later screen. **Trade Report** presents the ten-section report as a navigable workspace (Summary is the landing section) instead of one long document. **Decision** shows a compact brief — the report status, a quick summary, the investigation status, your thesis and the risk figures — with a **View full report →** action that opens the report workspace, so the act of deciding is not buried under the whole report. **Paper Execution** is a focused workspace for the gate, the structure, the risk context and the venue's response. **Trade Review** is a navigable workspace of its own. **Trade Memory** is a compact journal table — one row per saved trade, newest first — and opening a row replaces the table with that trade's own navigable record. Switching sections inside any of these is local UI state: it issues no network request and re-runs no analysis. The records themselves are fetched **once per trade** and held for that trade, so moving between screens — and returning to a screen you already loaded — reuses what is already there rather than re-running the investigation. A new trade starts from an empty session; the previous trade's records are never shown against it.
+The same workspace pattern carries through every later screen. **Trade Report** presents the ten-section report as a navigable workspace (Summary is the landing section) instead of one long document. **Decision** shows a compact brief — the report status, a quick summary, the investigation status, your thesis and the risk figures — with a **View full report →** action that opens the report workspace, so the act of deciding is not buried under the whole report. **Paper Execution** is a focused workspace for the gate, the structure, the risk context and the venue's response. **Trade Review** is a navigable workspace of its own. **Trade Memory** is a compact journal table — one row per saved trade, newest first — and opening a row replaces the table with that trade's own navigable record. **Trader Review** lists your saved trades as a picker and opens the selected one as its own navigable record — KNOWN, RECORDED, NOT AVAILABLE and your reflection — so you can look back at any trade you have recorded, not only the one currently in progress. Switching sections inside any of these is local UI state: it issues no network request and re-runs no analysis. The records themselves are fetched **once per trade** and held for that trade, so moving between screens — and returning to a screen you already loaded — reuses what is already there rather than re-running the investigation. A new trade starts from an empty session; the previous trade's records are never shown against it.
 
 ---
 
@@ -137,13 +140,13 @@ The same workspace pattern carries through every later screen. **Trade Report** 
 | Phase 10 — Paper Execution | A paper order submitted to the Bitget Demo environment with virtual funds — the execution gate (PAPER EXECUTION LOCKED / READY / UNAVAILABLE), a separate typed confirmation token, the venue's own returned order data or its actual error, and the standing guarantee that no live-money order is ever placed, under EXECUTION LOCKED / EXECUTION READY / PAPER ORDER SUBMITTED / PAPER ORDER FAILED / PAPER EXECUTION UNAVAILABLE states | ✅ Complete |
 | Phase 11 — Trade Review | The post-decision review assembled from the records TradeGuard already produced — the thesis, the Phase 6/7 risk and structure, the Phase 9 decision and the Phase 10 execution outcome — presented as a navigable workspace with the trader's own review notes, under REVIEW LOCKED / READY / INCOMPLETE / UNAVAILABLE states. It reports what happened; it does not tell you what to do next, and it never shows a profit, loss or fill that was not actually verified | ✅ Complete |
 | Phase 12 — Trade Memory | A persistent trade journal — each completed trade saved as a normalised record (the submitted thesis, the recorded investigation state, your decision and its reason, the paper-execution state and result, the trade review, and your own notes) and listed as a compact, scannable table you can open and read back. Stored as a single local JSON file on the API — no database, no cloud, no cache server — so a saved trade survives navigation, a page reload and a frontend restart, under NO DECISION / DECISION RECORDED / PAPER ORDER SUBMITTED row states. It is memory, not analysis: opening an old trade re-runs nothing, and profit, loss, fill, score and performance fields are null by construction | ✅ Complete |
-| Phase 13 — Trader Review & Polish | Recurring pattern detection, error/loading states, responsive UI, demo flow | ⏳ Planned |
+| Phase 13 — Trader Review & Polish | The look-back step, and the phase that finished the product's presentation. **Trader Review** opens any trade already saved to Trade Memory — with or without a trade in progress — and shows what was known before the decision, what you recorded and what is not available, alongside a place to write your own reflection. It re-runs no analysis, and the reflection is stored as one optional, additive group on the existing journal record, under REFLECTION NOT RECORDED / REFLECTION RECORDED states. The polish half: no screen advertises an unbuilt phase any more, the sidebar is split into two labelled halves, every navigation entry is live, and inline styles were consolidated into the stylesheet | ✅ Complete |
 
-Phase 13 is not implemented in any form. The screen it will occupy (Trader Review) exists only as an explicit placeholder marked "not built in this phase", and it remains disabled in the navigation. All nine investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure, Final Trade Report and Human Decision — are active, and the Paper Execution, Trade Review and Trade Memory steps are now real screens; nothing in the workflow is locked.
+Phase 13 is implemented and complete. Trader Review is a real screen rather than a placeholder, and it is enabled in the navigation, so **nothing in the workflow is locked**. All nine investigation stages — Thesis, Market Context, Events & Catalysts, Devil's Advocate, Historical Stress Test, Risk Assessment, Trade Structure, Final Trade Report and Human Decision — are active, and the Paper Execution, Trade Review, Trade Memory and Trader Review steps are all real screens. This is the final phase in the plan: no further phase is planned, and no capability is presented as forthcoming.
 
 **A note on phase numbering.** The original plan (see [`TradeGuard.md`](./TradeGuard.md)) called Phase 11 "Trade Memory" — a persistent trade journal — and Phase 12 "Post-Trade Review". What was actually built in the Phase 11 slot is the **post-decision Trade Review**: the review the original plan placed at Phase 12. It is deliberately **session-scoped and read-only** — it assembles records that already exist in the current trade session and writes only your own notes. The persistent journal across sessions then landed in the Phase 12 slot, which is where it is listed above; the numbering here follows the build rather than the original plan.
 
-One further divergence is worth stating plainly. The original plan's Phase 12 mentions surfacing **"AI warnings"** and recurring-pattern detection over the journal. That is deliberately **not** built and not planned for this phase: Trade Memory stores and reads back what you recorded, and nothing more. It does not detect patterns, score trades, rate decisions, classify a trade as good or bad, compute a win rate, or predict anything. The Phase 13 row above is where any of that would have to be argued for on its own merits.
+One further divergence is worth stating plainly. The original plan's Phase 12 mentions surfacing **"AI warnings"** and recurring-pattern detection over the journal. That is deliberately **not** built, and Phase 13 did not add it either. Trade Memory stores and reads back what you recorded, and Trader Review gives you a place to reflect on it in your own words — and nothing more. Neither detects patterns, scores trades, rates decisions, classifies a trade as good or bad, computes a win rate, or predicts anything. With the build complete, no phase remains in which any of that is planned.
 
 ---
 
@@ -594,6 +597,51 @@ Each trade session has an id, generated when the thesis is submitted. Saving the
 
 ---
 
+## Phase 13 — Trader Review & Polish
+
+Phase 13 answers one question: **"Looking back at a trade I have already recorded, what did I know, what did I decide, and what do I think now?"**
+
+It is two things at once: the **Trader Review** experience — the look-back step the workflow was always heading towards — and the phase that finished the product's presentation, so that nothing in the app reads as work-in-progress.
+
+### Reviewing a trade you have already saved
+
+Trader Review opens **any trade in Trade Memory**, not only the one currently in progress. If you are working on a trade it defaults to that one; if you are not, it lists your saved trades and lets you pick. Selecting one loads that exact record by its persistent session id and renders it — so a trade you saved weeks ago is just as reviewable as the one you submitted five minutes ago.
+
+Opening a saved trade **re-runs nothing**. No research, no thesis attack, no historical stress test, no risk engine, no structure, no report. The stored record is read from the journal and rendered as it was saved. This is verified by instrumenting the browser's network traffic: reviewing a saved trade produces journal reads and nothing else.
+
+### What it presents
+
+| Section | What it shows |
+| ------- | ------------- |
+| **KNOWN** | What was known before the decision — your own entry, invalidation and risk budget, the risk engine's figures (attributed to the engine), and the recorded investigation state |
+| **RECORDED** | What you actually recorded — the thesis **verbatim**, your decision, your decision reason **verbatim**, and your review notes **verbatim** |
+| **NOT AVAILABLE** | What the record does not contain, stated as unavailable — including P&L, which is never calculated |
+| **REFLECTION** | Your own look-back note on this trade, in your words |
+
+### The reflection
+
+Your reflection is stored as **one optional group on the existing journal record** — `status`, `statusLabel`, `notes` and `recordedAt`, and nothing else. It is additive: a trade saved before Phase 13 simply reads back as not reflected on, rather than as an error or a repaired guess.
+
+The note is stored **verbatim**. A whitespace-only note does not count as a reflection. The first `recordedAt` is preserved across later edits, but is re-stamped after a clear, so the timestamp never claims a note exists when it does not. Writing a reflection touches nothing else in the record — the thesis, decision, execution and notes are all verified unchanged after the write.
+
+### What it never does
+
+- **It never requires you to start a new trade.** Reviewing a saved trade is the point of the screen; asking you to create one would be the bug.
+- **It never re-runs the analysis.** Opening a saved trade reads the journal. The chain does not run.
+- **It never invents what was not recorded.** If information was unavailable when the trade was saved, it is shown as unavailable now — not reconstructed, not inferred from later data.
+- **It never loses an older trade.** Starting a new trade resets the selection to that new trade but leaves every previously saved trade in the list and selectable.
+- **It never scores, grades or judges.** No hindsight verdict on whether the decision was right, no good-trade / bad-trade flag, no win rate, no probability, no price target.
+- **It never writes your reflection for you.** The note is your text, stored verbatim. TradeGuard does not draft, complete or generate it.
+
+### The polish
+
+- **No screen advertises an unbuilt phase.** The remaining development-looking copy — the placeholder screen's "Planned · Phase N", the investigation rail's "not built yet" and the app's fallback subtitle "Not built in this phase." — was replaced with honest copy, and a verification check asserts those tokens no longer appear anywhere. The app shell's phase pill was updated to name the phase that is actually current.
+- **The navigation communicates the whole workflow.** The sidebar is split into two labelled halves — *Investigation* (naming all eight analysis stages) and *After the decision* (decide → reflect) — rather than growing new entries.
+- **Every navigation entry is live.** The last locked entry was Trader Review, and it is now a real screen.
+- **Inline styles were consolidated** into the stylesheet, and empty states were unified on one shape.
+
+---
+
 ## Data & integrations
 
 ### Market research
@@ -639,6 +687,12 @@ Trade Memory is the only stage with **storage**, and that storage is deliberatel
 
 Each save is normalised: the trade context, the recorded investigation state, your decision and its reason, the paper-execution state and result, the review, and your notes. Records are keyed on the trade session id, so re-saving updates the same record. Records are re-normalised on every read, which means a hand-edited or partially corrupted file cannot smuggle in an invented order ID, a fill or a P&L — an entry without a usable id is skipped rather than trusted.
 
+### Trader review reflection
+
+Trader Review has **no data source of its own**. It reads the same local journal Trade Memory writes, through the same service — no provider, no model, no engine, no second store. Opening a saved trade is a read of one record by its persistent id, which is why it resolves instantly and with every external service unreachable.
+
+The only thing Trader Review writes is **your reflection**, and it writes it through a **reflection-only** path: a POST carrying just the record id and the note. That path deliberately carries no trade, no decision and no execution, so it cannot disturb them — and the journal service is written so that a partial write replaces only the group it actually carried. A reflection-only write for a trade that is not already saved is **refused** rather than allowed to create a record with no trade in it. The reflection is one optional group — `status`, `statusLabel`, `notes`, `recordedAt` — added additively, so a record saved before this phase still reads back honestly as not reflected on.
+
 ### Provider availability
 
 External provider availability directly affects live research, and TradeGuard is built to be honest about that. If Bitget is unreachable from the network the backend is running on — a restricted sandbox, a corporate proxy, an outage — market context reports **Data unavailable** with the reason. The integration is real; it simply is not guaranteed to return data on every run, and the UI never pretends otherwise.
@@ -681,13 +735,17 @@ These are enforced in the code, not aspirational:
 - **No journal verdict or score.** Trade Memory has no win rate, expectancy, rating, grade or good-trade / bad-trade field, and does not compute one. The test suite walks every key of a saved record to assert that no such field exists.
 - **No silently repaired storage.** A corrupt journal file is reported as unreadable with a reason, not shown as an empty journal — "your journal is unreadable" and "you have saved nothing" are different facts. A malformed entry is skipped and counted, never patched up.
 - **Local storage is labelled as local.** The Trade Memory screen states that records live in a single JSON file on the TradeGuard server, that it is not cloud storage, not a database and not a backup, and that saved trades are never analysed, scored or ranked.
+- **No hindsight verdict.** Trader Review describes what you recorded and gives you a place to reflect. It does not say whether the decision was right, does not produce a score, grade, rating, win rate, probability or price target, and does not draw a conclusion from what happened afterwards.
+- **No reflection written for you.** The reflection is your own text, stored verbatim. TradeGuard does not draft, complete or generate it, and a whitespace-only note is never counted as a reflection.
+- **A reflection cannot disturb the record it belongs to.** Writing one replaces only the reflection group; the thesis, decision, execution, review and notes are verified unchanged after the write, and a reflection-only write for an unsaved trade is refused rather than creating a record with no trade in it.
+- **Nothing is reconstructed after the fact.** Information that was unavailable when a trade was saved stays unavailable when you review it. Trader Review never back-fills a gap with data that arrived later.
 - **Provider credentials stay server-side.** API keys are read from the backend environment and never reach the browser.
 
 ---
 
 ## Analysis architecture
 
-The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure, the Phase 8 final report, the Phase 9 human decision, the Phase 10 paper execution, the Phase 11 trade review and the Phase 12 trade memory all run entirely in the backend as deterministic pipelines. The thesis attack:
+The Phase 4 thesis attack, the Phase 5 historical stress test, the Phase 6 risk engine, the Phase 7 trade structure, the Phase 8 final report, the Phase 9 human decision, the Phase 10 paper execution, the Phase 11 trade review, the Phase 12 trade memory and the Phase 13 trader review all run entirely in the backend as deterministic pipelines. The thesis attack:
 ```
 TRADE CONTEXT + PHASE 3 RESEARCH
               ↓
@@ -836,6 +894,23 @@ THESIS  +  PHASE 9 DECISION  +  PHASE 10 EXECUTION  +  PHASE 11 REVIEW  +  YOUR 
 
 There is no provider, no model and no engine in that path. Reading the journal is a file read; writing it is a file write.
 
+The trader review (Phase 13) is not a pipeline at all — it is a **selection rule in front of the same file**:
+
+```
+SAVED TRADES  (the journal, listed as summaries)
+                        ↓
+   RECORD SELECTION  (an explicit pick wins; otherwise the trade in progress;
+                      otherwise the newest saved trade — derived, never stored)
+                        ↓
+   ONE RECORD READ BY ITS PERSISTENT ID  (no analysis, no provider, no engine)
+                        ↓
+   KNOWN · RECORDED · NOT AVAILABLE · REFLECTION
+                        ↓
+   YOUR REFLECTION  (written back through a reflection-only POST)
+```
+
+Which record is on screen is a **pure function** of the explicit selection, the active trade and the saved list — not state set by an effect. That is what stops the screen ever showing the previous trade's record for a frame while a new one loads, the same frame-accuracy rule the shared trade session is built on. The only write is your own reflection, and it goes through a path that carries nothing else, so it cannot touch the record it belongs to.
+
 Every statement in the output is derived from an observable input — a price move, a trend direction, a volatility reading, an event date, a historical candle, a detail from your own submission, or a decision you recorded. The thresholds that drive classification (flat-move band, extended-move threshold, elevated-volatility threshold, proximity to a 24h extreme) are documented constants in the code, shared by both engines, so the reasoning is explainable and reproducible.
 
 **Why deterministic rather than LLM-driven:** critical conclusions should not depend on a model's willingness to be disagreeable, and the classification should be testable without a live AI provider. Determinism also keeps the honesty guarantees enforceable — a rule can guarantee that no bearish evidence is invented; a prompt cannot.
@@ -850,7 +925,7 @@ This is deliberately a **clean seam**. The evidence classification and the numbe
 TRADEGUARD
 │
 ├── src/                          React + Vite frontend
-│   ├── screens/                  Trade Idea, Investigation, Trade Report, Decision, Paper Execution, Trade Review, Trade Memory, Trader Review placeholder
+│   ├── screens/                  Trade Idea, Investigation, Trade Report, Decision, Paper Execution, Trade Review, Trade Memory, Trader Review
 │   ├── components/               App shell, sidebar, trade-idea components
 │   │   ├── investigation/        Workspace components: trade header, investigation rail, section navigator, analysis panels
 │   │   └── journal/              Trade Memory: the journal index table and the saved-trade detail
@@ -885,11 +960,11 @@ TRADEGUARD
 | `POST /api/paper-execution` | Evaluates the paper-execution gate for the trade — EXECUTION LOCKED / READY FOR PAPER EXECUTION / PAPER EXECUTION UNAVAILABLE — and returns exactly what would be submitted. **Sends nothing** to any venue |
 | `POST /api/paper-execution/submit` | Submits a paper order to the Bitget **Demo** environment with virtual funds. Requires the confirmation token `PAPER EXECUTE`, enforced server-side — a missing or wrong token returns 400 and nothing is sent. Never returns 500: a venue rejection is a 200 carrying PAPER ORDER FAILED, because the venue refusing an order is a real outcome to report |
 | `POST /api/trade-review` | Assembles the post-decision review from the records TradeGuard already produced. Performs no new analysis and submits nothing, and always returns 200 — a locked, incomplete or unavailable review is a real answer, not an error. Its `pnl.computed` output is documented as `false` |
-| `POST /api/journal` | Saves (creates or updates) one trade in Trade Memory. Keyed on the trade session id, so re-saving updates the same record rather than duplicating it. Returns 400 only when the session id is missing or malformed, because without an id there is nothing to upsert against. Runs no analysis and submits nothing |
+| `POST /api/journal` | Saves (creates or updates) one trade in Trade Memory. Keyed on the trade session id, so re-saving updates the same record rather than duplicating it. Returns 400 only when the session id is missing or malformed, because without an id there is nothing to upsert against. Every group except the id is optional, and a **partial write replaces only the groups the request actually carried** — which is how Trader Review writes a reflection without disturbing the trade, decision, execution or notes. A reflection-only write for a trade that is not already saved is refused, so it can never create a record with no trade in it. Runs no analysis and submits nothing |
 | `GET /api/journal` | Lists the saved trades, newest first, as summaries — enough to identify and choose a trade. Always 200. A journal that exists but cannot be read returns `status: "unavailable"` with a reason rather than an empty list, because "unreadable" and "you have saved nothing" are different facts |
 | `GET /api/journal/:id` | Reads one saved trade in full. 200 with the record, or 404 with `status: "not-found"` and a null record. Nothing is recomputed |
 
-Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors. The human decision route sits outside the provider structure for the same reason, and depends only on the risk engine to carry its figures through; it is the one route that returns **400** on a bad request, because an absent decision or an unwritten reason is a validation failure rather than an analysis outcome, and there is no honest record to build from it. The paper-execution route is the only route with a venue behind it, and that venue is isolated in its own provider module (`providers/bitgetDemo.js`) with demo-only credentials and a live-trading refusal guard; its gate evaluation reads no market data, and only the `/submit` path can reach the venue at all. The trade-review route depends on nothing but the records it is handed and the shared `readRiskFigures` helper, so it has no provider, no model and no storage, and like the analysis routes it always answers 200. The journal routes are the only ones with storage behind them, and that storage is one JSON file behind a service module (`services/tradeJournal.js`) with no provider, no model and no analysis — so Trade Memory can be read and written with every external service unreachable.
+Provider integrations are isolated behind service modules (`server/services/providers/`), so swapping a data source means writing one provider module rather than touching the research pipeline. The risk engine deliberately sits outside that structure: it has no provider dependency to isolate. The trade structure sits outside it too, and depends only on the risk engine — so it inherits the risk engine's independence from every data provider. The final report goes further still: it depends only on the risk engine as well, and takes every earlier stage's result as an argument, so it can assemble an honest report with every data provider unreachable. `POST /api/final-report` therefore always returns HTTP 200 — an unavailable provider and a missing entry price are real, reportable answers, not errors. The human decision route sits outside the provider structure for the same reason, and depends only on the risk engine to carry its figures through; it is the one route that returns **400** on a bad request, because an absent decision or an unwritten reason is a validation failure rather than an analysis outcome, and there is no honest record to build from it. The paper-execution route is the only route with a venue behind it, and that venue is isolated in its own provider module (`providers/bitgetDemo.js`) with demo-only credentials and a live-trading refusal guard; its gate evaluation reads no market data, and only the `/submit` path can reach the venue at all. The trade-review route depends on nothing but the records it is handed and the shared `readRiskFigures` helper, so it has no provider, no model and no storage, and like the analysis routes it always answers 200. The journal routes are the only ones with storage behind them, and that storage is one JSON file behind a service module (`services/tradeJournal.js`) with no provider, no model and no analysis — so Trade Memory can be read and written with every external service unreachable. Trader Review adds **no route of its own**: it reads through the journal's existing routes and writes through the reflection-only partial write on `POST /api/journal`, so it inherits the journal's independence from every provider and introduces no new data source.
 
 ---
 
@@ -911,6 +986,7 @@ Provider integrations are isolated behind service modules (`server/services/prov
 | Paper execution | Bitget **Demo** API — virtual funds only, isolated in its own provider module and gated by a server-enforced confirmation token plus a live-trading refusal guard. Never a live venue |
 | Trade review | TradeGuard's own deterministic read-only assembly — restates the records Phases 1–10 already produced, reads the risk engine's figures through the same helper the execution stage uses, and adds no provider, no model and no storage |
 | Trade memory | TradeGuard's own deterministic journal — one local JSON file behind `services/tradeJournal.js`. No database, no migrations, no authentication, no cloud service, no cache server, no backup. It computes no profit, loss, fill or score |
+| Trader review | TradeGuard's own deterministic look-back over the saved journal — one record read by its persistent id behind a pure selection rule, plus a reflection-only write path. No provider, no model, no engine, no second store, and no analysis re-run |
 | Unit / integration tests | Node.js built-in test runner (`node --test`) |
 | Browser verification | Headless Chrome driven over the Chrome DevTools Protocol from Node's built-ins — no declared dependency. Earlier phases also used Playwright (`playwright-core`). Development verification only, not a project dependency |
 
@@ -996,20 +1072,27 @@ node scripts/verify-phase10.js    # paper execution, against a running API
 node scripts/verify-decision-stage.js
 node scripts/verify-phase11.js    # trade review, against a running API
 node scripts/verify-phase12.js    # trade memory — starts its own API on a temp journal
+node scripts/verify-phase13.js    # trader review — starts its own API on a temp journal
 ```
 
 `scripts/verify-phase12.js` is self-contained by default: it starts its own API process on a spare port with `TRADEGUARD_JOURNAL_FILE` pointed at a temporary file, runs 70 checks against the live routes, then shuts the process down and deletes the file. That means it never writes verification records into your real Trade Memory. Set `BASE` to run it against an already-running server instead — but then its records will land in that server's journal.
 
-**Verified state of the Phase 12 build:**
+`scripts/verify-phase13.js` works the same way, on its own port and its own temporary journal, and runs **101 checks**. Alongside the route-level checks it writes a **legacy Phase-12-era record** — one with the reflection key deleted — to disk and asserts it still reads back honestly rather than as an error, and it asserts the source-level wiring that makes the look-back safe: the pure record-selection rule, the reflection-only write path, the touched-flag that stops an untouched reflection being written, and the two server-side guards (a reflection-only write cannot create a record, and only a carried decision can replace the execution record).
 
-- **334/334 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, the human-decision service, the paper-execution service and its demo provider, the trade-review service, the trade-memory journal service and its routes, and the frontend stage model.
+**Verified state of the Phase 13 build:**
+
+- **363/363 unit and integration tests passing** — covering trade idea validation, market data derivation, event data handling, the thesis-attack engine, the historical stress-test engine, the deterministic risk engine, the trade-structure service, the final-report service, the human-decision service, the paper-execution service and its demo provider, the trade-review service, the trade-memory journal service and its routes, the Phase 13 record-selection rule and reflection-only write path, and the frontend stage model.
 - **Production build successful** — Vite build completes and emits to `dist/`.
 - **Phase 12 integration verification: 70/70 checks passing** against a live API — the journal file round-trip, the per-session upsert, verbatim thesis / reason / notes, the venue order ID surviving a read-back, an unavailable execution persisting as unavailable, a ready-but-unsubmitted order keeping no order ID, a hostile client's `pnl` / `filled` / `score` being dropped, trade A being byte-for-byte unchanged after trade B, the 400 on a missing session id, the 404 on an unknown trade, and the local-storage labelling.
+- **Phase 13 integration verification: 101/101 checks passing** against a live API on its own temporary journal — the reflection-only write changing the reflection and nothing else, that same write being refused for an id that is not already saved, the route-level reflection-only update, a legacy Phase-12-era record (reflection key deleted) still reading back honestly, and the source-level wiring for the record-selection rule, the reflection-only path, the touched-flag guard and both server guards.
 - **Browser verification completed successfully** — 40 checks in a real browser against the running app: a full trade A flow (submit → decision → paper execution → review notes) appearing in Trade Memory, surviving a **full page reload**, opening with the thesis / reason / notes verbatim, then trade B created and verified to hold none of A's data while A was compared field by field against a snapshot taken before B existed. **Opening Trade Memory and opening a saved trade each issued exactly one request — a journal read — and no analysis request at all.** Zero console errors.
+- **Phase 13 browser verification completed successfully — 126 checks across three suites.** The reflection flow (61 checks): the whole loop once, the two labelled sidebar halves, the KNOWN / RECORDED / NOT AVAILABLE split, the thesis, reason and notes shown verbatim, a reflection that survives a full page reload, two-trade isolation, and that Trader Review issues **no analysis request**. Reviewing saved trades with no active session (41 checks): the screen lists the saved trades instead of asking for a new one, selecting BTC reviews BTC and selecting ETH reviews ETH — verbatim, and never the other trade's — switching back and forth, a reflection written on a saved trade persisting without disturbing that trade's decision or execution, a full reload keeping everything, and starting a new trade leaving the older ones reachable. A read-only smoke against the trader's **real** journal (24 checks): the app loads with no console error, all eight steps are live, every saved trade is listed and opens, and browsing issues **no write at all** — the journal file's SHA-256 is byte-identical afterwards.
 - **Navigation performance re-verified after Phase 12** — Trade Report first load 0 API calls / 40 ms, Decision 0 / 159 ms, Paper Execution 0 / 117 ms, Trade Review 0 / 85 ms, returns to already-loaded screens 0 calls, section switches 0 calls (6–22 ms). The session architecture from the previous phase is intact; the only new network traffic is the debounced journal save.
 - **Cross-trade isolation verified in both layers** — the shared trade session (no stale asset, thesis or decision on any screen, including mid-load) and the journal itself (a new trade gets a new session id, and a saved trade can never be overwritten by a later one).
 
 The trade-memory stage has dedicated coverage across its required scenarios: creating a record, retrieving saved trades, persistence across a reload/restart (a second store instance reading the same file), opening a saved trade, decision persistence, decision-reason persistence, execution-state persistence, review-notes persistence, unavailable-execution persistence, missing P&L staying unavailable, multiple trades staying isolated, old trades staying intact after a new one is created, the empty journal state, and malformed/missing records being handled safely. Its guards assert that a corrupt file is reported rather than shown as an empty journal, that malformed entries are skipped and counted, that a hand-edited record cannot smuggle in an order ID, a fill or a P&L, that no record carries a score, rating, win-rate or verdict field, and that a client posting `pnl: 1234.56` does not get one stored.
+
+The Phase 13 look-back has dedicated coverage across its required scenarios: reviewing a saved trade with no active session, the active trade taking precedence, an explicit selection winning, a stale selection being ignored, an unsaved active trade still resolving, nothing at all resolving to nothing, selecting one saved trade and reviewing it, switching between saved trades, starting a new trade without losing access to an older one, a full reload, and opening a saved review issuing **no** analysis or provider request. Its guards assert the things that must never happen: a reflection-only save changes the reflection and **nothing else** (every other group is deep-compared before and after the write), a reflection-only save cannot create a record and cannot disturb a second trade, a whitespace-only note is never counted as a reflection, and the reflection group carries exactly its four honest fields with no score, grade or verdict smuggled in.
 
 The paper-execution stage has dedicated coverage across its required scenarios: the gate locked without a recorded TAKE, locked when the risk assessment is not ready, locked when the structure is incomplete, ready when the gate is satisfied, unavailable without demo credentials, unavailable when no symbol resolves, the confirmation token being required, a wrong token being rejected, and the guarantee that a missing or wrong token sends nothing. Its guards assert the things that must never happen: no order ID or fill is fabricated when the venue is unconfigured, no credential value leaks into a response, no live-trading path exists, and a venue rejection is reported as PAPER ORDER FAILED rather than being dressed up as a success.
 
@@ -1042,11 +1125,11 @@ This README summarises the product; `TradeGuard.md` is the source of truth for s
 
 ## Roadmap
 
-Phase 13 is planned and not implemented:
+The phased plan is complete. **Phases 1–13 are built** — the workflow described in [`TradeGuard.md`](./TradeGuard.md) runs end to end, from submitting a thesis through to reflecting on a saved trade. No further phase is planned, and no capability is presented as forthcoming.
 
-- **Phase 13 — Trader Review & Polish.** Recurring pattern detection from your own trade history, plus error states, loading states, responsive UI, and the end-to-end demo flow.
+**Phase 13 — Trader Review & Polish is complete** (see [the section above](#phase-13--trader-review--polish)): any saved trade can be reviewed with or without a trade in progress, what was known and what was recorded is read back verbatim, what is missing is stated as missing, and your own reflection is stored alongside it. The polish half of the phase replaced the last development-looking copy, split the navigation into two labelled halves, brought the last locked entry to life, and consolidated the stylesheet.
 
-**Phase 12 — Trade Memory is complete** (see [the section above](#phase-12--trade-memory)): the full decision context is persisted and read back — what you believed, why, what the investigation recorded, what you decided, and what was (or was not) executed. One thing the original plan placed here is deliberately **not** built: any "AI warning" or recurring-pattern detection over the journal. Trade Memory stores and reads back; it does not analyse, score or classify. Any of that would have to be argued for as Phase 13 work on its own merits.
+**Phase 12 — Trade Memory is complete** (see [its section](#phase-12--trade-memory)): the full decision context is persisted and read back — what you believed, why, what the investigation recorded, what you decided, and what was (or was not) executed. One thing the original plan placed there is deliberately **not** built: any "AI warning" or recurring-pattern detection over the journal. Trade Memory stores and reads back, and Trader Review gives you a place to reflect in your own words; neither analyses, scores or classifies. That work was never argued for, and with the plan complete it is not planned.
 
 ---
 

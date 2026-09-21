@@ -41,13 +41,13 @@ function EmptyDecision({ onEdit }) {
     <div className="card">
       <div className="card__body">
         <div className="empty-state">
-          <div className="card__title" style={{ marginBottom: 8 }}>
+          <div className="card__title">
             Nothing to decide on yet
           </div>
           Submit a trade idea from the Trade Idea screen and TradeGuard will examine it. Once the
           investigation and the final report are on screen, you can record your own decision here.
-          <div style={{ marginTop: 16 }}>
-            <button type="button" className="btn btn--primary" style={{ width: 'auto' }} onClick={onEdit}>
+          <div className="empty-state__actions">
+            <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
               Submit a trade idea
             </button>
           </div>

@@ -195,10 +195,16 @@ function allKeys(value, out = new Set()) {
 (async () => {
   let journalFile = EXTERNAL_BASE ? null : await startOwnServer();
 
-  // 0. Server alive on Phase 12.
+  // 0. Server alive on Phase 12 or later.
+  //
+  // The health endpoint reports the BUILD's phase, which moves on as later
+  // phases land (it read 13 once Phase 13 shipped). What Phase 12 needs to prove
+  // is that the running build still includes Trade Memory, so this asserts the
+  // phase is at least 12 rather than exactly 12. The journal's OWN meta — which
+  // is what this phase owns — is asserted separately below and is still 12.
   const health = await get('/api/health');
   check('server alive (Phase 12 built)', health.data?.status === 'ok', `phase ${health.data?.phase}`);
-  check('health reports phase 12', health.data?.phase === 12, String(health.data?.phase));
+  check('health reports a build that includes phase 12', Number(health.data?.phase) >= 12, String(health.data?.phase));
   if (journalFile) console.log(`      (journal file: ${journalFile})`);
 
   const ID_A = `verify-phase12-alpha-${Date.now()}`;

@@ -50,7 +50,7 @@ export default function InvestigationNav({
         <span className="inv-nav__title">Investigation</span>
         <span className="inv-nav__meta">
           {completed} of {total} stages with data
-          {locked > 0 ? ` · ${locked} arrive in later phases` : ''}
+          {locked > 0 ? ` · ${locked} not available in this build` : ''}
         </span>
       </div>
 
@@ -68,7 +68,7 @@ export default function InvestigationNav({
                 onClick={() => onSelect(section.id)}
                 disabled={isLocked}
                 aria-current={isActive ? 'true' : undefined}
-                title={isLocked ? `${section.label} — not built yet (phase ${section.stage.phase})` : section.label}
+                title={isLocked ? `${section.label} — not available in this build` : section.label}
               >
                 <span className="inv-nav__index">{index + 1}</span>
                 <span className="inv-nav__dot" aria-hidden="true" />

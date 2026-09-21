@@ -288,8 +288,7 @@ export default function TradeReviewPanel({ review, idea, notes, onNotesChange })
         return (
           <>
             <textarea
-              className="textarea"
-              style={{ width: '100%', minHeight: 120 }}
+              className="textarea review__notes-input"
               placeholder="What did you learn from this trade? What would you do differently? This note is yours — TradeGuard does not auto-generate conclusions from it."
               value={notes || ''}
               onChange={(e) => onNotesChange?.(e.target.value)}

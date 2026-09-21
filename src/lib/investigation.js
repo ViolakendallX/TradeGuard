@@ -7,8 +7,10 @@
  * Phase 7 makes the trade structure REAL, Phase 8 makes the final trade report
  * REAL, Phase 9 makes the human decision REAL — the stage where the trader
  * records their own choice — and Phase 10 makes paper execution REAL, which is
- * reachable only after the trader has explicitly decided to TAKE. Phases 11 and
- * later remain locked. A stage's completion
+ * reachable only after the trader has explicitly decided to TAKE. Phases 11–13
+ * add the post-decision workflow (Trade Review, Trade Memory and Trader Review)
+ * as their own screens rather than investigation stages, so every stage listed
+ * here is now available. A stage's completion
  * never depends on a static flag — it depends on whether the underlying work
  * actually produced valid output. A stage is marked complete ONLY when its data
  * or analysis came back available and usable; otherwise it is partial,
@@ -17,7 +19,7 @@
  */
 
 export const STAGE_RUNTIME = {
-  LOCKED: 'locked', // phase not built yet
+  LOCKED: 'locked', // stage not available in this build
   LOADING: 'loading', // research in flight
   COMPLETE: 'complete', // valid data retrieved
   PARTIAL: 'partial', // some data retrieved, some missing

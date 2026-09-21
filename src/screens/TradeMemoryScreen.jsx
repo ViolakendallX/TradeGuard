@@ -33,12 +33,12 @@ function JournalNotice({ title, children, onRetry }) {
     <div className="card">
       <div className="card__body">
         <div className="empty-state">
-          <div className="card__title" style={{ marginBottom: 8 }}>
+          <div className="card__title">
             {title}
           </div>
           {children}
           {onRetry && (
-            <div style={{ marginTop: 16 }}>
+            <div className="empty-state__actions">
               <button type="button" className="btn btn--ghost btn--inline" onClick={onRetry}>
                 Try again
               </button>
@@ -134,7 +134,7 @@ export default function TradeMemoryScreen({ onNavigate }) {
               Submit a trade idea and work it through the decision flow. Once you record your own
               decision, the trade is saved here automatically — and it will still be here after a page
               reload or a restart of the frontend.
-              <div style={{ marginTop: 16 }}>
+              <div className="empty-state__actions">
                 <button
                   type="button"
                   className="btn btn--primary btn--inline"

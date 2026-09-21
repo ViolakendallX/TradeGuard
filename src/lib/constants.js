@@ -9,6 +9,34 @@ export const NAV_ITEMS = [
   { id: 'trader-review', label: 'Trader Review', phase: 13 },
 ];
 
+/**
+ * The two halves of the TradeGuard workflow, as shown in the sidebar (Phase 13).
+ *
+ * The sidebar deliberately does NOT grow to thirteen entries. The eight analysis
+ * stages (thesis → market → events → attack → history → risk → structure →
+ * report) already have their own rail inside the Investigation workspace, so
+ * repeating them here would create a second, competing navigation. Instead the
+ * two halves are labelled and each carries a one-line caption, which makes the
+ * whole loop legible at a glance without duplicating any control.
+ *
+ * `items` must partition NAV_ITEMS exactly — every id appears once, in order.
+ * That invariant is asserted in investigation.test.js.
+ */
+export const NAV_GROUPS = [
+  {
+    id: 'investigation',
+    label: 'Investigation',
+    caption: 'Thesis · Market · Events · Attack · History · Risk · Structure · Report',
+    items: ['trade-idea', 'investigation', 'trade-report'],
+  },
+  {
+    id: 'after-decision',
+    label: 'After the decision',
+    caption: 'Decide · Execute · Review · Remember · Reflect',
+    items: ['decision', 'paper-execution', 'trade-review', 'trade-memory', 'trader-review'],
+  },
+];
+
 export const DIRECTIONS = [
   { value: 'bullish', label: 'Bullish', hint: 'Expecting the asset to rise', tone: 'up' },
   { value: 'bearish', label: 'Bearish', hint: 'Expecting the asset to fall', tone: 'down' },

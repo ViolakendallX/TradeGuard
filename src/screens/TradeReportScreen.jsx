@@ -24,13 +24,13 @@ function EmptyReport({ onEdit }) {
     <div className="card">
       <div className="card__body">
         <div className="empty-state">
-          <div className="card__title" style={{ marginBottom: 8 }}>
+          <div className="card__title">
             Nothing to report yet
           </div>
           Submit a trade idea and let TradeGuard investigate it. The final report consolidates the whole
           investigation into one navigable workspace.
-          <div style={{ marginTop: 16 }}>
-            <button type="button" className="btn btn--primary" style={{ width: 'auto' }} onClick={onEdit}>
+          <div className="empty-state__actions">
+            <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
               Submit a trade idea
             </button>
           </div>

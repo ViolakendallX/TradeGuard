@@ -21,9 +21,11 @@
  *     decision, and nothing more.
  *   - It never generates a recommendation, a prediction, a signal, or a
  *     "good trade / bad trade" classification. There is no field for one.
- *   - It never rewrites what the trader wrote. The thesis, the decision reason
- *     and the trader's own notes are stored verbatim — not trimmed, not
- *     summarised, not completed, not generated.
+ *   - It never rewrites what the trader wrote. The thesis, the decision reason,
+ *     the trader's review notes and the trader's own reflection are stored
+ *     verbatim — not trimmed, not summarised, not completed, not generated.
+ *   - It never grades a reflection or turns it into a lesson, a score or a
+ *     pattern. A reflection is the trader's own words and nothing more.
  *   - It never runs the analysis chain. Reading the journal touches no provider,
  *     no model, no engine and no network — it reads one file.
  *
@@ -83,6 +85,28 @@ export const INVESTIGATION_STATUS_LABELS = Object.freeze({
   'not-recorded': 'INVESTIGATION NOT RECORDED',
 });
 
+/**
+ * The trader's own reflection (Phase 13) — the note they write when they look
+ * back at a completed trade in Trader Review.
+ *
+ * It is stored SEPARATELY from the Phase 11 review notes on purpose: those were
+ * written at review time, this is written afterwards, and neither may overwrite
+ * the other. Both are the trader's own words and both are shown back to them.
+ */
+export const TRADER_REVIEW_STATUS = Object.freeze({
+  NOT_RECORDED: 'not-recorded', // no reflection was written
+  RECORDED: 'recorded', // the trader wrote one
+});
+
+export const TRADER_REVIEW_STATUS_LABELS = Object.freeze({
+  'not-recorded': 'REFLECTION NOT RECORDED',
+  recorded: 'REFLECTION RECORDED',
+});
+
+export const TRADER_REFLECTION_NOTE =
+  'Your reflection is your own words, stored exactly as you wrote it. TradeGuard never generates, ' +
+  'completes, scores or grades it, and it is not an assessment of whether the trade worked.';
+
 /** The single honest answer for profit/loss, everywhere, always. */
 export const PNL_NOTE = 'Outcome not yet available.';
 
@@ -93,9 +117,9 @@ export const JOURNAL_STORAGE_NOTE =
 
 export const JOURNAL_METHOD_NOTE =
   'Trade Memory stores the records TradeGuard already produced for a completed trade — the thesis, the ' +
-  'investigation state, your recorded decision, the paper-execution state and your own review notes — ' +
-  'and reads them back later. It runs no analysis, calls no model, calculates no profit or loss, and ' +
-  'draws no conclusion about how the trade turned out.';
+  'investigation state, your recorded decision, the paper-execution state, your own review notes and ' +
+  'your own reflection — and reads them back later. It runs no analysis, calls no model, calculates no ' +
+  'profit or loss, and draws no conclusion about how the trade turned out.';
 
 export const JOURNAL_DISCLAIMER =
   'A saved trade is a record of what you decided and what was (or was not) executed. It is not evidence ' +
@@ -117,7 +141,6 @@ export const JOURNAL_LIMITATIONS = Object.freeze([
 // --- small helpers ----------------------------------------------------------
 
 const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
-const has = (o, k) => isObj(o) && Object.prototype.hasOwnProperty.call(o, k);
 
 /** Trimmed, non-empty text or null. Used for metadata, never for trader prose. */
 function txt(v) {
@@ -400,6 +423,34 @@ function normalizeReview(source) {
   };
 }
 
+/**
+ * The trader's own reflection on the completed trade (Phase 13).
+ *
+ * Idempotent, like every other group here: it accepts both the request shape
+ * (`{ notes, recordedAt }`) and its own stored shape (`{ status, statusLabel,
+ * notes, recordedAt, updatedAt }`), so a read-modify-write upsert cannot corrupt
+ * it. A reflection exists only when the trader actually wrote something — an
+ * empty or whitespace-only note is "not recorded", never an empty string
+ * presented as a written reflection.
+ */
+function normalizeTraderReview(source, now) {
+  const s = isObj(source) ? source : null;
+  const stamp = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+  const stampIso = stamp.toISOString();
+
+  const notes = s ? raw(s.notes) : null;
+  const hasNotes = Boolean(txt(notes));
+  const status = hasNotes ? TRADER_REVIEW_STATUS.RECORDED : TRADER_REVIEW_STATUS.NOT_RECORDED;
+
+  return {
+    status,
+    statusLabel: TRADER_REVIEW_STATUS_LABELS[status],
+    // Verbatim. Never trimmed, summarised or generated.
+    notes: hasNotes ? notes : null,
+    recordedAt: hasNotes ? iso(s?.recordedAt) || stampIso : null,
+  };
+}
+
 function compactBlock(block) {
   if (!isObj(block)) return null;
   return {
@@ -526,6 +577,13 @@ export function deriveUnavailable(record) {
   if (!r) out.push('Trade review: not recorded.');
   else if (r.status !== 'ready') out.push(`Trade review: ${r.statusLabel || r.status}`);
 
+  // --- the trader's own reflection (Phase 13) -------------------------------
+  // A reflection nobody wrote is a gap like any other, stated plainly rather
+  // than rendered as a blank box that looks like an empty note.
+  if (record.traderReview?.status !== TRADER_REVIEW_STATUS.RECORDED) {
+    out.push('Trader reflection: none was recorded for this trade.');
+  }
+
   // --- the recorded investigation state -------------------------------------
   for (const [key, label] of Object.entries(STAGE_LABELS)) {
     const stage = record.investigation.stages[key];
@@ -570,6 +628,11 @@ export function normalizeRecord(input, now = new Date()) {
 
     // The trader's own review notes, stored verbatim.
     notes: raw(src.notes),
+
+    // Phase 13: the trader's own reflection, written in Trader Review. Additive
+    // and optional — a Phase 12 record saved before this field existed reads
+    // back as "not recorded" rather than being rejected or repaired.
+    traderReview: normalizeTraderReview(src.traderReview, stamp),
   };
 
   record.unavailable = deriveUnavailable(record);
@@ -613,6 +676,10 @@ export function summarizeRecord(record) {
 
     hasNotes: Boolean(txt(record.notes)),
     notesPreview: preview(record.notes, 100),
+
+    // Phase 13: whether the trader wrote a reflection on the completed trade.
+    hasReflection: record.traderReview?.status === TRADER_REVIEW_STATUS.RECORDED,
+    reflectionAt: record.traderReview?.recordedAt ?? null,
 
     // How much of this record is honestly missing. Shown, never hidden.
     unavailableCount: Array.isArray(record.unavailable) ? record.unavailable.length : 0,
@@ -756,6 +823,12 @@ export function createJournalStore(options = {}) {
    * save that omits the execution record cannot silently erase an order that was
    * genuinely submitted. The one exception is deliberate: when the DECISION
    * changed, the execution belongs to the old decision and is replaced too.
+   *
+   * That same rule is what lets Trader Review save ONLY a reflection against an
+   * older trade: the request carries `traderReview` and nothing else, so the
+   * stored trade, decision, execution, review and notes are all preserved
+   * untouched. A reflection-only write is refused for an id that is not already
+   * in the journal, so it can never create an empty record.
    */
   function upsert(input, now = new Date()) {
     const src = isObj(input) ? input : {};
@@ -782,15 +855,39 @@ export function createJournalStore(options = {}) {
     let created;
 
     if (index === -1) {
+      // A save that carries no trade context at all would create a record with
+      // nothing in it. The only request that can do that is a reflection-only
+      // write — Trader Review editing the reflection on a trade that is no longer
+      // in the journal — so it is refused rather than allowed to litter Trade
+      // Memory with a row that has no trade. Every ordinary save carries the
+      // submitted idea, so this cannot affect one.
+      if (!isObj(src.trade) && !isObj(src.idea)) {
+        return {
+          ok: false,
+          created: false,
+          record: null,
+          problem:
+            'That saved trade is no longer in Trade Memory, so there is nothing to update. ' +
+            'A new trade is only ever created by submitting a trade idea.',
+        };
+      }
       record = incoming;
       created = true;
     } else {
       const prev = records[index];
       const carriedTrade = isObj(src.trade) || isObj(src.idea);
 
+      // Only a request that actually CARRIED a decision can have changed it.
+      // Without this guard an absent decision compares as "different" from the
+      // stored one, and the rule below would then take the stored execution down
+      // with it — silently erasing a genuinely submitted order. That is exactly
+      // what a reflection-only save does (it carries neither a decision nor an
+      // execution), so the guard is what makes looking back at an old trade safe.
+      const carriedDecision = isObj(src.decision);
       const decisionChanged =
-        prev.decision.decision !== incoming.decision.decision ||
-        prev.decision.timestamp !== incoming.decision.timestamp;
+        carriedDecision &&
+        (prev.decision.decision !== incoming.decision.decision ||
+          prev.decision.timestamp !== incoming.decision.timestamp);
 
       const merged = {
         ...incoming,
@@ -804,7 +901,26 @@ export function createJournalStore(options = {}) {
           ? incoming.execution
           : prev.execution,
         review: isObj(src.review) ? incoming.review : prev.review,
-        notes: has(src, 'notes') ? incoming.notes : prev.notes,
+        // Notes are raw text, so the signal that the request CARRIED notes is
+        // that it carried a string — `''` means the trader cleared them, and
+        // anything else (absent, null, undefined) means the save does not
+        // concern notes at all. Testing for the KEY instead would be wrong: the
+        // route always shapes a `notes` key, so a reflection-only save would look
+        // like it carried notes and would silently erase the trader's own.
+        notes: typeof src.notes === 'string' ? incoming.notes : prev.notes,
+        traderReview: isObj(src.traderReview)
+          ? {
+              ...incoming.traderReview,
+              // When the trader FIRST recorded a reflection is preserved across
+              // edits — re-stamping it on every keystroke would make the
+              // timestamp meaningless. Clearing and re-writing does re-stamp it.
+              recordedAt:
+                prev.traderReview?.status === TRADER_REVIEW_STATUS.RECORDED &&
+                incoming.traderReview.status === TRADER_REVIEW_STATUS.RECORDED
+                  ? prev.traderReview.recordedAt
+                  : incoming.traderReview.recordedAt,
+            }
+          : prev.traderReview,
       };
 
       merged.investigation = summarizeInvestigation(merged.review);
