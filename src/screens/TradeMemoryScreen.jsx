@@ -23,28 +23,33 @@
 
 import { useCallback, useState } from 'react';
 import { useJournalList, useJournalRecord } from '../lib/journal.js';
+import EmptyState from '../components/EmptyState.jsx';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import JournalList from '../components/journal/JournalList.jsx';
 import JournalDetail from '../components/journal/JournalDetail.jsx';
 
-/** Shown while the journal is being read, and when it cannot be read. */
+/**
+ * Shown while the journal is being read, when it cannot be read, and when it is
+ * genuinely empty. The brand mark is present in every one of those cases, so an
+ * empty Trade Memory reads as a product waiting for its first trade rather than
+ * as a broken page.
+ */
 function JournalNotice({ title, children, onRetry }) {
   return (
     <div className="card">
       <div className="card__body">
-        <div className="empty-state">
-          <div className="card__title">
-            {title}
-          </div>
-          {children}
-          {onRetry && (
-            <div className="empty-state__actions">
+        <EmptyState
+          title={title}
+          actions={
+            onRetry ? (
               <button type="button" className="btn btn--ghost btn--inline" onClick={onRetry}>
                 Try again
               </button>
-            </div>
-          )}
-        </div>
+            ) : undefined
+          }
+        >
+          {children}
+        </EmptyState>
       </div>
     </div>
   );
@@ -130,20 +135,26 @@ export default function TradeMemoryScreen({ onNavigate }) {
           )}
 
           {list.status === 'ready' && list.records.length === 0 && (
-            <JournalNotice title="No trades saved yet">
-              Submit a trade idea and work it through the decision flow. Once you record your own
-              decision, the trade is saved here automatically — and it will still be here after a page
-              reload or a restart of the frontend.
-              <div className="empty-state__actions">
-                <button
-                  type="button"
-                  className="btn btn--primary btn--inline"
-                  onClick={() => onNavigate?.('trade-idea')}
+            <div className="card">
+              <div className="card__body">
+                <EmptyState
+                  title="No trades saved yet"
+                  actions={
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--inline"
+                      onClick={() => onNavigate?.('trade-idea')}
+                    >
+                      Start a trade idea
+                    </button>
+                  }
                 >
-                  Start a trade idea
-                </button>
+                  Submit a trade idea and work it through the decision flow. Once you record your own
+                  decision, the trade is saved here automatically — and it will still be here after a
+                  page reload or a restart of the frontend.
+                </EmptyState>
               </div>
-            </JournalNotice>
+            </div>
           )}
 
           {list.status === 'ready' && list.records.length > 0 && (

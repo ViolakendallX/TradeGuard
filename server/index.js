@@ -20,10 +20,18 @@
  *
  * There is no live-trading path in this application. Paper execution reads demo
  * credentials only, has no live host, and has no fallback from demo to live.
+ *
+ * AUTHENTICATION
+ * Accounts are real: a name, an email and a password, with the password stored
+ * only as a salted scrypt hash. A signed-in browser carries an opaque session
+ * token in an HttpOnly cookie — JavaScript cannot read it, and the server stores
+ * only its SHA-256 digest, so a copy of the session file is not a set of usable
+ * tokens. Trade Memory is scoped to the account behind that session.
  */
 
 import express from 'express';
 import cors from 'cors';
+import authRouter from './routes/auth.js';
 import tradeIdeasRouter from './routes/tradeIdeas.js';
 import researchRouter from './routes/research.js';
 import thesisAttackRouter from './routes/thesisAttack.js';
@@ -38,14 +46,48 @@ import tradeJournalRouter from './routes/tradeJournal.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 
+/**
+ * Which origins may make a CREDENTIALED cross-origin request.
+ *
+ * WHY THIS IS A LIST AND NOT `*`
+ * The session cookie is the only credential in the system, and `credentials:
+ * true` cannot be combined with a wildcard origin — a browser rejects it. So the
+ * origin is either reflected for a known caller or the request gets no CORS
+ * headers at all.
+ *
+ * WHY THIS DOES NOT WEAKEN THE DEV FLOW
+ * In development the frontend is served by Vite, which PROXIES `/api` to this
+ * process. The browser therefore talks to one origin and CORS never applies. A
+ * request with no `Origin` header — same-origin, or a command-line check — is
+ * always allowed through, so the proxy path and `curl` are unaffected.
+ */
+const ALLOWED_ORIGINS = (
+  process.env.TRADEGUARD_ALLOWED_ORIGINS ||
+  'http://localhost:5173,http://127.0.0.1:5173,http://[::1]:5173'
+)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No Origin header: not a cross-origin request. Nothing to authorise.
+      if (!origin) return callback(null, true);
+      return callback(null, ALLOWED_ORIGINS.includes(origin));
+    },
+    credentials: true,
+  }),
+);
 // 128kb rather than 64kb: a Trade Memory save carries the submitted trade, the
 // recorded decision, the paper-execution record and the assembled review in one
 // body. It is still a small, bounded request — this is not a file upload path.
 app.use(express.json({ limit: '128kb' }));
 
+// Public: liveness only. It reports that the process is up and which phase is
+// deployed — no account data, so it stays reachable while signed out.
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -55,6 +97,9 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// Auth first: /api/auth/* is public by necessity (it is how you become
+// authenticated), and each handler applies its own gate where one is needed.
+app.use('/api', authRouter);
 app.use('/api', tradeIdeasRouter);
 app.use('/api', researchRouter);
 app.use('/api', thesisAttackRouter);

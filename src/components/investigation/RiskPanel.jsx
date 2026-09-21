@@ -18,7 +18,7 @@
  */
 
 import { fmt } from '../../lib/investigationView.js';
-import { DataRow, EvidenceSection, UnavailableNotice } from './primitives.jsx';
+import { Badge, DataRow, EvidenceSection, Metric, UnavailableNotice } from './primitives.jsx';
 
 /** Plain-language headline for each engine status. */
 const STATUS_TITLE = {
@@ -26,6 +26,10 @@ const STATUS_TITLE = {
   incomplete: 'The risk cannot be calculated yet',
   invalid: 'This trade construction is inconsistent',
 };
+
+/** Engine status -> system badge kind. */
+const STATUS_BADGE = { ready: 'complete', incomplete: 'partial', invalid: 'unavailable' };
+const STATUS_ICON = { ready: 'check', incomplete: 'alert', invalid: 'alert' };
 
 /** Copy for the calculated-risk block when there is nothing to show. */
 const NOT_CALCULATED = {
@@ -41,9 +45,11 @@ export default function RiskPanel({ risk }) {
     return (
       <div className="rk">
         <div className="rk__status">
-          <span className="rk__badge rk__badge--unavailable">
-            {risk.statusLabel || 'RISK ASSESSMENT UNAVAILABLE'}
-          </span>
+          <Badge
+            kind="unavailable"
+            icon="gap"
+            label={risk.statusLabel || 'RISK ASSESSMENT UNAVAILABLE'}
+          />
         </div>
         <UnavailableNotice reason={risk.statusDetail || risk.reason} />
         <p className="rk__honesty">
@@ -71,9 +77,32 @@ export default function RiskPanel({ risk }) {
   return (
     <div className="rk">
       <div className="rk__status">
-        <span className={`rk__badge rk__badge--${risk.status}`}>{risk.statusLabel}</span>
+        <Badge
+          kind={STATUS_BADGE[risk.status] || 'unavailable'}
+          icon={STATUS_ICON[risk.status] || 'alert'}
+          label={risk.statusLabel}
+        />
         <span className="rk__status-note">{STATUS_TITLE[risk.status] || ''}</span>
       </div>
+
+      {/* A risk-control terminal reads its numbers first. These four are the
+          ones that decide whether the trade fits, so they are the largest
+          things on the screen — and they are echoed verbatim from the engine. */}
+      {calc && (
+        <div className="metric-grid rk__terminal">
+          <Metric
+            label="Defined risk"
+            value={fmt(calc.definedRisk)}
+            note={inputs.riskAmount != null ? `Budget supplied: ${fmt(inputs.riskAmount)}` : undefined}
+          />
+          <Metric label="Position size" value={`${fmt(calc.positionSize)} units`} />
+          <Metric label="Price risk / unit" value={fmt(calc.priceRiskPerUnit)} />
+          <Metric
+            label="Price risk % of entry"
+            value={calc.priceRiskPctOfEntry != null ? `${fmt(calc.priceRiskPctOfEntry)}%` : '—'}
+          />
+        </div>
+      )}
 
       {risk.statusDetail && <p className="rk__detail">{risk.statusDetail}</p>}
 

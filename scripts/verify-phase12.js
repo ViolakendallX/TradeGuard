@@ -85,13 +85,59 @@ let child = null;
 let tempDir = null;
 let BASE = EXTERNAL_BASE;
 
+/**
+ * The session cookie for the account this run creates.
+ *
+ * Every Trade Memory route requires a session, so this script signs in the way a
+ * browser does — POST /api/auth/register, then keep the cookie the server sends
+ * back. Nothing here fabricates a session: if sign-in does not work, the script
+ * fails at this step rather than pretending the journal routes are open.
+ */
+let COOKIE = null;
+
+/** The id of that account. Records written directly to the file are stamped with
+ *  it, because an unowned record belongs to nobody and would not be visible. */
+let USER_ID = null;
+
+async function signIn() {
+  const r = await fetch(`${BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Verification Trader',
+      email: `verify-${Date.now()}@tradeguard.test`,
+      password: 'verification-password',
+    }),
+  });
+
+  if (!r.ok) throw new Error(`The verification account could not be created (${r.status}).`);
+
+  const body = await r.json().catch(() => null);
+  const setCookie = r.headers.getSetCookie?.() ?? [];
+  if (!setCookie.length) throw new Error('Signing in returned no session cookie.');
+
+  COOKIE = setCookie[0].split(';')[0];
+  USER_ID = body?.user?.id ?? null;
+  if (!USER_ID) throw new Error('The verification account came back with no id.');
+  return COOKIE;
+}
+
 async function startOwnServer() {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-phase12-'));
   const journalFile = path.join(tempDir, 'trade-journal.json');
 
   child = spawn(process.execPath, ['server/index.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), TRADEGUARD_JOURNAL_FILE: journalFile },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      TRADEGUARD_JOURNAL_FILE: journalFile,
+      // Accounts and sessions are pointed at the same temp directory, so this
+      // verification creates its own account and can never read, add to, or
+      // invalidate a real trader's sign-in.
+      TRADEGUARD_USERS_FILE: path.join(tempDir, 'users.json'),
+      TRADEGUARD_SESSIONS_FILE: path.join(tempDir, 'sessions.json'),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -134,9 +180,11 @@ function stopOwnServer() {
 // --- http helpers -----------------------------------------------------------
 
 async function post(pathname, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (COOKIE) headers.Cookie = COOKIE;
   const r = await fetch(`${BASE}${pathname}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
   let data = null;
@@ -149,7 +197,7 @@ async function post(pathname, body) {
 }
 
 async function get(pathname) {
-  const r = await fetch(`${BASE}${pathname}`);
+  const r = await fetch(`${BASE}${pathname}`, { headers: COOKIE ? { Cookie: COOKIE } : {} });
   let data = null;
   try {
     data = await r.json();
@@ -206,6 +254,14 @@ function allKeys(value, out = new Set()) {
   check('server alive (Phase 12 built)', health.data?.status === 'ok', `phase ${health.data?.phase}`);
   check('health reports a build that includes phase 12', Number(health.data?.phase) >= 12, String(health.data?.phase));
   if (journalFile) console.log(`      (journal file: ${journalFile})`);
+
+  // 0b. Sign in. Trade Memory belongs to an account, so every journal route below
+  //     runs as a real session — and the routes refuse without one.
+  await signIn();
+  check('a verification account signs in', Boolean(COOKIE));
+
+  const anonymous = await fetch(`${BASE}/api/journal`);
+  check('Trade Memory refuses an unauthenticated read', anonymous.status === 401, `http ${anonymous.status}`);
 
   const ID_A = `verify-phase12-alpha-${Date.now()}`;
   const ID_B = `verify-phase12-bravo-${Date.now()}`;

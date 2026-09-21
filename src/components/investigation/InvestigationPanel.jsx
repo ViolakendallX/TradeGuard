@@ -10,7 +10,8 @@
  * this component.
  */
 
-import { STAGE_RUNTIME } from '../../lib/investigation.js';
+import Icon from '../Icon.jsx';
+import { STAGE_RUNTIME, STAGE_STYLE } from '../../lib/investigation.js';
 import { StatusBadge } from './primitives.jsx';
 import ThesisPanel from './ThesisPanel.jsx';
 import MarketPanel from './MarketPanel.jsx';
@@ -81,10 +82,21 @@ export default function InvestigationPanel({
   if (!section) return null;
 
   const isLoading = section.runtime === STAGE_RUNTIME.LOADING;
+  // Each stage carries its own icon and hue (see STAGE_STYLE), so the panel the
+  // trader is looking at is colour-coded to the stage they are in.
+  const style = STAGE_STYLE[section.id] || { accent: 'thesis', icon: 'thesis' };
 
   return (
-    <section className="inv-panel" data-panel={section.id} aria-label={section.label}>
+    <section
+      className="inv-panel"
+      data-panel={section.id}
+      data-accent={style.accent}
+      aria-label={section.label}
+    >
       <header className="inv-panel__head">
+        <span className="inv-panel__icon" aria-hidden="true">
+          <Icon name={style.icon} size={18} />
+        </span>
         <div className="inv-panel__heading">
           <h2 className="inv-panel__title">{section.label}</h2>
           <p className="inv-panel__desc">{section.stage.description}</p>

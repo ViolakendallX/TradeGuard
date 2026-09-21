@@ -103,13 +103,59 @@ let child = null;
 let tempDir = null;
 let BASE = EXTERNAL_BASE;
 
+/**
+ * The session cookie for the account this run creates.
+ *
+ * Every Trade Memory route requires a session, so this script signs in the way a
+ * browser does — POST /api/auth/register, then keep the cookie the server sends
+ * back. Nothing here fabricates a session: if sign-in does not work, the script
+ * fails at this step rather than pretending the journal routes are open.
+ */
+let COOKIE = null;
+
+/** The id of that account. Records written directly to the file are stamped with
+ *  it, because an unowned record belongs to nobody and would not be visible. */
+let USER_ID = null;
+
+async function signIn() {
+  const r = await fetch(`${BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Verification Trader',
+      email: `verify-${Date.now()}@tradeguard.test`,
+      password: 'verification-password',
+    }),
+  });
+
+  if (!r.ok) throw new Error(`The verification account could not be created (${r.status}).`);
+
+  const body = await r.json().catch(() => null);
+  const setCookie = r.headers.getSetCookie?.() ?? [];
+  if (!setCookie.length) throw new Error('Signing in returned no session cookie.');
+
+  COOKIE = setCookie[0].split(';')[0];
+  USER_ID = body?.user?.id ?? null;
+  if (!USER_ID) throw new Error('The verification account came back with no id.');
+  return COOKIE;
+}
+
 async function startOwnServer() {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-phase13-'));
   const journalFile = path.join(tempDir, 'trade-journal.json');
 
   child = spawn(process.execPath, ['server/index.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), TRADEGUARD_JOURNAL_FILE: journalFile },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      TRADEGUARD_JOURNAL_FILE: journalFile,
+      // Accounts and sessions are pointed at the same temp directory, so this
+      // verification creates its own account and can never read, add to, or
+      // invalidate a real trader's sign-in.
+      TRADEGUARD_USERS_FILE: path.join(tempDir, 'users.json'),
+      TRADEGUARD_SESSIONS_FILE: path.join(tempDir, 'sessions.json'),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -151,9 +197,11 @@ function stopOwnServer() {
 // --- http helpers -----------------------------------------------------------
 
 async function post(pathname, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (COOKIE) headers.Cookie = COOKIE;
   const r = await fetch(`${BASE}${pathname}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
   let data = null;
@@ -166,7 +214,7 @@ async function post(pathname, body) {
 }
 
 async function get(pathname) {
-  const r = await fetch(`${BASE}${pathname}`);
+  const r = await fetch(`${BASE}${pathname}`, { headers: COOKIE ? { Cookie: COOKIE } : {} });
   let data = null;
   try {
     data = await r.json();
@@ -257,7 +305,7 @@ function wiringChecks() {
 
   check(
     'the navigation lists Trader Review at phase 13',
-    /\{\s*id:\s*'trader-review',\s*label:\s*'Trader Review',\s*phase:\s*13\s*\}/.test(constants)
+    /\{\s*id:\s*'trader-review',\s*label:\s*'Trader Review',\s*phase:\s*13[\s\S]*?\}/.test(constants)
   );
   check('the sidebar treats phase 13 as built', /const CURRENT_PHASE = 13;/.test(sidebar));
   check('the sidebar groups the workflow', /NAV_GROUPS/.test(sidebar) && /nav__caption/.test(sidebar));
@@ -413,14 +461,66 @@ function wiringChecks() {
   check('health reports phase 13', health.data?.phase === 13, String(health.data?.phase));
   if (journalFile) console.log(`      (journal file: ${journalFile})`);
 
-  // 1. A Phase 12 record on disk — written before the reflection existed — still
-  //    reads back honestly. This is the backward-compatibility guarantee.
+  // 0b. Sign in. Every journal route requires a session, so this script runs as a
+  //     real account — the same way the browser does.
+  await signIn();
+  check('a verification account signs in', Boolean(COOKIE));
+
+  // 1a. A record that belongs to NO account is shown to no account — it is not
+  //     adopted, not deleted, and not silently attributed to whoever signed in.
+  if (journalFile) {
+    const unowned = {
+      version: 1,
+      records: [
+        {
+          id: 'verify-phase13-unowned',
+          createdAt: '2026-09-19T09:00:00.000Z',
+          trade: { ...CONTEXT, asset: 'RNVDA' },
+          decision: DECISION,
+          notes: 'Written before accounts existed.',
+        },
+      ],
+    };
+    fs.writeFileSync(journalFile, JSON.stringify(unowned, null, 2), 'utf8');
+
+    const unownedRead = await get('/api/journal/verify-phase13-unowned');
+    check('a record with no owner is not readable', unownedRead.status === 404, `http ${unownedRead.status}`);
+
+    const unownedList = await get('/api/journal');
+    check('a record with no owner is not listed', (unownedList.data?.records || []).length === 0);
+    check(
+      'an empty Trade Memory explains the pre-account records rather than hiding them',
+      unownedList.data?.legacy?.count === 1 && /before accounts existed/.test(unownedList.data?.message || ''),
+      unownedList.data?.message
+    );
+    check(
+      'the explanation names no record',
+      !JSON.stringify(unownedList.data || {}).includes('verify-phase13-unowned')
+    );
+
+    // It is still on disk, untouched.
+    const stillThere = JSON.parse(fs.readFileSync(journalFile, 'utf8'));
+    check('the unowned record was not deleted', stillThere.records.some((r) => r.id === 'verify-phase13-unowned'));
+    check(
+      'the unowned record was not attributed to anyone',
+      stillThere.records.every((r) => !r.userId || r.userId === USER_ID)
+    );
+  }
+
+  // 1. A record written by the Phase 12 build — before `traderReview` existed —
+  //    still reads back honestly. This is the backward-compatibility guarantee.
+  //
+  //    It is written WITH the account's id, because that is what a Phase 12
+  //    record belonging to a real trader is: the trade was theirs, and only the
+  //    reflection field is new. A record with no owner at all is a different
+  //    case, checked separately below.
   if (journalFile) {
     const legacy = {
       version: 1,
       records: [
         {
           id: 'verify-phase13-legacy',
+          userId: USER_ID,
           createdAt: '2026-09-19T10:00:00.000Z',
           updatedAt: '2026-09-19T10:00:00.000Z',
           trade: { ...CONTEXT, asset: 'RNVDA' },

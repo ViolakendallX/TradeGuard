@@ -38,6 +38,7 @@
 
 import { useEffect, useState } from 'react';
 import { resolveReviewRecordId, useJournalList, useJournalRecord, useJournalReflectionSync } from '../lib/journal.js';
+import EmptyState from '../components/EmptyState.jsx';
 import TradeHeader from '../components/investigation/TradeHeader.jsx';
 import TraderReviewPicker from '../components/investigation/TraderReviewPicker.jsx';
 import TraderReviewPanel from '../components/investigation/TraderReviewPanel.jsx';
@@ -47,24 +48,29 @@ function EmptyNoSavedTrades({ onEdit, onNavigate }) {
   return (
     <div className="card">
       <div className="card__body">
-        <div className="empty-state" data-trader-no-trades="true">
-          <div className="card__title">No saved trades to review</div>
-          Trader Review looks back at a trade that has already been recorded, so it needs something in
-          Trade Memory to work on. Submit a trade idea and it will be saved there automatically — from
-          then on you can reopen it here at any time and write your reflection on it.
-          <div className="empty-state__actions">
-            <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
-              Submit a trade idea
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--inline"
-              onClick={() => onNavigate?.('trade-memory')}
-            >
-              Open Trade Memory
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          title="No saved trades to review"
+          actions={
+            <>
+              <button type="button" className="btn btn--primary btn--inline" onClick={onEdit}>
+                Submit a trade idea
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--inline"
+                onClick={() => onNavigate?.('trade-memory')}
+              >
+                Open Trade Memory
+              </button>
+            </>
+          }
+        >
+          <span data-trader-no-trades="true">
+            Trader Review looks back at a trade that has already been recorded, so it needs something
+            in Trade Memory to work on. Submit a trade idea and it will be saved there automatically —
+            from then on you can reopen it here at any time and write your reflection on it.
+          </span>
+        </EmptyState>
       </div>
     </div>
   );
@@ -190,15 +196,18 @@ export default function TraderReviewScreen({
         {!hasActiveTrade && list.status === 'unavailable' && (
           <div className="card">
             <div className="card__body">
-              <div className="empty-state" data-trader-list-unavailable="true">
-                <div className="card__title">Your saved trades could not be listed</div>
-                {list.message || 'Trade Memory could not be read, so there is nothing to show yet.'}
-                <div className="empty-state__actions">
+              <EmptyState
+                title="Your saved trades could not be listed"
+                actions={
                   <button type="button" className="btn btn--ghost btn--inline btn--auto" onClick={list.reload}>
                     Try again
                   </button>
-                </div>
-              </div>
+                }
+              >
+                <span data-trader-list-unavailable="true">
+                  {list.message || 'Trade Memory could not be read, so there is nothing to show yet.'}
+                </span>
+              </EmptyState>
             </div>
           </div>
         )}
@@ -216,22 +225,23 @@ export default function TraderReviewScreen({
             {saved.status === 'unavailable' && (
               <div className="card">
                 <div className="card__body">
-                  <div className="empty-state">
-                    <div className="card__title">
-                      {saved.kind === 'not-found'
+                  <EmptyState
+                    title={
+                      saved.kind === 'not-found'
                         ? 'This trade has not been saved to Trade Memory yet'
-                        : 'This trade could not be read back'}
-                    </div>
+                        : 'This trade could not be read back'
+                    }
+                    actions={
+                      <button type="button" className="btn btn--ghost btn--inline btn--auto" onClick={saved.reload}>
+                        Try again
+                      </button>
+                    }
+                  >
                     {saved.kind === 'not-found'
                       ? 'Trade Memory saves a trade as soon as there is something to save. Give it a moment, then try again — nothing is lost.'
                       : saved.message ||
                         'Trade Memory could not be reached, so the saved record for this trade cannot be shown.'}
-                    <div className="empty-state__actions">
-                      <button type="button" className="btn btn--ghost btn--inline btn--auto" onClick={saved.reload}>
-                        Try again
-                      </button>
-                    </div>
-                  </div>
+                  </EmptyState>
                 </div>
               </div>
             )}

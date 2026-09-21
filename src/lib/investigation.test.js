@@ -762,30 +762,74 @@ test('the sidebar groups partition the workflow exactly — every screen once, i
   );
   assert.equal(new Set(grouped).size, grouped.length, 'no screen appears in two groups');
 
-  // The two halves are labelled, and each carries a caption that names the work
-  // it contains — that is what makes the whole loop legible from the sidebar.
-  assert.equal(NAV_GROUPS.length, 2);
+  // Four labelled, captioned groups create the hierarchy the eye reads before it
+  // reads any single item. The invariant is the partition and the labels — not
+  // the historical number of groups, which changes with the product's shape.
+  assert.equal(NAV_GROUPS.length, 4);
   for (const group of NAV_GROUPS) {
     assert.ok(group.label, `${group.id} has a label`);
     assert.ok(group.caption, `${group.id} has a caption`);
   }
 
-  // The investigation group holds the analysis half; the second group holds the
-  // post-decision half, starting at the decision itself.
-  assert.deepEqual(NAV_GROUPS[0].items, ['trade-idea', 'investigation', 'trade-report']);
-  assert.deepEqual(NAV_GROUPS[1].items, [
-    'decision',
-    'paper-execution',
-    'trade-review',
-    'trade-memory',
-    'trader-review',
-  ]);
+  // The groups run in workflow order, and every screen lands in exactly one.
+  assert.deepEqual(
+    NAV_GROUPS.map((group) => group.id),
+    ['trading', 'analysis', 'decision', 'memory'],
+    'the sidebar runs start → analyse → decide → remember'
+  );
+  assert.deepEqual(
+    NAV_GROUPS.flatMap((group) => group.items.map((id) => `${group.id}:${id}`)),
+    [
+      'trading:trade-idea',
+      'analysis:investigation',
+      'analysis:trade-report',
+      'decision:decision',
+      'decision:paper-execution',
+      'memory:trade-review',
+      'memory:trade-memory',
+      'memory:trader-review',
+    ]
+  );
 
-  // Every analysis stage is named in the first caption, so the sidebar does not
-  // have to repeat the eight-stage rail to communicate the workflow.
+  // Every analysis stage is named in the ANALYSIS caption, so the sidebar does
+  // not have to repeat the eight-stage rail to communicate the workflow.
+  const analysis = NAV_GROUPS.find((group) => group.id === 'analysis');
+  assert.ok(analysis, 'there is an analysis group');
   for (const stage of ['Thesis', 'Market', 'Events', 'Attack', 'History', 'Risk', 'Structure', 'Report']) {
-    assert.match(NAV_GROUPS[0].caption, new RegExp(stage), `the investigation caption names ${stage}`);
+    assert.match(analysis.caption, new RegExp(stage), `the analysis caption names ${stage}`);
   }
+});
+
+test('every workflow screen carries an icon and one of the section accents', async () => {
+  const { NAV_ITEMS } = await import('./constants.js');
+
+  // The colour language is only a language if every section speaks it. A screen
+  // with no accent, or an accent outside the token set, silently breaks it.
+  const ACCENTS = [
+    'thesis',
+    'market',
+    'events',
+    'attack',
+    'history',
+    'risk',
+    'structure',
+    'report',
+    'decision',
+    'execution',
+    'memory',
+    'review',
+  ];
+
+  for (const item of NAV_ITEMS) {
+    assert.ok(item.icon, `${item.id} has an icon`);
+    assert.ok(ACCENTS.includes(item.accent), `${item.id} uses a known accent, not ${item.accent}`);
+  }
+
+  // And the accents are used, not all set to one safe blue.
+  assert.ok(
+    new Set(NAV_ITEMS.map((item) => item.accent)).size >= 6,
+    'the sidebar spans the colour language rather than defaulting everything to one hue'
+  );
 });
 
 test('no fabricated completion: unavailable market/events/attack are never marked complete', () => {

@@ -1,39 +1,67 @@
+/**
+ * The eight workflow screens.
+ *
+ * `accent` names ONE of the section hues in the token system, and it is the
+ * only place that mapping is decided — the sidebar, the header, the section
+ * chrome and the badges all read it from here, so a section cannot end up two
+ * different colours in two places.
+ *
+ * `icon` names a glyph from `src/components/Icon.jsx`.
+ */
 export const NAV_ITEMS = [
-  { id: 'trade-idea', label: 'Trade Idea', phase: 1 },
-  { id: 'investigation', label: 'Investigation', phase: 2 },
-  { id: 'trade-report', label: 'Trade Report', phase: 8 },
-  { id: 'decision', label: 'Decision', phase: 9 },
-  { id: 'paper-execution', label: 'Paper Execution', phase: 10 },
-  { id: 'trade-review', label: 'Trade Review', phase: 11 },
-  { id: 'trade-memory', label: 'Trade Memory', phase: 12 },
-  { id: 'trader-review', label: 'Trader Review', phase: 13 },
+  { id: 'trade-idea', label: 'Trade Idea', phase: 1, icon: 'compass', accent: 'thesis' },
+  { id: 'investigation', label: 'Investigation', phase: 2, icon: 'thesis', accent: 'thesis' },
+  { id: 'trade-report', label: 'Trade Report', phase: 8, icon: 'report', accent: 'report' },
+  { id: 'decision', label: 'Decision', phase: 9, icon: 'decision', accent: 'decision' },
+  { id: 'paper-execution', label: 'Paper Execution', phase: 10, icon: 'execution', accent: 'execution' },
+  { id: 'trade-review', label: 'Trade Review', phase: 11, icon: 'history', accent: 'history' },
+  { id: 'trade-memory', label: 'Trade Memory', phase: 12, icon: 'memory', accent: 'memory' },
+  { id: 'trader-review', label: 'Trader Review', phase: 13, icon: 'review', accent: 'review' },
 ];
 
 /**
- * The two halves of the TradeGuard workflow, as shown in the sidebar (Phase 13).
+ * The four stages of the TradeGuard workflow, as shown in the sidebar.
  *
  * The sidebar deliberately does NOT grow to thirteen entries. The eight analysis
  * stages (thesis → market → events → attack → history → risk → structure →
  * report) already have their own rail inside the Investigation workspace, so
- * repeating them here would create a second, competing navigation. Instead the
- * two halves are labelled and each carries a one-line caption, which makes the
- * whole loop legible at a glance without duplicating any control.
+ * repeating them here would create a second, competing navigation. Instead:
  *
- * `items` must partition NAV_ITEMS exactly — every id appears once, in order.
- * That invariant is asserted in investigation.test.js.
+ *   - each group is labelled, spaced and captioned, which is what creates the
+ *     hierarchy the eye reads before it reads any single item;
+ *   - the investigation group's caption names all eight stages, so the whole
+ *     pipeline is legible at a glance without duplicating any control;
+ *   - each item carries its own accent and icon, so the sidebar teaches the
+ *     product's colour language before the trader ever opens a section.
+ *
+ * `items` must partition NAV_ITEMS exactly — every id appears once, in NAV_ITEMS
+ * order. That invariant is asserted in investigation.test.js, and it is the
+ * thing that stops the sidebar drifting out of step with the real routes.
  */
 export const NAV_GROUPS = [
   {
-    id: 'investigation',
-    label: 'Investigation',
-    caption: 'Thesis · Market · Events · Attack · History · Risk · Structure · Report',
-    items: ['trade-idea', 'investigation', 'trade-report'],
+    id: 'trading',
+    label: 'Trading',
+    caption: 'Start with the idea',
+    items: ['trade-idea'],
   },
   {
-    id: 'after-decision',
-    label: 'After the decision',
-    caption: 'Decide · Execute · Review · Remember · Reflect',
-    items: ['decision', 'paper-execution', 'trade-review', 'trade-memory', 'trader-review'],
+    id: 'analysis',
+    label: 'Analysis',
+    caption: 'Thesis · Market · Events · Attack · History · Risk · Structure · Report',
+    items: ['investigation', 'trade-report'],
+  },
+  {
+    id: 'decision',
+    label: 'Decision',
+    caption: 'Decide · Execute',
+    items: ['decision', 'paper-execution'],
+  },
+  {
+    id: 'memory',
+    label: 'Memory',
+    caption: 'Review · Remember · Reflect',
+    items: ['trade-review', 'trade-memory', 'trader-review'],
   },
 ];
 

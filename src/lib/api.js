@@ -1,6 +1,164 @@
 const API_BASE = '/api';
 
 /**
+ * How the app finds out that the session it was using is gone.
+ *
+ * A session can end while the trader is working: it expires, it is revoked on
+ * another device, or the account is removed. The server answers those with a 401
+ * — and the server is the only authority on whether a session is valid, so the
+ * frontend does not try to predict it. It registers a reaction here and the API
+ * layer reports the 401 when it sees one.
+ *
+ * This exists rather than a check inside each screen because a screen that
+ * happens to be looking at the wrong thing must not be able to leave the app
+ * believing it is still signed in.
+ */
+let unauthorizedHandler = null;
+
+/** Registers the reaction to a 401. Pass null to clear it. */
+export function setUnauthorizedHandler(fn) {
+  unauthorizedHandler = typeof fn === 'function' ? fn : null;
+}
+
+/** Reports a 401 to whoever is listening. Safe when nobody is. */
+function noteUnauthorized(status) {
+  if (status === 401 && unauthorizedHandler) unauthorizedHandler();
+}
+
+/** Reads a JSON body, tolerating a response that is not JSON. */
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+/**
+ * The session behind the current browser, if there is one.
+ *
+ * The session token is in an HttpOnly cookie the page cannot read, so "am I
+ * signed in?" is not a question the frontend can answer from its own state. It
+ * asks the server. `authenticated: false` is a normal answer, not a failure, so
+ * this resolves rather than throwing.
+ */
+export async function fetchSession() {
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/auth/me`);
+  } catch {
+    return { ok: false, kind: 'offline', authenticated: false, user: null, message: 'TradeGuard could not reach the server.' };
+  }
+
+  const payload = await readJson(response);
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: 'server',
+      authenticated: false,
+      user: null,
+      message: payload?.message || `Session check failed (${response.status}).`,
+    };
+  }
+
+  return { ok: true, kind: null, authenticated: Boolean(payload?.authenticated), user: payload?.user || null };
+}
+
+/**
+ * Creates an account. On success the server also opens a session, so the caller
+ * lands signed in — which is what "create an account and start using it" means.
+ */
+export async function registerAccount({ name, email, password, confirmPassword }) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, confirmPassword }),
+    });
+  } catch {
+    return { ok: false, kind: 'offline', errors: {}, message: 'TradeGuard could not reach the server. Check that the API is running.' };
+  }
+
+  const payload = await readJson(response);
+
+  if (response.status === 400) {
+    return { ok: false, kind: 'invalid', errors: payload?.errors || {}, message: payload?.message || 'Check the highlighted fields.' };
+  }
+  if (response.status === 409) {
+    return { ok: false, kind: 'duplicate', errors: payload?.errors || {}, message: payload?.message || 'That email address is already registered.' };
+  }
+  if (!response.ok) {
+    return { ok: false, kind: 'server', errors: {}, message: payload?.message || `Account creation failed (${response.status}).` };
+  }
+
+  // A 200 that is not `ok` means the account may exist but no session was
+  // opened. That is not a sign-in, so it is not reported as one.
+  if (payload?.status !== 'ok') {
+    return { ok: false, kind: 'unavailable', errors: {}, message: payload?.message || 'The account could not be created.' };
+  }
+
+  return { ok: true, kind: null, user: payload.user || null, message: payload.message };
+}
+
+/**
+ * Checks a credential pair and opens a session.
+ *
+ * Every failure — unknown email, wrong password, malformed input — comes back as
+ * one 401 with one message, because the server refuses to say which it was. This
+ * function does not try to guess either.
+ */
+export async function loginAccount({ email, password }) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    return { ok: false, kind: 'offline', errors: {}, message: 'TradeGuard could not reach the server. Check that the API is running.' };
+  }
+
+  const payload = await readJson(response);
+
+  if (response.status === 401) {
+    return { ok: false, kind: 'rejected', errors: {}, message: payload?.message || 'Email or password is incorrect.' };
+  }
+  if (!response.ok) {
+    return { ok: false, kind: 'server', errors: {}, message: payload?.message || `Sign-in failed (${response.status}).` };
+  }
+  if (payload?.status !== 'ok') {
+    return { ok: false, kind: 'unavailable', errors: {}, message: payload?.message || 'Sign-in could not be completed.' };
+  }
+
+  return { ok: true, kind: null, user: payload.user || null, message: payload.message };
+}
+
+/**
+ * Destroys the session and clears the cookie.
+ *
+ * Always resolves: a logout that reported failure because it found nothing to
+ * destroy would leave the trader unable to tell "already signed out" from "still
+ * signed in".
+ */
+export async function logoutAccount() {
+  try {
+    const response = await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    await readJson(response);
+    return { ok: true };
+  } catch {
+    // The session may well be gone server-side; what matters is that the app
+    // stops treating this browser as signed in. The next session check settles it.
+    return { ok: false, message: 'TradeGuard could not reach the server to sign out.' };
+  }
+}
+
+/**
  * Phase 1: submit a trade thesis to the backend for validation + capture.
  * Throws on network failure so the UI can degrade gracefully.
  */
@@ -454,12 +612,12 @@ export async function saveJournalRecord(sessionId, extras = {}) {
     }),
   });
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  // A 401 here means the session ended while the trader was working. The app is
+  // told, so it can drop to the sign-in screen rather than render an empty
+  // Trade Memory as though that were the truth.
+  noteUnauthorized(response.status);
+
+  const payload = await readJson(response);
 
   if (response.status === 400) {
     return {
@@ -469,7 +627,6 @@ export async function saveJournalRecord(sessionId, extras = {}) {
       message: payload?.message || 'This trade could not be saved to Trade Memory.',
     };
   }
-
   if (!response.ok) {
     return {
       ok: false,
@@ -528,12 +685,12 @@ export async function saveJournalReflection(id, notes) {
     }),
   });
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  // A 401 here means the session ended while the trader was working. The app is
+  // told, so it can drop to the sign-in screen rather than render an empty
+  // Trade Memory as though that were the truth.
+  noteUnauthorized(response.status);
+
+  const payload = await readJson(response);
 
   if (response.status === 400) {
     return {
@@ -578,12 +735,12 @@ export async function saveJournalReflection(id, notes) {
 export async function fetchJournalList() {
   const response = await fetch(`${API_BASE}/journal`);
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  // A 401 here means the session ended while the trader was working. The app is
+  // told, so it can drop to the sign-in screen rather than render an empty
+  // Trade Memory as though that were the truth.
+  noteUnauthorized(response.status);
+
+  const payload = await readJson(response);
 
   if (!response.ok) {
     return {
@@ -600,12 +757,12 @@ export async function fetchJournalList() {
 export async function fetchJournalRecord(id) {
   const response = await fetch(`${API_BASE}/journal/${encodeURIComponent(id)}`);
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
+  // A 401 here means the session ended while the trader was working. The app is
+  // told, so it can drop to the sign-in screen rather than render an empty
+  // Trade Memory as though that were the truth.
+  noteUnauthorized(response.status);
+
+  const payload = await readJson(response);
 
   if (response.status === 404) {
     return { ok: false, kind: 'not-found', message: payload?.message || 'That saved trade no longer exists.' };

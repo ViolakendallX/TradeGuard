@@ -109,6 +109,31 @@ export const INVESTIGATION_STAGES = [
   },
 ];
 
+/**
+ * The visual identity of each stage — its section accent and its icon key.
+ *
+ * This lives next to the stage model on purpose: a stage's colour is part of
+ * what the stage MEANS, not a styling afterthought, so it moves with the model
+ * rather than being re-declared inside a component. A stage without an entry
+ * here shows up as a colourless gap in the rail, which is why the coverage is
+ * asserted in investigation.test.js.
+ *
+ * `accent` names one of the section hues in the token system; `icon` names a
+ * glyph in src/components/Icon.jsx.
+ */
+export const STAGE_STYLE = Object.freeze({
+  'thesis-captured': { accent: 'thesis', icon: 'thesis' },
+  'market-context': { accent: 'market', icon: 'market' },
+  'events-catalysts': { accent: 'events', icon: 'events' },
+  'contradicting-evidence': { accent: 'attack', icon: 'attack' },
+  'historical-comparisons': { accent: 'history', icon: 'history' },
+  'risk-assessment': { accent: 'risk', icon: 'risk' },
+  'trade-structure': { accent: 'structure', icon: 'structure' },
+  'final-report': { accent: 'report', icon: 'report' },
+  'human-decision': { accent: 'decision', icon: 'decision' },
+  'paper-execution': { accent: 'execution', icon: 'execution' },
+});
+
 export const INVESTIGATION_STAGE_COUNT = INVESTIGATION_STAGES.length;
 
 /**

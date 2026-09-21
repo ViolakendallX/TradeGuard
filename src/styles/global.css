@@ -4,70 +4,312 @@
    ============================================================ */
 
 :root {
-  /* Surfaces */
-  --bg-app: #070a0f;
-  --bg-panel: #0e131b;
-  --bg-panel-raised: #141b25;
-  --bg-input: #0a0f16;
-  --bg-hover: #182130;
+  /* ==========================================================
+     THE EIGHT LAYERS
+     Every surface in the product belongs to exactly one of these, and
+     the difference between them is what makes the hierarchy readable
+     without reading anything. Nothing below should be bypassed with a
+     raw colour in a component.
 
-  /* Lines */
-  --border: #1d2635;
-  --border-strong: #2a3648;
+     The ramp is a deep navy family, not a grey one: every step keeps a
+     blue cast, which is what stops the interface reading as "black
+     rectangles on black". Depth comes from the RAMP plus a translucent
+     surface plus a hairline plus a shadow — never from one of them alone.
+     ========================================================== */
 
-  /* Text */
-  --text: #e7ecf5;
-  --text-secondary: #9aa6bb;
-  --text-muted: #67728a;
+  /* Layer 0 — the field the product sits on (the deepest thing on screen) */
+  --bg-app: #050914;
+  --bg-app-alt: #07101f;
+  --bg-deep: #03060f;
 
-  /* Brand */
-  --accent: #4d8dff;
-  --accent-strong: #2f6fe6;
-  --accent-soft: rgba(77, 141, 255, 0.12);
-  --accent-ring: rgba(77, 141, 255, 0.35);
+  /* Layer 1 — workspace ground (the screen's own floor) */
+  --bg-workspace: #091426;
+  --bg-workspace-alt: #0b1428;
+
+  /* Layer 2 — section container (a titled region inside a screen) */
+  --bg-section: #0b1428;
+  --bg-section-raised: #101a30;
+
+  /* Layer 3 — elevated panel (a section that owns content) */
+  --bg-panel: #101a30;
+  --bg-panel-raised: #14213a;
+  --bg-elevated: #1a2846;
+
+  /* Layer 4 — feature card (a distinct idea inside a panel) */
+  --bg-card: #0e1a33;
+  --bg-card-hover: #14223f;
+  /* The glass surface: used where a card sits over a glowing field and
+     should let a little of it through. */
+  --bg-glass: rgba(16, 26, 48, 0.66);
+  --bg-glass-strong: rgba(20, 33, 58, 0.82);
+
+  /* Layer 5 — interactive element */
+  --bg-input: #070e1e;
+  --bg-input-hover: #0a1428;
+  --bg-hover: #16233f;
+  --bg-sunken: #050b18;
+
+  /* Lines — translucent navy, never grey. A border is a light source
+     catching an edge, so it carries a faint blue-white tint. */
+  --border: #1b2b4a;
+  --border-soft: rgba(126, 168, 232, 0.1);
+  --border-strong: #2b4166;
+  --border-accent: rgba(76, 141, 255, 0.4);
+  --border-hairline: rgba(150, 190, 255, 0.14);
+  --border-glow: rgba(25, 217, 255, 0.42);
+
+  /* ==========================================================
+     TYPE HIERARCHY — six levels of importance
+     The single biggest correction in this system. Previously every
+     string was the same near-white, which flattened the whole product:
+     a heading, a paragraph and a timestamp all shouted equally.
+     Now each level has its own colour, so importance is legible before
+     a single word is read.
+     ========================================================== */
+  --text-heading: #f2f7ff; /* primary headings   — bright near-white   */
+  --text-subheading: #a9c9f2; /* secondary headings — light blue          */
+  --text-body: #8ea3c6; /* body text          — muted blue-gray     */
+  --text-meta: #64789b; /* metadata           — darker blue-gray    */
+  --text-faint: #46587a; /* disabled / inert   — faintest            */
+
+  /* Legacy aliases kept so nothing that already reads them breaks. */
+  --text: var(--text-heading);
+  --text-secondary: var(--text-body);
+  --text-muted: var(--text-meta);
+
+  /* ==========================================================
+     BRAND
+     Electric cyan is the product's own voice. Blue is its structural
+     partner. The gradient between them is the ONE brand gradient and it
+     is spent deliberately: the logo, the primary action, the active
+     state, the single most important number on a screen.
+     ========================================================== */
+  --accent: #4c8dff;
+  --accent-strong: #2e6be8;
+  --accent-soft: rgba(76, 141, 255, 0.14);
+  --accent-ring: rgba(76, 141, 255, 0.38);
+  --accent-cyan: #19d9ff;
+  --grad-brand: linear-gradient(135deg, #4c8dff 0%, #19d9ff 100%);
+  --grad-cyan: linear-gradient(120deg, #19d9ff 0%, #19e6b5 100%);
+  --grad-action: linear-gradient(100deg, #1ba8ff 0%, #19d9ff 46%, #19e6b5 100%);
+  --grad-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0) 62%);
+
+  /* ==========================================================
+     THE SECTION ACCENTS
+     One controlled hue per product area, and each one MEANS something:
+     the same colour always maps to the same kind of thinking. They are
+     used sparingly — an icon, an active state, a card edge, a badge, the
+     important number — never as a fill for a whole screen.
+     ========================================================== */
+  --sec-thesis: #4c8dff; /* blue        — the core idea */
+  --sec-market: #19d9ff; /* electric cyan — live price action */
+  --sec-events: #8b5cf6; /* purple      — catalysts, outside world */
+  --sec-attack: #ff667a; /* coral       — contradiction, challenge */
+  --sec-history: #f5b84b; /* amber       — historical evidence, caution */
+  --sec-risk: #ff8a3d; /* orange      — capital exposure */
+  --sec-structure: #19e6b5; /* teal-green  — the defined construction */
+  --sec-report: #8b7bff; /* blue-violet — synthesis, intelligence */
+  --sec-decision: #f7cc4a; /* gold        — human judgment */
+  --sec-execution: #19d9ff; /* cyan        — execution */
+  --sec-memory: #8b5cf6; /* purple      — historical memory */
+  --sec-review: #2dd4bf; /* teal        — learning, reflection */
+
+  /* The same hues as reusable raw values, for the places that need a
+     colour rather than a section mapping. */
+  --blue: #4c8dff;
+  --cyan: #19d9ff;
+  --purple: #8b5cf6;
+  --violet: #8b7bff;
+  --coral: #ff667a;
+  --amber: #f5b84b;
+  --orange: #ff8a3d;
+  --green: #35d07f;
+  --teal: #19e6b5;
+  --gold: #f7cc4a;
+
+  /* Soft + ring variants, generated per hue so no component has to
+     hand-write an rgba(). */
+  --blue-soft: rgba(76, 141, 255, 0.14);
+  --cyan-soft: rgba(25, 217, 255, 0.14);
+  --purple-soft: rgba(139, 92, 246, 0.14);
+  --violet-soft: rgba(139, 123, 255, 0.14);
+  --coral-soft: rgba(255, 102, 122, 0.14);
+  --amber-soft: rgba(245, 184, 75, 0.14);
+  --orange-soft: rgba(255, 138, 61, 0.14);
+  --green-soft: rgba(53, 208, 127, 0.14);
+  --teal-soft: rgba(25, 230, 181, 0.14);
+  --gold-soft: rgba(245, 184, 75, 0.14);
+
+  --blue-ring: rgba(76, 141, 255, 0.42);
+  --cyan-ring: rgba(25, 217, 255, 0.42);
+  --purple-ring: rgba(139, 92, 246, 0.42);
+  --coral-ring: rgba(255, 102, 122, 0.42);
+  --amber-ring: rgba(245, 184, 75, 0.42);
+  --green-ring: rgba(53, 208, 127, 0.42);
+  --teal-ring: rgba(25, 230, 181, 0.42);
+
+  /* ==========================================================
+     DEPTH — elevation, shadow and glow
+     The interface is built in layers; these are what make the layers
+     legible. Glow is reserved: it marks the ACTIVE, the FOCUSED or the
+     IMPORTANT, never decoration.
+     ========================================================== */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.34);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.52);
+  --shadow-4: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --shadow-inset-strong: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  --glow-blue: 0 0 0 1px rgba(76, 141, 255, 0.3), 0 8px 26px rgba(76, 141, 255, 0.2);
+  --glow-cyan: 0 0 0 1px rgba(25, 217, 255, 0.3), 0 8px 26px rgba(25, 217, 255, 0.18);
+  --glow-teal: 0 0 0 1px rgba(25, 230, 181, 0.28), 0 8px 26px rgba(25, 230, 181, 0.16);
+  --glow-soft: 0 0 24px rgba(25, 217, 255, 0.1);
+  /* The one glow a card uses when it is the screen's primary object. */
+  --glow-card: 0 0 0 1px rgba(25, 217, 255, 0.16), 0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(25, 217, 255, 0.06);
+
+  /* ==========================================================
+     THE CARD TAXONOMY
+     Ten card types, one per job. Before this the product had exactly one
+     card face, which is why a warning, a metric and a piece of evidence
+     all looked identical. Each type now declares its own edge, its own
+     surface tint and its own corner treatment.
+     ========================================================== */
+  --card-radius: 16px;
+  --card-radius-sm: 12px;
+  --card-radius-lg: 20px;
+  --card-pad: 20px;
+  --card-pad-sm: 14px;
+  --card-edge: rgba(150, 190, 255, 0.12);
+  --card-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 55%);
+
+  /* ==========================================================
+     SPACING — one scale, so rhythm is consistent
+     ========================================================== */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 56px;
+  --sp-10: 72px;
+
+  /* ==========================================================
+     RADII — restrained. Curves read as modern, not playful.
+     ========================================================== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-pill: 999px;
+
+  /* ==========================================================
+     TYPOGRAPHY — three families, a deliberate ladder
+     display = Space Grotesk, the premium geometric voice of headings
+     sans    = Inter, the workhorse for every piece of reading text
+     mono    = JetBrains Mono, every number that represents money or risk
+     ========================================================== */
+  --font-display: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --fs-display: 38px;
+  --fs-hero: 29px;
+  --fs-title: 22px;
+  --fs-section: 18px;
+  --fs-card: 15px;
+  --fs-body: 14px;
+  --fs-meta: 12px;
+  --fs-micro: 11px;
+  /* Three sizes the ladder needs that are not page headings:
+     caption = uppercase micro-label, small = supporting copy,
+     body-lg = the single louder body size (hero controls). */
+  --fs-caption: 12px;
+  --fs-small: 13px;
+  --fs-body-lg: 16px;
+  /* The numeric ladder. A money/risk figure is a different kind of object
+     from a paragraph, so it gets its own scale rather than borrowing one. */
+  --fs-value-sm: 17px;
+  --fs-value: 24px;
+  --fs-value-lg: 32px;
+  --fs-value-xl: 40px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --lh-tight: 1.14;
+  --lh-snug: 1.36;
+  --lh-body: 1.62;
+  --ls-tight: -0.022em;
+  --ls-normal: 0;
+  --ls-wide: 0.04em;
+  --ls-caps: 0.12em;
+
+  /* ==========================================================
+     MOTION — one duration scale, one curve, no animation for its
+     own sake. Everything that moves is a state change.
+     ========================================================== */
+  --dur-1: 140ms;
+  --dur-2: 240ms;
+  --dur-3: 420ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Market magnitude + error accent.
      NOTE: --up is the negative/error colour and --down the positive one, and
      --up doubles as the form-validation colour (.label__req, .field__error,
      .has-error). These are NOT the trade-direction colours — see --dir-* below. */
-  --up: #ff4d5e;
-  --up-soft: rgba(255, 77, 94, 0.12);
-  --down: #17c98a;
-  --down-soft: rgba(23, 201, 138, 0.12);
+  --up: #ff667a;
+  --up-soft: rgba(255, 102, 122, 0.14);
+  --down: #35d07f;
+  --down-soft: rgba(53, 208, 127, 0.14);
 
   /* Trade direction — conventional trading semantics:
      bullish / long = green, bearish / short = red.
      Every direction presentation reads from these (trade header badge, thesis
      preview, submission result, direction selector, trade structure). */
-  --dir-bullish: #17c98a;
-  --dir-bullish-soft: rgba(23, 201, 138, 0.12);
-  --dir-bearish: #ff4d5e;
-  --dir-bearish-soft: rgba(255, 77, 94, 0.12);
+  --dir-bullish: #35d07f;
+  --dir-bullish-soft: rgba(53, 208, 127, 0.14);
+  --dir-bearish: #ff667a;
+  --dir-bearish-soft: rgba(255, 102, 122, 0.14);
 
-  --neutral: #8a94a6;
-  --neutral-soft: rgba(138, 148, 166, 0.12);
+  --neutral: #7d8db0;
+  --neutral-soft: rgba(125, 141, 176, 0.14);
 
   /* Status */
-  --warn: #f5a524;
-  --warn-soft: rgba(245, 165, 36, 0.12);
-  --danger: #ff5470;
-  --danger-soft: rgba(255, 84, 112, 0.12);
-  --ok: #17c98a;
-  --ok-soft: rgba(23, 201, 138, 0.12);
-
-  /* Type */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --warn: #f5b84b;
+  --warn-soft: rgba(245, 184, 75, 0.14);
+  --danger: #ff667a;
+  --danger-soft: rgba(255, 102, 122, 0.14);
+  --ok: #35d07f;
+  --ok-soft: rgba(53, 208, 127, 0.14);
 
   /* Metrics */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --sidebar-w: 232px;
-  --topbar-h: 60px;
+  --sidebar-w: 250px;
+  --topbar-h: 62px;
 
-  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.025), 0 10px 30px rgba(0, 0, 0, 0.42);
+
+  /* Authentication surfaces — the deep navy field the sign-in page sits on, plus
+     the glows that stop it reading as a flat black rectangle. Tokens rather
+     than literals, so the login page cannot drift away from the palette. */
+  --auth-navy-1: #0a1730;
+  --auth-navy-2: #07101f;
+  --auth-navy-3: #050914;
+  --auth-glow-a: rgba(25, 217, 255, 0.17);
+  --auth-glow-b: rgba(76, 141, 255, 0.13);
+  --auth-hairline: rgba(160, 200, 255, 0.07);
+  --shadow-auth-card: 0 1px 0 rgba(255, 255, 255, 0.04), 0 30px 80px rgba(0, 0, 0, 0.62),
+    0 0 70px rgba(25, 217, 255, 0.07);
 }
 
 * {
@@ -247,29 +489,6 @@ textarea {
   background: var(--bg-panel-raised);
   border: 1px solid var(--border);
   color: var(--text-muted);
-}
-
-.sidebar__footer {
-  margin-top: auto;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-raised);
-}
-
-.sidebar__footer-title {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.sidebar__footer-text {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  line-height: 1.55;
 }
 
 .status-dot {
@@ -564,6 +783,12 @@ textarea {
 .select:disabled {
   cursor: not-allowed;
 }
+
+/* The dropdown POPUP is styled by the `option` rules in the
+   "NATIVE SELECT DROPDOWN READABILITY" section at the end of this file. The
+   gradient above leaves `background-color` transparent, which is what made the
+   options render white-on-white. Change the closed control here; change the
+   popup there. */
 
 .field__error {
   display: flex;
@@ -1852,9 +2077,10 @@ textarea {
   align-items: center;
   gap: 8px 20px;
   /* Full-bleed across .content's horizontal padding, so nothing scrolls
-     visibly beside the sticky header. */
-  margin: 0 -26px;
-  padding: 11px 26px;
+     visibly beside the sticky header. The value is inherited from .content so
+     the bleed can never be wider than the padding it cancels. */
+  margin: 0 calc(-1 * var(--content-pad-x, 26px));
+  padding: 11px var(--content-pad-x, 26px);
   background: var(--bg-app);
   border-bottom: 1px solid var(--border);
 }
@@ -2311,10 +2537,11 @@ textarea {
   }
 }
 
+/* The breakpoints below only override .content's padding token; the sticky
+   header reads it, so the bleed stays exactly cancelled at every width. */
 @media (max-width: 900px) {
   .inv-head {
-    margin: 0 -18px;
-    padding: 10px 18px;
+    padding-block: 10px;
   }
 }
 
@@ -5208,4 +5435,5549 @@ textarea {
   .picker__fact--when {
     margin-left: 0;
   }
+}
+
+/* ============================================================
+   Authentication — Sign in and Create account
+   ------------------------------------------------------------
+   Full-screen, desktop-first. The left panel is the brand field; the right is
+   the form. Nothing here is a gate: the app behind it stays reachable, and the
+   screens say so. Reuses the product's form language (.label / .input /
+   .has-error / .field__error) so the auth pages look like TradeGuard.
+   ============================================================ */
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  min-height: 100vh;
+  background: var(--auth-navy-2);
+}
+
+/* --- left: the brand field ------------------------------------------------ */
+
+.auth__brand {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 64px 72px;
+  background: linear-gradient(168deg, var(--auth-navy-1) 0%, var(--auth-navy-2) 58%, var(--auth-navy-3) 100%);
+  border-right: 1px solid var(--border);
+}
+
+.auth__glow {
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 90%;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 14% 10%, var(--auth-glow-a), transparent 62%),
+    radial-gradient(700px 460px at 86% 96%, var(--auth-glow-b), transparent 60%);
+}
+
+.auth__brand-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.brand--auth .brand__mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.brand--auth .brand__name {
+  font-size: 17px;
+}
+
+.auth__headline {
+  margin: 0;
+  font-size: clamp(28px, 2.6vw, 38px);
+  font-weight: 640;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.auth__lede {
+  margin: 14px 0 0;
+  max-width: 46ch;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* the one piece of visualisation: a price line on a hairline grid */
+.auth__visual {
+  position: relative;
+  margin: 2px 0;
+}
+
+.auth__visual-svg {
+  display: block;
+  width: 100%;
+  height: 186px;
+}
+
+.auth__visual-grid line {
+  stroke: var(--auth-hairline);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth__visual-level {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+  opacity: 0.45;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth__visual-area {
+  fill: url(#tg-auth-area);
+  stroke: none;
+}
+
+.auth__visual-stop-top {
+  stop-color: var(--accent);
+  stop-opacity: 0.22;
+}
+
+.auth__visual-stop-bottom {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+
+.auth__visual-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth__visual-node {
+  fill: var(--auth-navy-2);
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth__visual-node.is-end {
+  fill: var(--accent);
+}
+
+.auth__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.auth__points li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.auth__points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 10px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.75;
+}
+
+/* --- right: the floating card --------------------------------------------- */
+
+.auth__panel {
+  display: grid;
+  place-items: center;
+  padding: 56px 40px;
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 424px;
+  padding: 34px 32px 30px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-auth-card);
+}
+
+.brand--card {
+  gap: 9px;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.brand--card .brand__mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.brand--card .brand__name {
+  font-size: 14px;
+}
+
+.auth__title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.auth__subtitle {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.auth__form {
+  margin-top: 22px;
+}
+
+/* --- the form-level message area ------------------------------------------ */
+
+.auth__notice {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.auth__notice--error {
+  background: var(--up-soft);
+  border-color: rgba(255, 77, 94, 0.32);
+}
+
+.auth__notice--info {
+  background: var(--accent-soft);
+  border-color: rgba(77, 141, 255, 0.3);
+}
+
+.auth__notice-title {
+  font-size: 12px;
+  font-weight: 620;
+  color: var(--text);
+}
+
+.auth__notice-text {
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.auth__notice-action {
+  margin-top: 11px;
+  width: 100%;
+}
+
+.auth__notice-link {
+  margin-top: 9px;
+}
+
+/* --- the password reveal control ------------------------------------------ */
+
+.auth__control {
+  position: relative;
+}
+
+.auth__control--adorned .input {
+  padding-right: 64px;
+}
+
+.auth__reveal {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 5px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+  font-weight: 620;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease;
+}
+
+.auth__reveal:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.auth__reveal:focus-visible {
+  outline: none;
+  color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* --- actions --------------------------------------------------------------- */
+
+.auth__row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 16px;
+}
+
+.auth__submit {
+  margin-top: 2px;
+}
+
+.auth__empty {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.auth__alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.auth__skip {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.auth__skip-text {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* --- the topbar entry point ------------------------------------------------ */
+
+.topbar__account {
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+}
+
+.topbar__account:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.topbar__account:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* --- responsive: desktop-first, collapsing to a single column -------------- */
+
+@media (max-width: 1180px) {
+  .auth__brand {
+    padding: 52px 48px;
+  }
+}
+
+@media (max-width: 960px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth__brand {
+    padding: 40px 32px 34px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .auth__brand-inner {
+    gap: 22px;
+    max-width: none;
+  }
+
+  /* The visualisation and the point list are desktop furniture. On a narrow
+     screen they would push the form below the fold, and the form is the point. */
+  .auth__visual,
+  .auth__points {
+    display: none;
+  }
+
+  .auth__headline {
+    font-size: 26px;
+  }
+
+  .auth__panel {
+    padding: 32px 24px 56px;
+    place-items: start center;
+  }
+}
+
+@media (max-width: 520px) {
+  .auth__brand {
+    padding: 32px 22px 28px;
+  }
+
+  .auth__panel {
+    padding: 26px 16px 48px;
+  }
+
+  .auth__card {
+    padding: 26px 20px 24px;
+  }
+}
+
+/* ============================================================
+   TradeGuard — VISUAL DESIGN SYSTEM
+   ------------------------------------------------------------
+   A redesign of the product's presentation only. No behaviour,
+   no logic, no routes changed.
+
+   The three ideas doing the work:
+
+   1. SIX LAYERS. App → workspace → panel → card → control →
+      indicator. Each is a distinct tone, border and elevation, so
+      hierarchy is visible before anything is read.
+   2. ONE ACCENT PER SECTION, declared once as `--section-accent`
+      and inherited by icon, edge, badge and glow. Never as a fill.
+   3. RESTRAINT. Colour marks meaning. Most of the screen is quiet
+      navy; the accent is spent on the active, the important and
+      the status — which is what makes it read as premium rather
+      than loud.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. ACCENT RESOLUTION
+   `data-accent` is the ONLY place a section hue is chosen.
+   Everything below reads the two custom properties it sets.
+   ------------------------------------------------------------ */
+[data-accent='thesis'] {
+  --section-accent: var(--sec-thesis);
+  --section-soft: var(--blue-soft);
+}
+[data-accent='market'] {
+  --section-accent: var(--sec-market);
+  --section-soft: var(--cyan-soft);
+}
+[data-accent='events'] {
+  --section-accent: var(--sec-events);
+  --section-soft: var(--purple-soft);
+}
+[data-accent='attack'] {
+  --section-accent: var(--sec-attack);
+  --section-soft: var(--coral-soft);
+}
+[data-accent='history'] {
+  --section-accent: var(--sec-history);
+  --section-soft: var(--amber-soft);
+}
+[data-accent='risk'] {
+  --section-accent: var(--sec-risk);
+  --section-soft: var(--orange-soft);
+}
+[data-accent='structure'] {
+  --section-accent: var(--sec-structure);
+  --section-soft: var(--green-soft);
+}
+[data-accent='report'] {
+  --section-accent: var(--sec-report);
+  --section-soft: var(--violet-soft);
+}
+[data-accent='decision'] {
+  --section-accent: var(--sec-decision);
+  --section-soft: var(--gold-soft);
+}
+[data-accent='execution'] {
+  --section-accent: var(--sec-execution);
+  --section-soft: var(--cyan-soft);
+}
+[data-accent='memory'] {
+  --section-accent: var(--sec-memory);
+  --section-soft: var(--purple-soft);
+}
+[data-accent='review'] {
+  --section-accent: var(--sec-review);
+  --section-soft: var(--teal-soft);
+}
+
+/* ------------------------------------------------------------
+   2. THE GROUND — layered, not flat
+   ------------------------------------------------------------ */
+body {
+  background-color: var(--bg-app);
+  color: var(--text);
+}
+
+.app {
+  background-color: var(--bg-app);
+  /* Two very large, very faint pools of colour. They stop the background
+     reading as flat black without ever competing with content. */
+  background-image: radial-gradient(
+      1100px 620px at 12% -8%,
+      rgba(76, 141, 255, 0.07),
+      transparent 62%
+    ),
+    radial-gradient(900px 560px at 96% 4%, rgba(34, 211, 238, 0.05), transparent 60%);
+}
+
+/* Layer 2 — the screen's own ground. */
+.main {
+  background: linear-gradient(180deg, var(--bg-workspace) 0%, var(--bg-app-alt) 46%);
+}
+
+.content {
+  /* The horizontal padding is a token, because the sticky trade header bleeds
+     out to it. Hard-coding that number in two places is how a 6px horizontal
+     overflow appears at one breakpoint and not another. */
+  --content-pad-x: var(--sp-7);
+  padding: var(--sp-6) var(--content-pad-x) var(--sp-8);
+  max-width: 1360px;
+}
+
+/* Layer 3 — panels sit above the workspace. */
+.panel,
+.inv-panel,
+.card {
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-workspace) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.card {
+  border-radius: var(--radius-lg);
+}
+
+/* ------------------------------------------------------------
+   3. BRAND
+   ------------------------------------------------------------ */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.logo__mark {
+  display: block;
+  flex: none;
+  filter: drop-shadow(0 2px 6px rgba(76, 141, 255, 0.28));
+}
+
+.logo__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.logo__word {
+  font-size: 16px;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.logo__word-accent {
+  color: var(--accent);
+}
+
+.logo__tag {
+  margin-top: 2px;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.logo--sm .logo__word {
+  font-size: 14px;
+}
+.logo--lg .logo__word {
+  font-size: 19px;
+}
+.logo--lg .logo__tag {
+  font-size: var(--fs-meta);
+}
+
+/* ------------------------------------------------------------
+   4. ICONS
+   ------------------------------------------------------------ */
+.icon {
+  display: block;
+  flex: none;
+  color: inherit;
+}
+
+/* ------------------------------------------------------------
+   5. SIDEBAR
+   ------------------------------------------------------------ */
+.sidebar {
+  width: var(--sidebar-w);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--bg-workspace-alt) 0%, var(--bg-app) 100%);
+  border-right: 1px solid var(--border);
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.4);
+}
+
+.sidebar__brand {
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* Group labels are the quietest possible caps — structure you feel, not read. */
+.nav__label {
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.nav__caption {
+  padding: 0 var(--sp-2) var(--sp-1);
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.nav__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.nav__item:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.nav__icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  transition: color 140ms ease;
+}
+
+.nav__item:hover .nav__icon {
+  color: var(--section-accent, var(--accent));
+}
+
+/* ACTIVE — tinted with the section's own hue, an edge in the same hue, and a
+   small glow. That is the only loud thing in the sidebar. */
+.nav__item.is-active {
+  background: var(--section-soft, var(--accent-soft));
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent)) 34%, transparent);
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 4px 16px
+      color-mix(in srgb, var(--section-accent, var(--accent)) 16%, transparent);
+}
+
+.nav__item.is-active .nav__icon {
+  color: var(--section-accent, var(--accent));
+}
+
+/* The accent edge: a short bar, not a full-height stripe. */
+.nav__edge {
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--section-accent, var(--accent));
+  box-shadow: 0 0 10px var(--section-accent, var(--accent));
+}
+
+.nav__item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   6. TOPBAR
+   ------------------------------------------------------------ */
+.topbar {
+  min-height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  padding: var(--sp-3) var(--sp-7);
+  background: linear-gradient(180deg, rgba(18, 26, 43, 0.92) 0%, rgba(12, 17, 32, 0.72) 100%);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+
+.topbar__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* A marker in the active section's hue ties the header to the sidebar. */
+.topbar__marker {
+  width: 3px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    180deg,
+    var(--section-accent, var(--accent)) 0%,
+    color-mix(in srgb, var(--section-accent, var(--accent)) 30%, transparent) 100%
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--section-accent, var(--accent)) 40%, transparent);
+  flex: none;
+}
+
+.topbar__headings {
+  min-width: 0;
+}
+
+.topbar__title {
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  line-height: var(--lh-tight);
+  color: var(--text);
+}
+
+.topbar__subtitle {
+  margin-top: 3px;
+  font-size: var(--fs-body);
+  line-height: var(--lh-snug);
+  color: var(--text-secondary);
+  max-width: 78ch;
+}
+
+.topbar__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-wide);
+  color: var(--text-secondary);
+}
+
+.pill--status {
+  color: var(--text-secondary);
+}
+
+.topbar__account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+/* The account chip is a label now, not a control — it names the account Trade
+   Memory belongs to. It has to be able to give up width, or a long name pushes
+   the topbar past the viewport at narrow sizes. */
+.topbar__account {
+  min-width: 0;
+}
+
+.topbar__account-name {
+  min-width: 0;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__signout {
+  flex: none;
+  white-space: nowrap;
+}
+
+.topbar__account:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------
+   7. INVESTIGATION RAIL — a pipeline, not a row of buttons
+   ------------------------------------------------------------ */
+.inv-nav {
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-workspace) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.inv-nav__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.inv-nav__title {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.inv-nav__meta {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+}
+
+.inv-nav__list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inv-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inv-nav__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.inv-nav__index {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-nav__icon {
+  display: grid;
+  place-items: center;
+  color: var(--section-accent, var(--accent));
+  opacity: 0.9;
+}
+
+.inv-nav__item:hover:not(:disabled) {
+  background: var(--bg-panel-raised);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.inv-nav__item.is-active {
+  background: var(--section-soft, var(--accent-soft));
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent)) 42%, transparent);
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 3px 14px
+      color-mix(in srgb, var(--section-accent, var(--accent)) 18%, transparent);
+}
+
+.inv-nav__item.is-active .inv-nav__icon {
+  color: var(--section-accent, var(--accent));
+}
+
+.inv-nav__item:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* The completion dot — status never rests on colour alone, but the colour is
+   what makes it readable at a glance. */
+.inv-nav__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex: none;
+}
+
+.inv-nav__item--complete .inv-nav__dot {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(40, 208, 138, 0.6);
+}
+.inv-nav__item--partial .inv-nav__dot {
+  background: var(--amber);
+  box-shadow: 0 0 8px rgba(245, 165, 36, 0.55);
+}
+.inv-nav__item--unavailable .inv-nav__dot {
+  background: var(--danger);
+  opacity: 0.7;
+}
+.inv-nav__item--loading .inv-nav__dot {
+  background: var(--cyan);
+  animation: tg-pulse 1.2s ease-in-out infinite;
+}
+.inv-nav__item--locked .inv-nav__dot {
+  background: var(--text-faint);
+}
+
+@keyframes tg-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* A hairline connector instead of an ASCII arrow. */
+.inv-nav__sep {
+  width: 14px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-strong), transparent);
+  flex: none;
+}
+
+.inv-nav__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+
+.inv-gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+
+.inv-gate__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.inv-gate--ready .inv-gate__dot {
+  background: var(--cyan);
+}
+.inv-gate--submitted .inv-gate__dot {
+  background: var(--green);
+}
+.inv-gate--unavailable .inv-gate__dot,
+.inv-gate--locked .inv-gate__dot {
+  background: var(--amber);
+}
+.inv-gate--loading .inv-gate__dot {
+  background: var(--cyan);
+  animation: tg-pulse 1.2s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------
+   8. CARD TYPES — different purposes, different faces
+   ------------------------------------------------------------ */
+.tg-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-workspace) 100%);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-1);
+}
+
+/* PRIMARY ANALYSIS — the card that carries the finding. */
+.tg-card--primary {
+  background: linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-panel) 100%);
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent)) 26%, var(--border));
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.tg-card--primary::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  background: var(--section-accent, var(--accent));
+  opacity: 0.85;
+}
+
+/* EVIDENCE — compact, icon-led. */
+.tg-card--evidence {
+  padding: var(--sp-4);
+  background: var(--bg-card);
+}
+
+/* WARNING — contradiction, risk, caution. */
+.tg-card--warning {
+  border-color: rgba(245, 165, 36, 0.34);
+  background: linear-gradient(180deg, rgba(245, 165, 36, 0.08) 0%, var(--bg-card) 70%);
+}
+
+.tg-card--warning::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  background: var(--amber);
+}
+
+/* SUCCESS — something verified. */
+.tg-card--success {
+  border-color: rgba(40, 208, 138, 0.32);
+  background: linear-gradient(180deg, rgba(40, 208, 138, 0.07) 0%, var(--bg-card) 70%);
+}
+
+.tg-card--success::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  background: var(--green);
+}
+
+/* DATA — a surface for a chart or a table. Darker, so the data leads. */
+.tg-card--data {
+  background: var(--bg-input);
+  border-color: var(--border-strong);
+}
+
+/* METRIC — one big number. */
+.tg-card--metric {
+  padding: var(--sp-4) var(--sp-5);
+  background: linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-card) 100%);
+}
+
+.tg-metric__value {
+  font-size: 26px;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tg-metric__label {
+  margin-top: 4px;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* INSIGHT — icon + headline + explanation. */
+.tg-card--insight {
+  padding: var(--sp-4);
+  background: var(--bg-card);
+  border-left: 3px solid var(--section-accent, var(--accent));
+}
+
+/* INFORMATION GAP — muted amber. Never red: a gap is not an error. */
+.tg-card--gap {
+  padding: var(--sp-4);
+  border-color: rgba(245, 165, 36, 0.24);
+  background: rgba(245, 165, 36, 0.05);
+}
+
+/* --- card internals ------------------------------------------------------ */
+.tg-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.tg-card__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent)) 30%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent)) 12%, var(--bg-card));
+  color: var(--section-accent, var(--accent));
+}
+
+.tg-card__titles {
+  min-width: 0;
+}
+
+.tg-card__title {
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  letter-spacing: var(--ls-normal);
+}
+
+.tg-card__hint {
+  margin-top: 2px;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+.tg-card__body {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  line-height: var(--lh-body);
+}
+
+.tg-card--unavailable .tg-card__icon {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.tg-metric__note {
+  margin-top: 6px;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+.tg-metric__value.is-up {
+  color: var(--up);
+}
+.tg-metric__value.is-down {
+  color: var(--down);
+}
+.tg-metric__value.is-warn {
+  color: var(--amber);
+}
+
+/* UNAVAILABLE — clearly different, deliberately not alarming. */
+.tg-card--unavailable {
+  padding: var(--sp-4);
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------
+   9. STATUS BADGES — icon + text + colour, never colour alone
+   ------------------------------------------------------------ */
+.tg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tg-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.tg-badge--available,
+.tg-badge--complete {
+  color: var(--green);
+  border-color: rgba(40, 208, 138, 0.36);
+  background: var(--green-soft);
+}
+
+.tg-badge--ready {
+  color: var(--cyan);
+  border-color: rgba(34, 211, 238, 0.36);
+  background: var(--cyan-soft);
+}
+
+.tg-badge--partial,
+.tg-badge--incomplete {
+  color: var(--amber);
+  border-color: rgba(245, 165, 36, 0.36);
+  background: var(--amber-soft);
+}
+
+.tg-badge--unavailable {
+  color: #d98a97;
+  border-color: rgba(255, 84, 112, 0.3);
+  background: rgba(255, 84, 112, 0.08);
+}
+
+.tg-badge--locked {
+  color: var(--purple);
+  border-color: rgba(167, 139, 250, 0.3);
+  background: var(--purple-soft);
+}
+
+.tg-badge--submitted {
+  color: var(--cyan);
+  border-color: rgba(34, 211, 238, 0.36);
+  background: var(--cyan-soft);
+}
+
+/* In flight. Cyan, but quieter than "ready" — nothing has landed yet. */
+.tg-badge--pending {
+  color: var(--cyan);
+  border-color: rgba(34, 211, 238, 0.24);
+  background: rgba(34, 211, 238, 0.05);
+}
+
+/* Decision badges. They must stay NEUTRAL in emphasis — TradeGuard never
+   recommends one — so all three share a weight and a shape. */
+.tg-badge--take {
+  color: var(--green);
+  border-color: rgba(40, 208, 138, 0.36);
+  background: var(--green-soft);
+}
+.tg-badge--wait {
+  color: var(--amber);
+  border-color: rgba(245, 165, 36, 0.36);
+  background: var(--amber-soft);
+}
+.tg-badge--skip {
+  color: var(--coral);
+  border-color: rgba(255, 107, 94, 0.34);
+  background: var(--coral-soft);
+}
+
+/* ------------------------------------------------------------
+   10. AUTH — the premium front door
+   ------------------------------------------------------------ */
+.auth {
+  background-color: var(--bg-app);
+  background-image: radial-gradient(
+      900px 620px at 14% 6%,
+      rgba(76, 141, 255, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(760px 520px at 88% 92%, rgba(34, 211, 238, 0.09), transparent 62%);
+}
+
+/* Dark glass: a real blur over a lit background, not a flat dark rectangle. */
+.auth__card {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(21, 31, 50, 0.86) 0%,
+    rgba(12, 17, 32, 0.9) 100%
+  );
+  border: 1px solid rgba(122, 152, 200, 0.16);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-auth-card), var(--shadow-inset);
+  backdrop-filter: blur(18px) saturate(130%);
+  overflow: hidden;
+}
+
+/* A single hairline of light along the top edge sells the glass. */
+.auth__card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(76, 141, 255, 0.5),
+    rgba(34, 211, 238, 0.45),
+    transparent
+  );
+}
+
+.auth__headline {
+  font-size: var(--fs-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.12;
+  color: var(--text);
+}
+
+.auth__lede {
+  font-size: var(--fs-card);
+  line-height: var(--lh-body);
+  color: var(--text-secondary);
+  max-width: 46ch;
+}
+
+.auth__title {
+  font-size: 24px;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+}
+
+.auth__submit {
+  background: var(--grad-brand);
+  border: none;
+  color: #051019;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wide);
+  box-shadow: 0 6px 20px rgba(76, 141, 255, 0.28);
+}
+
+.auth__submit:hover:not(:disabled) {
+  box-shadow: 0 8px 26px rgba(76, 141, 255, 0.4);
+}
+
+.auth__submit:disabled {
+  background: var(--bg-hover);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------
+   9b. THE INVESTIGATION PANEL — one stage, one hue
+   ------------------------------------------------------------ */
+.inv-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.inv-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--section-accent, var(--accent)) 0%,
+    transparent 62%
+  );
+  opacity: 0.9;
+}
+
+.inv-panel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.inv-panel__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin-top: 2px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent)) 32%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent)) 12%, var(--bg-panel));
+  color: var(--section-accent, var(--accent));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--section-accent, var(--accent)) 12%, transparent);
+}
+
+.inv-panel__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.inv-panel__title {
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------
+   9c. THESIS ATTACK — coral/red, and six clearly separated reads
+   ------------------------------------------------------------ */
+.da__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.da__section {
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) calc(var(--sp-4) + 1px);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-workspace) 100%);
+  box-shadow: var(--shadow-1);
+}
+
+/* Each read gets its own tint, so the six are told apart before they are read. */
+.da__section--support {
+  background: linear-gradient(180deg, rgba(40, 208, 138, 0.07) 0%, var(--bg-card) 60%);
+}
+.da__section--contradict {
+  background: linear-gradient(180deg, rgba(255, 107, 94, 0.09) 0%, var(--bg-card) 60%);
+}
+.da__section--risk {
+  background: linear-gradient(180deg, rgba(245, 165, 36, 0.08) 0%, var(--bg-card) 60%);
+}
+.da__section--invalidation {
+  background: linear-gradient(180deg, rgba(76, 141, 255, 0.08) 0%, var(--bg-card) 60%);
+}
+.da__section--missing {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+/* The counterargument is the loudest thing in the section — it is the whole
+   point of the attack — so it gets the coral edge and a real surface. */
+.da__callout {
+  padding: var(--sp-5);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 107, 94, 0.34);
+  border-left: 3px solid var(--coral);
+  background: linear-gradient(180deg, rgba(255, 107, 94, 0.1) 0%, var(--bg-card) 70%);
+  box-shadow: var(--shadow-2);
+}
+
+.da__callout-label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--coral);
+}
+
+.da__callout-title {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------
+   9d. THE REPORT — an intelligence report, section by section
+   Each section marker carries the hue of the analysis it summarises, so
+   the document can be scanned rather than read.
+   ------------------------------------------------------------ */
+.report__section {
+  position: relative;
+  padding: var(--sp-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-workspace) 100%);
+  box-shadow: var(--shadow-1);
+}
+
+.report__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* The marker: a numbered chip in the section's own hue. */
+.report__section-index {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent)) 40%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent)) 14%, var(--bg-card));
+  color: var(--section-accent, var(--accent));
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__section-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------
+   10-pre. DECISION — amber/gold, and three equal-weight choices
+   The section is warm. The three options are deliberately NOT ranked by
+   size, weight or shadow: only their hue differs, so the colour reads as
+   identity rather than as a recommendation.
+   ------------------------------------------------------------ */
+[data-accent='decision'] .inv-panel {
+  border-top: 2px solid color-mix(in srgb, var(--section-accent) 55%, transparent);
+}
+
+.decision__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+@media (max-width: 860px) {
+  .decision__options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.decision__option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) calc(var(--sp-4) + 3px);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  text-align: left;
+  overflow: hidden;
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+
+/* Identity, not emphasis: a hairline of hue and a tinted marker. */
+.decision__option::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--border-strong);
+}
+
+.decision__option[data-decision-tone='take']::before {
+  background: var(--green);
+}
+.decision__option[data-decision-tone='wait']::before {
+  background: var(--amber);
+}
+.decision__option[data-decision-tone='skip']::before {
+  background: var(--coral);
+}
+
+.decision__option:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
+}
+
+.decision__option.is-selected {
+  border-color: color-mix(in srgb, var(--section-accent) 48%, var(--border));
+  background: color-mix(in srgb, var(--section-accent) 9%, var(--bg-card));
+}
+
+.decision__option.is-selected[data-decision-tone='take'] {
+  border-color: rgba(40, 208, 138, 0.5);
+}
+.decision__option.is-selected[data-decision-tone='wait'] {
+  border-color: rgba(245, 165, 36, 0.5);
+}
+.decision__option.is-selected[data-decision-tone='skip'] {
+  border-color: rgba(255, 107, 94, 0.5);
+}
+
+.decision__option-label {
+  display: block;
+  font-size: var(--fs-section);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wide);
+  color: var(--text);
+}
+
+.decision__option[data-decision-tone='take'] .decision__option-label {
+  color: var(--green);
+}
+.decision__option[data-decision-tone='wait'] .decision__option-label {
+  color: var(--amber);
+}
+.decision__option[data-decision-tone='skip'] .decision__option-label {
+  color: var(--coral);
+}
+
+.decision__option-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  line-height: var(--lh-snug);
+}
+
+.decision__radio {
+  flex: none;
+  margin-top: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-input);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.decision__radio.is-on {
+  border-color: var(--section-accent);
+  box-shadow: inset 0 0 0 3.5px var(--section-accent);
+}
+
+/* ------------------------------------------------------------
+   10a. DATA DISPLAY — metric grid, range meter
+   ------------------------------------------------------------ */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-4);
+}
+
+/* The risk terminal's own read-out sits above the detail tables. */
+.rk__terminal {
+  margin-top: var(--sp-5);
+}
+
+.rk__terminal .tg-metric__value {
+  font-size: 30px;
+}
+
+/* The range meter: a dark chart surface with a cyan/blue read. Green and red
+   appear only as the 24h change number — never as decoration. */
+.market-range {
+  padding: var(--sp-5);
+  background: linear-gradient(180deg, #080d18 0%, var(--bg-input) 100%);
+}
+
+.market-range__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.market-range__title {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.market-range__legend {
+  display: flex;
+  gap: var(--sp-4);
+}
+
+.market-range__bound {
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-wide);
+}
+
+.market-range__track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.market-range__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pos, 0%);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-cyan) 100%);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.28);
+}
+
+.market-range__marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  border: 2px solid #071019;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+}
+
+.market-range__marker-value {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-range__note {
+  margin-top: var(--sp-6);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------
+   10b. TRADE IDEA — three questions, three blocks
+   ------------------------------------------------------------ */
+.idea-section {
+  position: relative;
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-5) 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.idea-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.idea-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.idea-section__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--section-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--section-accent) 12%, var(--bg-panel));
+  color: var(--section-accent);
+}
+
+.idea-section__titles {
+  min-width: 0;
+}
+
+.idea-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.idea-section__step {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--section-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.idea-section__note {
+  margin-top: 2px;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+.idea-section__body {
+  display: grid;
+  gap: var(--sp-4);
+  padding-left: calc(30px + var(--sp-3));
+}
+
+@media (max-width: 720px) {
+  .idea-section__body {
+    padding-left: 0;
+  }
+}
+
+/* The one action on the screen. */
+.idea-submit {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+}
+
+.btn--hero {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 15px 30px;
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #04101f;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent-cyan) 100%);
+  box-shadow: 0 10px 30px rgba(76, 141, 255, 0.3);
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.btn--hero:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(76, 141, 255, 0.42);
+}
+
+.btn--hero:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn--hero:disabled {
+  background: var(--bg-hover);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+.btn--hero .spinner {
+  border-color: rgba(4, 16, 31, 0.28);
+  border-top-color: #04101f;
+}
+
+.idea-submit__note {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+/* ------------------------------------------------------------
+   10c. EMPTY STATE — the wordmark, not a bare sentence
+   ------------------------------------------------------------ */
+.empty-state {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: center;
+  text-align: center;
+  padding: var(--sp-7) var(--sp-5);
+}
+
+.empty-state__logo {
+  color: var(--section-accent, var(--accent));
+  opacity: 0.9;
+  margin-bottom: var(--sp-2);
+}
+
+.empty-state__title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.empty-state__text {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  justify-content: center;
+  margin-top: var(--sp-2);
+}
+
+/* ------------------------------------------------------------
+   11. RESPONSIVE
+   ------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  .content {
+    --content-pad-x: var(--sp-5);
+    padding: var(--sp-5) var(--content-pad-x) var(--sp-7);
+  }
+  .topbar {
+    padding: var(--sp-3) var(--sp-5);
+  }
+}
+
+@media (max-width: 960px) {
+  .sidebar {
+    width: 200px;
+  }
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .topbar__title {
+    font-size: var(--fs-title);
+  }
+}
+
+@media (max-width: 720px) {
+  /* Desktop: full sidebar + workspace. Mobile: the sidebar becomes a stacked
+     band above the workspace, with its groups on a horizontal scroll rail. */
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar__brand {
+    min-width: 0;
+  }
+  /* The nav stacks back to a single column at mobile, because horizontal
+     scroll on a narrow screen asks the trader to swipe just to see what is
+     available — and the four groups fit comfortably stacked. */
+  .nav {
+    flex-direction: column;
+    overflow-y: auto;
+    min-width: 0;
+    max-height: 50vh;
+    gap: var(--sp-3);
+  }
+  .nav__group {
+    min-width: 0;
+    flex: none;
+    max-width: none;
+  }
+  .main {
+    min-width: 0;
+  }
+  .content {
+    --content-pad-x: var(--sp-4);
+    padding: var(--sp-4) var(--content-pad-x) var(--sp-7);
+  }
+  .topbar {
+    padding: var(--sp-3) var(--sp-4);
+  }
+  .topbar__meta {
+    flex-wrap: wrap;
+    /* Wrapping alone is not enough. The meta block is `flex: none` at full width,
+       and for a wrapping flex container `flex: none` means "as wide as all the
+       items on one line" — so the box itself overflowed instead of the items
+       breaking. It has to be allowed to shrink before it will wrap. */
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    row-gap: 6px;
+  }
+  .topbar__account-name {
+    max-width: 12ch;
+  }
+}
+
+/* Respect the user's motion preference — the only animation in the system is
+   the loading pulse, and it should stop when asked. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==========================================================================
+   TRADEGUARD — VISUAL OVERHAUL
+   ==========================================================================
+
+   This block is the premium terminal layer. It is deliberately appended LAST
+   so that it refines every earlier block through the cascade rather than
+   fighting it: the phase-specific layouts above still own their geometry, and
+   everything below owns the surface, the colour, the depth and the type.
+
+   The three ideas it is built on:
+
+     1. DEPTH IS A STACK, NOT A SHADE. Eight declared layers, each one a
+        slightly lighter navy plus a hairline plus a shadow. A card is legible
+        as a card because it sits on something, not because it is a different
+        grey.
+
+     2. COLOUR CARRIES MEANING. Twelve section accents, one per area of
+        thinking. A hue appears on an icon, an edge, a badge and the single
+        most important number — never as a screen fill. A trader learns the
+        colour language once and then reads the product faster.
+
+     3. TYPE HAS SIX LEVELS. Heading, sub-heading, body, metadata, accent and
+        value. Previously everything was near-white, which flattened the whole
+        interface; a timestamp shouted as loudly as a heading.
+
+   Nothing here changes behaviour. Every rule is a surface, a colour, a
+   measurement or a transition.
+   ========================================================================== */
+
+/* ------------------------------------------------------------
+   1. THE FIELD
+   The deepest layer. Two enormous, very faint pools of cyan and blue over a
+   vertical navy ramp, plus a hairline grid masked to the top of the viewport.
+   The grid is what makes the field read as an instrument panel rather than as
+   an empty room — and the mask is what stops it becoming a texture.
+   ------------------------------------------------------------ */
+body {
+  background-color: var(--bg-app);
+  background-image: linear-gradient(180deg, #07101f 0%, #050914 54%, #03060f 100%);
+  color: var(--text-body);
+}
+
+/* The two decorative layers live on the body pseudo-elements, at z-index -1,
+   so no screen's stacking context is disturbed by them. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Layer A — the light pools. */
+body::before {
+  background-image: radial-gradient(1200px 720px at 8% -12%, rgba(25, 217, 255, 0.1), transparent 60%),
+    radial-gradient(1000px 660px at 94% 0%, rgba(76, 141, 255, 0.11), transparent 58%),
+    radial-gradient(1000px 900px at 50% 116%, rgba(139, 92, 246, 0.08), transparent 62%);
+}
+
+/* Layer B — the instrument grid, faded out below the fold. */
+body::after {
+  background-image: linear-gradient(rgba(126, 168, 232, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 168, 232, 0.05) 1px, transparent 1px);
+  background-size: 58px 58px;
+  -webkit-mask-image: radial-gradient(1200px 620px at 50% -6%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(1200px 620px at 50% -6%, #000 0%, transparent 74%);
+}
+
+/* The app shell itself becomes transparent so the field shows through. */
+.app {
+  background-color: transparent;
+  background-image: none;
+}
+
+.main {
+  background: linear-gradient(180deg, rgba(9, 20, 38, 0.86) 0%, rgba(7, 16, 31, 0.7) 48%, rgba(5, 9, 20, 0.55) 100%);
+}
+
+.content {
+  --content-pad-x: var(--sp-7);
+  padding: var(--sp-7) var(--content-pad-x) var(--sp-9);
+}
+
+/* ------------------------------------------------------------
+   2. THE TYPE LADDER
+   Six levels, applied by role. This is the correction that does most of the
+   work: the product stops being one undifferentiated wall of near-white.
+   ------------------------------------------------------------ */
+
+/* Level 1 — primary headings. Bright near-white, display family, tight. */
+.page-head__title,
+.report__section-title,
+.rk__section-title,
+.struct__section-title,
+.da__section-title,
+.auth__title,
+.auth__headline {
+  font-family: var(--font-display);
+  color: var(--text-heading);
+  letter-spacing: var(--ls-tight);
+  font-weight: var(--fw-semibold);
+}
+
+/* Level 2 — secondary headings. A light blue, so a sub-heading is visibly
+   subordinate to its heading without being dimmer than the body. */
+.card__title,
+.decision__block-title,
+.exec__order-title,
+.review__known-title,
+.trader__reflection-title,
+.hs__title,
+.inv-fact__title {
+  color: var(--text-subheading);
+}
+
+/* Level 3 — body copy. Muted blue-gray. Reading text is NEVER pure white. */
+p,
+li,
+dd,
+.report__section-body,
+.inv-panel__body,
+.card__body,
+.auth__lede,
+.auth__subtitle {
+  color: var(--text-body);
+}
+
+/* Level 4 — metadata. Darker, smaller, quieter: labels, sources, timestamps. */
+.data-row dt,
+.kv dt,
+.struct__meta-label,
+.report__sub-label,
+.stage__meta,
+.market-range__note,
+.da__item-src,
+.exec__order-src,
+.event-item__src,
+.review__src-note,
+.field__meta,
+.topbar__subtitle {
+  color: var(--text-meta);
+}
+
+/* Level 5 — the value. A number that represents money, risk or a level is a
+   different kind of object from a sentence, so it gets monospace, tabular
+   figures and the section's own accent. */
+.tg-metric__value,
+.rk__criterion-value,
+.struct__meta-value,
+.report__meta-value,
+.kv dd,
+.data-row dd,
+.exec__limit,
+.struct__invalidation-value,
+.decision__risk-partial,
+.preview__ticker {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Level 6 — the accent. A small amount of colour spent where it means
+   something: an eyebrow, a section label, an active state. */
+.page-head__eyebrow,
+.section-label,
+.report__section-label,
+.nav__label,
+.auth__eyebrow {
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.page-head__eyebrow,
+.section-label,
+.report__section-label {
+  color: var(--section-accent, var(--accent-cyan));
+}
+
+/* ------------------------------------------------------------
+   3. PAGE HEAD
+   The opening of every screen: an accent eyebrow, a large display heading, a
+   lede held to a readable measure, and a hairline that closes the block.
+   ------------------------------------------------------------ */
+.page-head {
+  position: relative;
+  padding-bottom: var(--sp-5);
+  margin-bottom: var(--sp-6);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.page-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 96px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--section-accent, var(--accent-cyan)), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 55%, transparent);
+}
+
+.page-head__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  margin-bottom: var(--sp-3);
+}
+
+.page-head__eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.page-head__title {
+  margin: 0 0 var(--sp-3);
+  font-family: var(--font-display);
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-heading);
+}
+
+.page-head__lede {
+  margin: 0;
+  max-width: 76ch;
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-body);
+  color: var(--text-body);
+}
+
+/* ------------------------------------------------------------
+   4. TOPBAR
+   Refined terminal chrome: the brand, the screen's own title with an accent
+   marker, and a right-hand cluster of small, elegant indicators.
+   ------------------------------------------------------------ */
+.topbar {
+  height: var(--topbar-h);
+  padding: 0 var(--content-pad-x, var(--sp-7));
+  background: linear-gradient(180deg, rgba(11, 20, 40, 0.97) 0%, rgba(7, 16, 31, 0.94) 100%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 30px rgba(0, 0, 0, 0.34);
+}
+
+/* The brand lockup lives in the topbar as well as the sidebar, so the product
+   is signed at both ends of the screen. */
+.topbar__brand {
+  display: none;
+  align-items: center;
+  padding-right: var(--sp-4);
+  margin-right: var(--sp-4);
+  border-right: 1px solid var(--border-soft);
+}
+
+.topbar__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.topbar__marker {
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--section-accent, var(--accent-cyan)), transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 60%, transparent);
+}
+
+.topbar__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-heading);
+  line-height: 1.15;
+}
+
+.topbar__subtitle {
+  font-size: var(--fs-meta);
+  line-height: 1.3;
+  max-width: 68ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+
+/* The account chip: a real surface, so the signed-in identity reads as an
+   object rather than as loose text. */
+.topbar__account {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 200px;
+  padding: 6px var(--sp-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 26%, var(--border));
+  background: linear-gradient(180deg, rgba(25, 217, 255, 0.1) 0%, rgba(25, 217, 255, 0.03) 100%);
+  color: var(--text-subheading);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 20px rgba(25, 217, 255, 0.07);
+}
+
+.topbar__account .icon {
+  color: var(--accent-cyan);
+}
+
+.topbar__account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__signout {
+  flex: none;
+}
+
+/* ------------------------------------------------------------
+   5. PILLS AND STATUS
+   Small, elegant, and never colour-alone: every status carries a dot or a
+   glyph as well as a hue.
+   ------------------------------------------------------------ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+  background: rgba(126, 168, 232, 0.06);
+  color: var(--text-meta);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.pill--status {
+  border-color: color-mix(in srgb, var(--ok) 30%, transparent);
+  background: var(--ok-soft);
+  color: color-mix(in srgb, var(--ok) 88%, #ffffff);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16), 0 0 12px rgba(53, 208, 127, 0.5);
+  flex: none;
+}
+
+.status-dot.is-offline {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(245, 184, 75, 0.16), 0 0 12px rgba(245, 184, 75, 0.5);
+}
+
+/* The one place a pulse is allowed: a live connection indicator. */
+@media (prefers-reduced-motion: no-preference) {
+  .status-dot {
+    animation: tg-pulse 2.6s var(--ease) infinite;
+  }
+}
+
+@keyframes tg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ------------------------------------------------------------
+   6. SIDEBAR — a premium terminal rail
+   ------------------------------------------------------------ */
+.sidebar {
+  width: var(--sidebar-w);
+  background: linear-gradient(180deg, rgba(11, 20, 40, 0.94) 0%, rgba(5, 9, 20, 0.97) 100%);
+  border-right: 1px solid var(--border);
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.5), 24px 0 60px rgba(0, 0, 0, 0.24);
+}
+
+.sidebar__brand {
+  position: relative;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* A faint wash of brand light behind the lockup — the sidebar's own horizon. */
+.sidebar__brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(220px 90px at 22% 0%, rgba(25, 217, 255, 0.12), transparent 70%);
+}
+
+.nav {
+  padding: var(--sp-5) var(--sp-3) var(--sp-6);
+  gap: var(--sp-6);
+}
+
+.nav__group {
+  gap: var(--sp-3);
+}
+
+/* Group labels become real dividers: a rule and a caption, so the four groups
+   read as four named regions rather than as one long list. */
+.nav__label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-2);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+}
+
+.nav__label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+.nav__caption {
+  padding: 0 var(--sp-2);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.nav__items {
+  gap: 3px;
+}
+
+.nav__item {
+  gap: 11px;
+  padding: 9px var(--sp-3);
+  border-radius: var(--radius-md);
+  color: var(--text-meta);
+  font-weight: var(--fw-medium);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+
+.nav__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: rgba(126, 168, 232, 0.05);
+  color: var(--text-faint);
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+/* Every item carries its own section hue on the icon tile, at low intensity —
+   so the sidebar teaches the colour language before a section is ever opened. */
+.nav__item[data-accent] .nav__icon {
+  color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 72%, var(--text-faint));
+}
+
+.nav__item:hover:not(:disabled) {
+  background: rgba(126, 168, 232, 0.07);
+  border-color: var(--border-soft);
+  color: var(--text-subheading);
+}
+
+.nav__item:hover:not(:disabled) .nav__icon {
+  color: var(--section-accent, var(--accent-cyan));
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 34%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 12%, transparent);
+}
+
+.nav__item.is-active {
+  /* A real background-COLOUR as well as the gradient: the gradient alone
+     leaves `background-color` transparent, and a tinted active row is a
+     property the product asserts. */
+  background-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 15%, transparent);
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 20%, transparent) 0%,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 6%, transparent) 62%,
+    transparent 100%
+  );
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 34%, transparent);
+  color: var(--text-heading);
+  font-weight: var(--fw-semibold);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 22px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 14%, transparent);
+}
+
+.nav__item.is-active .nav__icon {
+  color: var(--section-accent, var(--accent-cyan));
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 45%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 16%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 30%, transparent);
+}
+
+.nav__edge {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 14px var(--section-accent, var(--accent-cyan));
+}
+
+.nav__badge {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+  background: rgba(126, 168, 232, 0.06);
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* The pipeline legend: the eight analysis stages as a row of accent pips.
+   It is a LEGEND, not a control — the rail inside the Investigation workspace
+   remains the only way to select a stage, so the sidebar never becomes a
+   second, competing navigation. */
+.nav__pipeline {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 2px var(--sp-2) 0;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.5);
+}
+
+.nav__pip {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pip-hue, var(--border-strong));
+  opacity: 0.55;
+  transition: opacity var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.nav__pipeline:hover .nav__pip {
+  opacity: 0.95;
+}
+
+.nav__pipeline:hover .nav__pip {
+  box-shadow: 0 0 10px var(--pip-hue, transparent);
+}
+
+/* ------------------------------------------------------------
+   7. BRAND
+   One identity, used everywhere. The wordmark is set in the display face and
+   the "Guard" half carries the brand gradient; the mark is a shield holding
+   the thesis under examination.
+   ------------------------------------------------------------ */
+.logo__word {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  color: var(--text-heading);
+}
+
+.logo__word-accent {
+  background: var(--grad-cyan);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.logo__mark {
+  filter: drop-shadow(0 0 10px rgba(25, 217, 255, 0.45))
+    drop-shadow(0 2px 6px rgba(76, 141, 255, 0.3));
+}
+
+.logo__tag {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+}
+
+.logo--lg .logo__word {
+  font-size: 22px;
+}
+
+.logo--lg .logo__tag {
+  font-size: var(--fs-micro);
+}
+
+.logo--sm .logo__word {
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------
+   8. THE CARD TAXONOMY
+   Ten types, one per job. Each declares its own edge, its own surface tint and
+   its own left treatment, so a warning can never be mistaken for a metric.
+   ------------------------------------------------------------ */
+.tg-card,
+.card,
+.panel,
+.inv-panel {
+  position: relative;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+  overflow: hidden;
+}
+
+/* Every card catches a little light along its top edge. This single line is
+   what stops a dark card reading as a hole cut in the screen. */
+.tg-card::after,
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180, 214, 255, 0.16), transparent);
+  pointer-events: none;
+}
+
+.tg-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--card-pad) var(--card-pad) var(--sp-3);
+}
+
+.tg-card__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 30%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 12%, transparent);
+  color: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 14%, transparent);
+}
+
+.tg-card__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.tg-card__hint {
+  margin-top: 3px;
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--text-meta);
+}
+
+.tg-card__body {
+  padding: 0 var(--card-pad) var(--card-pad);
+  color: var(--text-body);
+}
+
+/* --- the ten types ------------------------------------------------------ */
+
+/* 1. PRIMARY — the screen's main object. Largest radius, an accent edge, the
+   one card allowed a real glow. */
+.tg-card--primary {
+  border-radius: var(--card-radius-lg);
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 28%, var(--card-edge));
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 9%, transparent) 0%,
+      transparent 42%
+    ),
+    linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--glow-card);
+}
+
+.tg-card--primary::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    var(--section-accent, var(--accent-cyan)),
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 20%, transparent)
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 45%, transparent);
+}
+
+/* 2. METRIC — one large number, its label, its note. Monospace, tabular, and
+   the number takes the section hue because it IS the important value. */
+.tg-card--metric {
+  padding: var(--card-pad);
+  border-radius: var(--card-radius);
+  background: linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-card) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset-strong);
+}
+
+.tg-card--metric::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--section-accent, var(--accent-cyan)),
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 12%, transparent) 70%,
+    transparent
+  );
+}
+
+.tg-metric__value {
+  font-size: var(--fs-value-lg);
+  font-weight: var(--fw-semibold);
+  line-height: 1.05;
+  color: var(--text-heading);
+}
+
+.tg-metric__value.is-up {
+  color: var(--up);
+}
+.tg-metric__value.is-down {
+  color: var(--down);
+}
+.tg-metric__value.is-bullish {
+  color: var(--dir-bullish);
+}
+.tg-metric__value.is-bearish {
+  color: var(--dir-bearish);
+}
+
+.tg-metric__label {
+  margin-top: var(--sp-2);
+  font-size: 10.5px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-meta);
+}
+
+.tg-metric__note {
+  margin-top: 5px;
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+/* 3. EVIDENCE — a quoted finding. An accent rule down the left edge and a
+   slightly sunken surface, so it reads as something extracted rather than
+   something asserted. */
+.tg-card--evidence {
+  border-left: 3px solid color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 62%, transparent);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-sunken) 100%);
+}
+
+/* 4. WARNING — amber. It has to look like a caution at a glance. */
+.tg-card--warning {
+  border-color: color-mix(in srgb, var(--amber) 34%, var(--card-edge));
+  background: linear-gradient(180deg, rgba(245, 184, 75, 0.09) 0%, var(--bg-card) 62%);
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgba(245, 184, 75, 0.14);
+}
+
+.tg-card--warning::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--amber);
+  box-shadow: 0 0 18px rgba(245, 184, 75, 0.45);
+}
+
+.tg-card--warning .tg-card__icon {
+  border-color: rgba(245, 184, 75, 0.34);
+  background: var(--amber-soft);
+  color: var(--amber);
+  box-shadow: 0 0 16px rgba(245, 184, 75, 0.16);
+}
+
+/* 5. SUCCESS — green. Used for a completed, verified state, never as praise. */
+.tg-card--success {
+  border-color: color-mix(in srgb, var(--ok) 32%, var(--card-edge));
+  background: linear-gradient(180deg, rgba(53, 208, 127, 0.08) 0%, var(--bg-card) 62%);
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgba(53, 208, 127, 0.13);
+}
+
+.tg-card--success::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ok);
+  box-shadow: 0 0 18px rgba(53, 208, 127, 0.42);
+}
+
+.tg-card--success .tg-card__icon {
+  border-color: rgba(53, 208, 127, 0.32);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+/* 6. INSIGHT — the one card that states a conclusion. It gets the accent as a
+   wash and the largest type, because it is the thing to read first. */
+.tg-card--insight {
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 32%, var(--card-edge));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 13%, transparent) 0%,
+    var(--bg-card) 68%
+  );
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tg-card--insight .tg-card__title {
+  font-size: var(--fs-section);
+}
+
+/* 7. DATA — charts and market information. Sunken, so it reads as a readout
+   rather than as a container of prose. */
+.tg-card--data {
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-card) 100%);
+  box-shadow: var(--shadow-1), var(--shadow-inset);
+}
+
+/* 8. STATUS — a clear state plus its explanation. */
+.tg-card--status {
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 26%, var(--card-edge));
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 8%, transparent) 0%,
+    var(--bg-card) 60%
+  );
+}
+
+/* 9. INFORMATION GAP — amber, muted. A gap is not a failure; it is a known
+   hole, and it must not shout as loudly as a warning. */
+.tg-card--gap {
+  border-color: rgba(245, 184, 75, 0.22);
+  background: linear-gradient(180deg, rgba(245, 184, 75, 0.05) 0%, var(--bg-sunken) 100%);
+  border-style: dashed;
+}
+
+.tg-card--gap .tg-card__icon {
+  border-color: rgba(245, 184, 75, 0.26);
+  background: rgba(245, 184, 75, 0.08);
+  color: color-mix(in srgb, var(--amber) 78%, var(--text-meta));
+}
+
+/* 10. UNAVAILABLE — clearly not available, clearly not broken. Muted, with a
+   dashed edge: absent, not failed. */
+.tg-card--unavailable {
+  border-color: var(--border-soft);
+  border-style: dashed;
+  background: linear-gradient(180deg, rgba(126, 168, 232, 0.035) 0%, var(--bg-sunken) 100%);
+  box-shadow: var(--shadow-1);
+}
+
+.tg-card--unavailable .tg-card__icon {
+  border-color: var(--border-soft);
+  background: rgba(126, 168, 232, 0.05);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+.tg-card--unavailable .tg-card__title {
+  color: var(--text-meta);
+}
+
+.tg-card--unavailable .tg-card__body {
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------------------
+   9. BADGES
+   Icon or dot plus text plus hue. Never hue alone.
+   ------------------------------------------------------------ */
+.tg-badge,
+.stage__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+  background: rgba(126, 168, 232, 0.07);
+  color: var(--text-meta);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.tg-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  flex: none;
+}
+
+.tg-badge--complete,
+.tg-badge--available,
+.tg-badge--ready {
+  border-color: color-mix(in srgb, var(--ok) 34%, transparent);
+  background: var(--ok-soft);
+  color: color-mix(in srgb, var(--ok) 90%, #ffffff);
+}
+
+.tg-badge--partial,
+.tg-badge--incomplete {
+  border-color: color-mix(in srgb, var(--amber) 34%, transparent);
+  background: var(--amber-soft);
+  color: color-mix(in srgb, var(--amber) 92%, #ffffff);
+}
+
+.tg-badge--unavailable,
+.tg-badge--locked {
+  border-color: var(--border-soft);
+  background: rgba(126, 168, 232, 0.05);
+  color: var(--text-faint);
+}
+
+.tg-badge--submitted {
+  border-color: color-mix(in srgb, var(--accent-cyan) 38%, transparent);
+  background: var(--cyan-soft);
+  color: var(--accent-cyan);
+}
+
+.tg-badge--pending {
+  border-color: color-mix(in srgb, var(--blue) 34%, transparent);
+  background: var(--blue-soft);
+  color: color-mix(in srgb, var(--blue) 92%, #ffffff);
+}
+
+/* The three decision tones carry equal weight — no hue is louder than another,
+   because the product does not prefer an answer. */
+.tg-badge--take {
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  background: var(--ok-soft);
+  color: color-mix(in srgb, var(--ok) 92%, #ffffff);
+}
+
+.tg-badge--wait {
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  background: var(--amber-soft);
+  color: color-mix(in srgb, var(--amber) 92%, #ffffff);
+}
+
+.tg-badge--skip {
+  border-color: color-mix(in srgb, var(--coral) 40%, transparent);
+  background: var(--coral-soft);
+  color: color-mix(in srgb, var(--coral) 92%, #ffffff);
+}
+
+/* ------------------------------------------------------------
+   10. CONTROLS
+   Inputs are sunken wells with a hairline that lights up on focus. This is the
+   single most tactile change: a field you can see yourself typing into.
+   ------------------------------------------------------------ */
+.label {
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
+  color: var(--text-subheading);
+}
+
+.label__req {
+  color: var(--coral);
+}
+
+.label__opt {
+  font-weight: var(--fw-regular);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.input,
+.select,
+.textarea {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-input) 100%);
+  color: var(--text-heading);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-input-hover) 100%);
+}
+
+/* The focus glow. A field is the one control that must be unmistakable. */
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-cyan) 62%, transparent);
+  background: linear-gradient(180deg, #06101f 0%, #08172c 100%);
+  box-shadow: 0 0 0 3px rgba(25, 217, 255, 0.14), 0 0 26px rgba(25, 217, 255, 0.14),
+    inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.input.has-error,
+.textarea.has-error,
+.select.has-error {
+  border-color: color-mix(in srgb, var(--coral) 60%, transparent);
+  box-shadow: 0 0 0 3px rgba(255, 102, 122, 0.13), inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.field__error {
+  color: color-mix(in srgb, var(--coral) 92%, #ffffff);
+  font-size: var(--fs-meta);
+}
+
+.field__meta {
+  font-size: var(--fs-meta);
+}
+
+/* The confidence slider becomes an instrument, not a browser default. */
+.confidence__slider {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--blue) 0%,
+    var(--accent-cyan) 60%,
+    var(--teal) 100%
+  );
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 18px rgba(25, 217, 255, 0.14);
+}
+
+.confidence__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #07101f;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(25, 217, 255, 0.24), 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------
+   11. BUTTONS
+   ------------------------------------------------------------ */
+.btn {
+  border-radius: var(--radius-md);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+
+.btn--primary {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 52%, transparent);
+  background: var(--grad-action);
+  color: #04121c;
+  box-shadow: 0 6px 22px rgba(25, 217, 255, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--grad-action);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(25, 217, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(25, 217, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn--primary:disabled {
+  background: rgba(126, 168, 232, 0.1);
+  border-color: var(--border-soft);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+.btn--ghost {
+  border: 1px solid var(--border);
+  background: rgba(126, 168, 232, 0.06);
+  color: var(--text-subheading);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-cyan) 38%, var(--border));
+  background: rgba(25, 217, 255, 0.1);
+  color: var(--text-heading);
+  box-shadow: 0 0 20px rgba(25, 217, 255, 0.12);
+}
+
+.btn--link {
+  color: var(--accent-cyan);
+  font-weight: var(--fw-medium);
+}
+
+.btn--link:hover {
+  color: color-mix(in srgb, var(--accent-cyan) 80%, #ffffff);
+  text-shadow: 0 0 16px rgba(25, 217, 255, 0.5);
+}
+
+/* The hero CTA. One per screen, and it is unmistakably the primary act. */
+.btn--hero {
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 55%, transparent);
+  background: var(--grad-action);
+  color: #04121c;
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 34px rgba(25, 217, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.btn--hero:hover:not(:disabled) {
+  filter: brightness(1.09);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 44px rgba(25, 217, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn--hero:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn--hero:disabled {
+  background: rgba(126, 168, 232, 0.1);
+  border-color: var(--border-soft);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+.btn--hero .spinner {
+  border-color: rgba(4, 18, 28, 0.3);
+  border-top-color: #04121c;
+}
+
+/* ------------------------------------------------------------
+   12. DATA — rows, grids, keys and values
+   ------------------------------------------------------------ */
+.data-row dt,
+.kv dt {
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+}
+
+.data-row dd,
+.kv dd {
+  color: var(--text-heading);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+}
+
+.data-row dd.is-up {
+  color: var(--up);
+}
+.data-row dd.is-down {
+  color: var(--down);
+}
+.data-row dd.is-bullish {
+  color: var(--dir-bullish);
+}
+.data-row dd.is-bearish {
+  color: var(--dir-bearish);
+}
+
+.data-grid {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.42);
+  overflow: hidden;
+}
+
+.data-row {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.data-row:last-child {
+  border-bottom: none;
+}
+
+.kv {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.42);
+}
+
+/* ------------------------------------------------------------
+   13. TABLES — the journal reads like a terminal blotter
+   ------------------------------------------------------------ */
+.report__table,
+.journal__table {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.report__table th,
+.journal__table th {
+  background: rgba(5, 9, 20, 0.7);
+  color: var(--text-meta);
+  font-size: 10.5px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.report__table td,
+.journal__table td {
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-body);
+}
+
+.journal__row:hover {
+  background: rgba(25, 217, 255, 0.05);
+}
+
+/* ------------------------------------------------------------
+   14. EMPTY STATES
+   The brand mark, one honest sentence, and the action that resolves it.
+   ------------------------------------------------------------ */
+.empty-state {
+  padding: var(--sp-8) var(--sp-6);
+  border-radius: var(--card-radius-lg);
+  border: 1px dashed var(--border-soft);
+  background: radial-gradient(600px 220px at 50% 0%, rgba(25, 217, 255, 0.06), transparent 70%),
+    rgba(5, 9, 20, 0.4);
+}
+
+.empty-state__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.empty-state__text {
+  max-width: 60ch;
+  color: var(--text-meta);
+  line-height: var(--lh-body);
+}
+
+/* ------------------------------------------------------------
+   15. MICRO-INTERACTIONS
+   Restrained. Everything that moves is a state change, and every movement is
+   a couple of pixels at most.
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  /* A screen arriving is a short lift and a fade — never a slide. */
+  .content > * {
+    animation: tg-rise var(--dur-3) var(--ease-out) both;
+  }
+
+  .content > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+
+  .content > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+
+  /* A card lifts toward the cursor. */
+  .tg-card,
+  .card {
+    transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+      transform var(--dur-2) var(--ease);
+  }
+
+  .tg-card--metric:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 34%, var(--card-edge));
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.46),
+      0 0 26px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 14%, transparent);
+  }
+}
+
+@keyframes tg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   16. SCROLLBARS
+   ------------------------------------------------------------ */
+* {
+  scrollbar-color: #22375c transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  background-color: #22375c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #2f4a77;
+}
+
+::selection {
+  background: rgba(25, 217, 255, 0.28);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   VISUAL OVERHAUL — SCREENS
+   ==========================================================================
+   The per-screen layer. Everything above owns the system; this owns the
+   composition of each screen: the sign-in pages, the command centre, the
+   analysis pipeline, and the twelve section identities.
+
+   The rule that keeps twelve hues from becoming a rainbow: a section's colour
+   appears on its ICON, its EDGE, its LABEL and its IMPORTANT NUMBER — never as
+   a screen background. Every screen is still the same navy product.
+   ========================================================================== */
+
+/* ------------------------------------------------------------
+   17. SIGN IN / CREATE ACCOUNT
+   The reference direction: a deep navy field, one glass card with a cyan edge
+   and a soft bloom, a gradient headline, pill inputs carrying their own icon,
+   and a single cyan-to-teal action. No social sign-in exists in this product
+   and none is added.
+   ------------------------------------------------------------ */
+.auth {
+  background: linear-gradient(160deg, var(--auth-navy-1) 0%, var(--auth-navy-2) 52%, var(--auth-navy-3) 100%);
+}
+
+/* The brand panel: a lit surface, not an empty one. */
+.auth__brand {
+  background: linear-gradient(180deg, rgba(10, 23, 48, 0.9) 0%, rgba(5, 9, 20, 0.72) 100%);
+  border-right: 1px solid var(--auth-hairline);
+}
+
+.auth__glow {
+  background: radial-gradient(760px 520px at 18% 6%, var(--auth-glow-a), transparent 66%),
+    radial-gradient(620px 460px at 82% 88%, var(--auth-glow-b), transparent 68%);
+}
+
+.auth__headline {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-bold);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--text-heading);
+}
+
+.auth__lede {
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-body);
+  color: var(--text-body);
+}
+
+.auth__points li {
+  color: var(--text-meta);
+  font-size: var(--fs-small);
+}
+
+.auth__points li::before {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 12px rgba(25, 217, 255, 0.6);
+}
+
+.auth__visual-line {
+  stroke: var(--accent-cyan);
+  filter: drop-shadow(0 0 8px rgba(25, 217, 255, 0.55));
+}
+
+.auth__visual-grid line {
+  stroke: rgba(126, 168, 232, 0.1);
+}
+
+.auth__visual-level {
+  stroke: rgba(245, 184, 75, 0.45);
+  stroke-dasharray: 5 5;
+}
+
+/* The card. This is the object the reference is built around: a glass surface
+   with a lit cyan edge and a bloom behind it.
+   Deliberately NO `backdrop-filter`: the surface is already 92–96% opaque, so
+   the blur changed almost nothing visually, while costing a full-card
+   re-rasterisation on every frame — and under software rendering (headless
+   Chrome runs with `--disable-gpu`) that was enough to push a page reload past
+   the verifier's timeout. The depth here is bought with the gradient, the lit
+   border and the bloom instead, which are free. */
+.auth__card {
+  position: relative;
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(25, 217, 255, 0.28);
+  background: linear-gradient(180deg, rgba(16, 26, 48, 0.96) 0%, rgba(9, 20, 38, 0.98) 100%);
+  box-shadow: var(--shadow-auth-card);
+  overflow: hidden;
+}
+
+/* The bloom: a wide, very soft cyan wash sitting behind the card's top half. */
+.auth__card::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 70%;
+  pointer-events: none;
+  background: radial-gradient(60% 100% at 50% 0%, rgba(25, 217, 255, 0.16), transparent 70%);
+}
+
+/* The lit top edge — the same hairline every card in the product carries. */
+.auth__card::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(25, 217, 255, 0.6), transparent);
+  pointer-events: none;
+}
+
+.auth__head {
+  position: relative;
+  padding-bottom: var(--sp-2);
+}
+
+/* The gradient headline, straight from the reference. */
+.auth__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  background: var(--grad-cyan);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth__subtitle {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--text-meta);
+}
+
+.auth__form {
+  position: relative;
+  gap: var(--sp-5);
+}
+
+/* Pill inputs with a leading icon — the reference's most recognisable detail. */
+.auth__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(126, 168, 232, 0.2);
+  background: linear-gradient(180deg, rgba(5, 9, 20, 0.85) 0%, rgba(7, 16, 31, 0.9) 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.auth__control:hover {
+  border-color: rgba(126, 168, 232, 0.34);
+}
+
+/* The whole wrapper lights up when the field inside it has focus. */
+.auth__control:focus-within {
+  border-color: rgba(25, 217, 255, 0.62);
+  box-shadow: 0 0 0 3px rgba(25, 217, 255, 0.13), 0 0 30px rgba(25, 217, 255, 0.16),
+    inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.auth__control .input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 4px;
+  border-radius: inherit;
+}
+
+.auth__control .input:focus {
+  box-shadow: none;
+  border: none;
+  background: transparent;
+}
+
+.auth__control-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  flex: none;
+  color: var(--text-faint);
+  transition: color var(--dur-1) var(--ease);
+}
+
+.auth__control:focus-within .auth__control-icon {
+  color: var(--accent-cyan);
+}
+
+.auth__control--adorned .input {
+  padding-right: 66px;
+}
+
+.auth__reveal {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+
+.auth__reveal:hover {
+  color: var(--accent-cyan);
+  background: rgba(25, 217, 255, 0.1);
+}
+
+/* The action: one full-width cyan-to-teal pill. */
+.auth__submit {
+  width: 100%;
+  min-height: 50px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(25, 217, 255, 0.5);
+  background: var(--grad-cyan);
+  color: #04121c;
+  font-family: var(--font-display);
+  font-size: var(--fs-body-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 36px rgba(25, 217, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.auth__submit:hover:not(:disabled) {
+  background: var(--grad-cyan);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 46px rgba(25, 217, 255, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.auth__submit:disabled {
+  background: rgba(126, 168, 232, 0.1);
+  border-color: rgba(126, 168, 232, 0.16);
+  color: var(--text-faint);
+  box-shadow: none;
+}
+
+.auth__submit .spinner {
+  border-color: rgba(4, 18, 28, 0.28);
+  border-top-color: #04121c;
+}
+
+.auth__alt {
+  color: var(--text-meta);
+}
+
+.auth__skip-text {
+  color: var(--text-faint);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+.auth__empty {
+  color: var(--text-faint);
+  font-size: var(--fs-meta);
+}
+
+.auth__notice {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.6);
+}
+
+.auth__notice-title {
+  color: var(--text-subheading);
+  font-weight: var(--fw-semibold);
+}
+
+.auth__notice-text {
+  color: var(--text-meta);
+}
+
+.divider {
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* Create account reads as the same product, differently composed: a slightly
+   cooler field and a wider card, so it is clearly a sibling and not a copy. */
+.auth[data-auth-screen='create-account'] {
+  background: linear-gradient(200deg, #0a1730 0%, #050914 56%, #07101f 100%);
+}
+
+.auth[data-auth-screen='create-account'] .auth__card {
+  border-color: rgba(76, 141, 255, 0.3);
+  background: linear-gradient(180deg, rgba(18, 30, 56, 0.92) 0%, rgba(9, 20, 38, 0.96) 100%);
+}
+
+.auth[data-auth-screen='create-account'] .auth__card::before {
+  background: radial-gradient(60% 100% at 50% 0%, rgba(76, 141, 255, 0.17), transparent 70%);
+}
+
+.auth[data-auth-screen='create-account'] .auth__card::after {
+  background: linear-gradient(90deg, transparent, rgba(76, 141, 255, 0.6), transparent);
+}
+
+.auth[data-auth-screen='create-account'] .auth__title {
+  background: linear-gradient(120deg, #4c8dff 0%, #19d9ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth[data-auth-screen='create-account'] .auth__submit {
+  background: linear-gradient(100deg, #4c8dff 0%, #19d9ff 52%, #19e6b5 100%);
+}
+
+/* ------------------------------------------------------------
+   18. TRADE IDEA — the command centre
+   Three numbered sections, each with its own accent and its own icon tile,
+   stacked as layered cards over the workspace, closed by one hero action.
+   ------------------------------------------------------------ */
+.idea-layout {
+  gap: var(--sp-6);
+}
+
+.idea-section {
+  position: relative;
+  padding: var(--sp-6);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 6%, transparent) 0%,
+      transparent 30%
+    ),
+    linear-gradient(180deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.idea-section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(
+    180deg,
+    var(--section-accent, var(--accent-cyan)),
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 10%, transparent)
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 40%, transparent);
+}
+
+.idea-section:hover {
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 30%, var(--card-edge));
+  box-shadow: var(--shadow-3), var(--shadow-inset);
+}
+
+.idea-section__head {
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: var(--sp-5);
+}
+
+.idea-section__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 34%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 13%, transparent);
+  color: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 18%, transparent);
+}
+
+.idea-section__step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.2em;
+  color: var(--section-accent, var(--accent-cyan));
+  opacity: 0.85;
+}
+
+.idea-section__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.idea-section__note {
+  color: var(--text-meta);
+  font-size: var(--fs-meta);
+}
+
+/* The direction selector: three equal tiles, each with its own hue. */
+.direction__option {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-card) 100%);
+  color: var(--text-meta);
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.direction__title {
+  font-weight: var(--fw-semibold);
+  color: var(--text-subheading);
+}
+
+.direction__option:hover {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg, var(--bg-input-hover) 0%, var(--bg-card-hover) 100%);
+}
+
+.direction__option[aria-checked='true'],
+.direction__option.is-selected {
+  border-color: color-mix(in srgb, var(--dir-color, var(--accent-cyan)) 60%, transparent);
+  background: color-mix(in srgb, var(--dir-color, var(--accent-cyan)) 14%, var(--bg-card));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dir-color, var(--accent-cyan)) 30%, transparent),
+    0 0 26px color-mix(in srgb, var(--dir-color, var(--accent-cyan)) 20%, transparent);
+}
+
+.direction__option[aria-checked='true'] .direction__title {
+  color: var(--dir-color, var(--accent-cyan));
+}
+
+/* The submission result reads as a status card, not as a browser alert. */
+.result {
+  border-radius: var(--card-radius);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, var(--card-edge));
+  background: linear-gradient(180deg, rgba(25, 217, 255, 0.08) 0%, var(--bg-card) 60%);
+  box-shadow: var(--shadow-2);
+}
+
+.result--error {
+  border-color: color-mix(in srgb, var(--coral) 34%, var(--card-edge));
+  background: linear-gradient(180deg, rgba(255, 102, 122, 0.09) 0%, var(--bg-card) 60%);
+}
+
+.result__badge {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+}
+
+.result__badge--error {
+  color: var(--coral);
+}
+
+.result__message {
+  color: var(--text-body);
+}
+
+.result__time {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+
+/* The live thesis preview: a sticky readout panel. */
+.preview {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.preview__ticker {
+  font-size: var(--fs-title);
+  font-weight: var(--fw-bold);
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+}
+
+.preview__thesis {
+  color: var(--text-body);
+}
+
+/* ------------------------------------------------------------
+   19. THE INVESTIGATION WORKSPACE
+   A sticky trade header, a rail that reads as a pipeline, and one panel that
+   owns the analysis. The rail is where the eight stage identities live.
+   ------------------------------------------------------------ */
+.inv-head {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, rgba(16, 26, 48, 0.97) 0%, rgba(11, 20, 40, 0.99) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.inv-head__id {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--text-heading);
+}
+
+.inv-head__note {
+  color: var(--text-faint);
+  font-size: var(--fs-micro);
+}
+
+.inv-fact {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.5);
+}
+
+.inv-fact__title,
+.inv-fact dt {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.inv-fact dd,
+.inv-fact__value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-heading);
+}
+
+/* --- the rail ------------------------------------------------------------ */
+.inv-nav {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-sunken) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.inv-nav__head {
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.inv-nav__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  color: var(--text-subheading);
+}
+
+.inv-nav__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+}
+
+.inv-nav__list {
+  position: relative;
+}
+
+/* The pipeline spine: a hairline running down the rail, so the eight stages
+   read as one sequence rather than eight unrelated buttons. */
+.inv-nav__list::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--border), transparent);
+}
+
+.inv-nav__item {
+  position: relative;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  color: var(--text-meta);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.inv-nav__index {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-faint);
+}
+
+.inv-nav__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-sunken);
+  color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 62%, var(--text-faint));
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.inv-nav__dot {
+  background: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 10px var(--section-accent, var(--accent-cyan));
+}
+
+.inv-nav__item:hover:not(:disabled) {
+  background: rgba(126, 168, 232, 0.06);
+  color: var(--text-subheading);
+}
+
+.inv-nav__item:hover:not(:disabled) .inv-nav__icon {
+  color: var(--section-accent, var(--accent-cyan));
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 36%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 12%, transparent);
+}
+
+.inv-nav__item.is-active,
+.inv-nav__item[aria-current='true'] {
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 40%, transparent);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 18%, transparent) 0%,
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 4%, transparent) 70%,
+    transparent 100%
+  );
+  color: var(--text-heading);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.inv-nav__item.is-active .inv-nav__icon {
+  color: #04121c;
+  border-color: transparent;
+  background: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 55%, transparent);
+}
+
+.inv-nav__item.is-active .inv-nav__index {
+  color: var(--section-accent, var(--accent-cyan));
+}
+
+/* A completed stage keeps its hue at a lower intensity, so progress through
+   the pipeline is visible at a glance without competing with the active row. */
+.inv-nav__item--complete .inv-nav__icon {
+  color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 88%, #ffffff);
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 34%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 12%, transparent);
+}
+
+.inv-nav__item--partial .inv-nav__icon {
+  color: var(--amber);
+  border-color: rgba(245, 184, 75, 0.32);
+  background: rgba(245, 184, 75, 0.1);
+}
+
+.inv-nav__item--soon .inv-nav__icon,
+.inv-nav__item:disabled .inv-nav__icon {
+  color: var(--text-faint);
+  border-color: var(--border-soft);
+  background: var(--bg-sunken);
+}
+
+.inv-nav__sep {
+  background: var(--border-soft);
+}
+
+/* --- the panel ----------------------------------------------------------- */
+.inv-panel {
+  border-radius: var(--card-radius-lg);
+  border-color: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 22%, var(--card-edge));
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 7%, transparent) 0%,
+      transparent 26%
+    ),
+    linear-gradient(180deg, var(--bg-panel-raised) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-3), var(--shadow-inset);
+}
+
+.inv-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--section-accent, var(--accent-cyan)),
+    color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 20%, transparent) 45%,
+    transparent
+  );
+  box-shadow: 0 0 22px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 45%, transparent);
+}
+
+.inv-panel__head {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.inv-panel__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 36%, transparent);
+  background: color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 14%, transparent);
+  color: var(--section-accent, var(--accent-cyan));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--section-accent, var(--accent-cyan)) 20%, transparent);
+}
+
+.inv-panel__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.02em;
+  color: var(--text-heading);
+}
+
+.inv-panel__desc {
+  color: var(--text-meta);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+}
+
+/* --- the metric grid ----------------------------------------------------- */
+.metric-grid {
+  gap: var(--sp-4);
+}
+
+/* ------------------------------------------------------------
+   20. SECTION IDENTITIES
+   Twelve accents, and each screen composes them differently. The accent is
+   read from `--section-accent`, which `[data-accent]` sets once.
+   ------------------------------------------------------------ */
+
+/* MARKET — electric cyan. A readout, not a document. */
+[data-accent='market'] .data-grid,
+[data-accent='market'] .tg-card--data {
+  border-color: rgba(25, 217, 255, 0.16);
+}
+
+.market-range__title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  color: var(--text-subheading);
+}
+
+.market-range__bound {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-meta);
+}
+
+.market-range__track {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, rgba(25, 217, 255, 0.08), rgba(25, 217, 255, 0.22));
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  overflow: visible;
+}
+
+.market-range__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pos, 0%);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, #4c8dff 0%, #19d9ff 100%);
+  box-shadow: 0 0 18px rgba(25, 217, 255, 0.45);
+}
+
+.market-range__marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #07101f;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(25, 217, 255, 0.22), 0 0 20px rgba(25, 217, 255, 0.5);
+}
+
+.market-range__marker-value {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(25, 217, 255, 0.34);
+  background: rgba(5, 9, 20, 0.92);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+/* EVENTS — purple. A timeline, deliberately unlike the Market readout. */
+[data-accent='events'] .inv-panel__icon,
+[data-accent='events'] .tg-card__icon {
+  border-color: rgba(139, 92, 246, 0.38);
+  background: rgba(139, 92, 246, 0.14);
+  color: var(--purple);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.22);
+}
+
+.event-list {
+  position: relative;
+  padding-left: var(--sp-5);
+}
+
+.event-list::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.5), rgba(139, 92, 246, 0.06));
+}
+
+.event-item {
+  position: relative;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--card-radius-sm);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.07) 0%, var(--bg-card) 70%);
+  box-shadow: var(--shadow-1);
+  transition: border-color var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+
+.event-item::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 22px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid #07101f;
+  background: var(--purple);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.7);
+}
+
+.event-item:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateX(2px);
+}
+
+.event-item__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.event-item__date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--purple);
+}
+
+.event-item__desc {
+  color: var(--text-body);
+  font-size: var(--fs-small);
+}
+
+.event-item__src {
+  font-size: var(--fs-micro);
+}
+
+/* THESIS ATTACK — coral. The screen that argues back. Six sections, and each
+   one is told apart by its treatment, not only by its label. */
+.da__section {
+  position: relative;
+  padding: var(--sp-5);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-sunken) 100%);
+  box-shadow: var(--shadow-1), var(--shadow-inset);
+  overflow: hidden;
+}
+
+.da__section::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--da-hue, var(--coral));
+  opacity: 0.75;
+}
+
+.da__section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
+  color: var(--text-heading);
+}
+
+.da__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+}
+
+.da__item {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.42);
+  border-left: 2px solid var(--da-hue, var(--coral));
+}
+
+.da__item-title {
+  color: var(--text-subheading);
+  font-weight: var(--fw-semibold);
+}
+
+.da__item-detail {
+  color: var(--text-body);
+  font-size: var(--fs-small);
+}
+
+.da__item-index {
+  font-family: var(--font-mono);
+  color: var(--da-hue, var(--coral));
+}
+
+/* The six sections, each with its own hue. Supporting and contradicting are
+   the two that matter most, so they get the strongest treatments. */
+.da__section--support {
+  --da-hue: var(--green);
+  border-color: rgba(53, 208, 127, 0.22);
+  background: linear-gradient(180deg, rgba(53, 208, 127, 0.07) 0%, var(--bg-sunken) 100%);
+}
+
+.da__section--contradict {
+  --da-hue: var(--coral);
+  border-color: rgba(255, 102, 122, 0.24);
+  background: linear-gradient(180deg, rgba(255, 102, 122, 0.08) 0%, var(--bg-sunken) 100%);
+}
+
+.da__section--risk {
+  --da-hue: var(--orange);
+  border-color: rgba(255, 138, 61, 0.24);
+  background: linear-gradient(180deg, rgba(255, 138, 61, 0.08) 0%, var(--bg-sunken) 100%);
+}
+
+.da__section--invalidation {
+  --da-hue: var(--amber);
+  border-color: rgba(245, 184, 75, 0.22);
+  background: linear-gradient(180deg, rgba(245, 184, 75, 0.07) 0%, var(--bg-sunken) 100%);
+}
+
+.da__callout {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(255, 102, 122, 0.3);
+  background: linear-gradient(180deg, rgba(255, 102, 122, 0.12) 0%, rgba(255, 102, 122, 0.03) 100%);
+  box-shadow: 0 0 30px rgba(255, 102, 122, 0.1);
+}
+
+.da__callout-label {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--coral);
+}
+
+.da__callout-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.da__callout-detail {
+  color: var(--text-body);
+}
+
+.da__strength {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+
+/* HISTORICAL STRESS TEST — amber. Analytical, and clearly about the past. */
+.hs__badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(245, 184, 75, 0.34);
+  background: var(--amber-soft);
+  color: var(--amber);
+  padding: 2px 9px;
+}
+
+.hs__criterion-label,
+.rk__criterion-label,
+.struct__meta-label {
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.hs__criterion-value,
+.rk__criterion-value,
+.struct__meta-value {
+  color: var(--text-heading);
+  font-size: var(--fs-small);
+}
+
+.hs__count,
+.rk__count {
+  font-family: var(--font-mono);
+  color: var(--amber);
+}
+
+/* RISK — orange. The screen that owns the money, so its numbers are the
+   largest type in the product. */
+[data-accent='risk'] .tg-card--metric {
+  border-color: rgba(255, 138, 61, 0.24);
+  background: linear-gradient(180deg, rgba(255, 138, 61, 0.07) 0%, var(--bg-card) 62%);
+}
+
+[data-accent='risk'] .tg-card--metric::before {
+  background: linear-gradient(90deg, var(--orange), rgba(255, 138, 61, 0.12) 70%, transparent);
+  box-shadow: 0 0 20px rgba(255, 138, 61, 0.4);
+}
+
+[data-accent='risk'] .tg-metric__value {
+  font-size: var(--fs-value-xl);
+  color: #ffd9c2;
+  text-shadow: 0 0 30px rgba(255, 138, 61, 0.28);
+}
+
+.rk__terminal {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(255, 138, 61, 0.2);
+  background: linear-gradient(180deg, rgba(255, 138, 61, 0.05) 0%, var(--bg-sunken) 100%);
+}
+
+.rk__step {
+  border-left: 2px solid rgba(255, 138, 61, 0.4);
+}
+
+.rk__step-label {
+  color: var(--text-meta);
+  font-size: var(--fs-meta);
+}
+
+.rk__working {
+  font-family: var(--font-mono);
+  color: var(--text-subheading);
+}
+
+.rk__warning {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid rgba(245, 184, 75, 0.28);
+  background: rgba(245, 184, 75, 0.08);
+}
+
+.rk__warning-title {
+  color: var(--amber);
+  font-weight: var(--fw-semibold);
+}
+
+.rk__warning-detail {
+  color: var(--text-body);
+  font-size: var(--fs-small);
+}
+
+/* TRADE STRUCTURE — teal. A trading ticket: precise, monospaced, calm. */
+[data-accent='structure'] .struct__meta-value,
+[data-accent='structure'] .tg-card__icon {
+  color: var(--teal);
+}
+
+.struct__grid {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(25, 230, 181, 0.18);
+  background: linear-gradient(180deg, rgba(25, 230, 181, 0.05) 0%, var(--bg-sunken) 100%);
+}
+
+.struct__meta-row {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.struct__meta-row:last-child {
+  border-bottom: none;
+}
+
+.struct__invalidation {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid rgba(255, 102, 122, 0.26);
+  background: rgba(255, 102, 122, 0.07);
+}
+
+.struct__invalidation-value {
+  color: var(--coral);
+}
+
+.struct__section-index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--teal);
+  opacity: 0.8;
+}
+
+/* TRADE REPORT — blue/violet. Ten numbered sections, each with a marker. */
+.report__section {
+  position: relative;
+  padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.report__section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    var(--report-hue, var(--violet)),
+    color-mix(in srgb, var(--report-hue, var(--violet)) 8%, transparent)
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--report-hue, var(--violet)) 40%, transparent);
+}
+
+.report__section--boundary {
+  --report-hue: var(--gold);
+  border-color: rgba(245, 184, 75, 0.28);
+  background: linear-gradient(180deg, rgba(245, 184, 75, 0.08) 0%, var(--bg-card) 60%);
+}
+
+.report__section-index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.16em;
+  color: var(--report-hue, var(--violet));
+}
+
+.report__section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.report__section-label {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.report__meta-value {
+  color: var(--text-heading);
+  font-size: var(--fs-small);
+}
+
+.report__roll-up {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(139, 123, 255, 0.22);
+  background: linear-gradient(180deg, rgba(139, 123, 255, 0.08) 0%, var(--bg-card) 70%);
+}
+
+/* ------------------------------------------------------------
+   21. HUMAN DECISION — three options, one weight
+   The product does not prefer an answer, so no option may look better than
+   another. Same size, same radius, same padding; only the hue differs.
+   ------------------------------------------------------------ */
+.decision__options {
+  gap: var(--sp-4);
+}
+
+.decision__option {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-sunken) 100%);
+  box-shadow: var(--shadow-1), var(--shadow-inset);
+  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
+}
+
+/* Every option carries its own hue on its top edge at equal intensity. */
+.decision__option::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--tone-hue, var(--border-strong));
+  opacity: 0.6;
+  transition: opacity var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.decision__option-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  color: var(--tone-hue, var(--text-heading));
+}
+
+.decision__option-hint {
+  color: var(--text-meta);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.decision__option:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tone-hue, var(--border-strong)) 40%, var(--border));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.44);
+}
+
+.decision__option:hover::before {
+  opacity: 0.9;
+}
+
+/* Selected: the hue fills in. The three remain exactly equally loud. */
+.decision__option[aria-checked='true'],
+.decision__option.is-selected {
+  border-color: color-mix(in srgb, var(--tone-hue, var(--accent-cyan)) 52%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tone-hue, var(--accent-cyan)) 14%, transparent) 0%,
+    var(--bg-card) 70%
+  );
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone-hue, var(--accent-cyan)) 30%, transparent),
+    0 14px 36px rgba(0, 0, 0, 0.46),
+    0 0 34px color-mix(in srgb, var(--tone-hue, var(--accent-cyan)) 16%, transparent);
+}
+
+.decision__option[aria-checked='true']::before,
+.decision__option.is-selected::before {
+  opacity: 1;
+  box-shadow: 0 0 20px var(--tone-hue, var(--accent-cyan));
+}
+
+.decision__radio {
+  border-color: var(--border-strong);
+}
+
+.decision__boundary {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(245, 184, 75, 0.24);
+  background: linear-gradient(180deg, rgba(245, 184, 75, 0.07) 0%, var(--bg-card) 70%);
+}
+
+.decision__block {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+  box-shadow: var(--shadow-1), var(--shadow-inset);
+}
+
+.decision__ownership {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid rgba(25, 217, 255, 0.2);
+  background: rgba(25, 217, 255, 0.06);
+}
+
+.decision__record {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(53, 208, 127, 0.24);
+  background: linear-gradient(180deg, rgba(53, 208, 127, 0.07) 0%, var(--bg-card) 70%);
+}
+
+/* ------------------------------------------------------------
+   22. PAPER EXECUTION — cyan/teal. An order ticket.
+   ------------------------------------------------------------ */
+.exec__stage {
+  border-radius: var(--card-radius-lg);
+  border: 1px solid rgba(25, 217, 255, 0.22);
+  background: linear-gradient(180deg, rgba(25, 217, 255, 0.06) 0%, var(--bg-panel) 60%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.exec__order {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-card) 100%);
+}
+
+.exec__order-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-card);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.exec__limit {
+  color: var(--text-heading);
+  font-size: var(--fs-small);
+}
+
+.exec__status {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(25, 217, 255, 0.3);
+  background: linear-gradient(180deg, rgba(25, 217, 255, 0.1) 0%, rgba(25, 217, 255, 0.02) 100%);
+}
+
+.exec__status--loading {
+  border-color: rgba(76, 141, 255, 0.3);
+  background: rgba(76, 141, 255, 0.08);
+}
+
+.exec__status--offline,
+.exec__locked {
+  border-radius: var(--card-radius);
+  border: 1px dashed var(--border-soft);
+  background: rgba(5, 9, 20, 0.5);
+}
+
+.exec__result {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(25, 230, 181, 0.3);
+  background: linear-gradient(180deg, rgba(25, 230, 181, 0.1) 0%, var(--bg-card) 70%);
+  box-shadow: 0 0 34px rgba(25, 230, 181, 0.1);
+}
+
+.exec__result-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.exec__confirm {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(245, 184, 75, 0.28);
+  background: rgba(245, 184, 75, 0.07);
+}
+
+.exec__confirm-token {
+  font-family: var(--font-mono);
+  color: var(--gold);
+}
+
+.exec__credentials {
+  border-radius: var(--card-radius);
+  border: 1px dashed rgba(245, 184, 75, 0.3);
+  background: rgba(245, 184, 75, 0.05);
+}
+
+/* ------------------------------------------------------------
+   23. TRADE MEMORY — a premium blotter
+   ------------------------------------------------------------ */
+.journal__row {
+  transition: background var(--dur-1) var(--ease);
+}
+
+.journal__table td:first-child {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}
+
+.picker__row {
+  border-radius: var(--card-radius-sm);
+  border: 1px solid var(--border-soft);
+  background: rgba(5, 9, 20, 0.4);
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+
+.picker__row:hover {
+  border-color: rgba(139, 92, 246, 0.34);
+  background: rgba(139, 92, 246, 0.08);
+  transform: translateX(2px);
+}
+
+/* ------------------------------------------------------------
+   24. TRADER REVIEW — the reflection layer
+   ------------------------------------------------------------ */
+.trader__reflection {
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.07) 0%, var(--bg-card) 70%);
+  box-shadow: var(--shadow-2), var(--shadow-inset);
+}
+
+.trader__reflection-at {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+}
+
+.review__known {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-edge);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+}
+
+.review__limit {
+  border-radius: var(--card-radius-sm);
+  border: 1px dashed rgba(245, 184, 75, 0.24);
+  background: rgba(245, 184, 75, 0.05);
+}
+
+.review__notes-input {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg-input) 100%);
+}
+
+/* ------------------------------------------------------------
+   25. RESPONSIVE
+   Desktop first. The sidebar collapses to a horizontal rail on tablet and to a
+   scrollable strip on mobile; cards stack; nothing ever overflows sideways.
+   ------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  .content {
+    --content-pad-x: var(--sp-6);
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-w: 214px;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .auth__brand {
+    border-right: none;
+    border-bottom: 1px solid var(--auth-hairline);
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --topbar-h: auto;
+  }
+
+  /* `--content-pad-x` must be declared ON `.content`, not on `:root`.
+     The sticky trade header bleeds out by exactly this amount to cancel the
+     padding, so the two have to agree. A `:root` declaration loses to the
+     `.content` declaration in the 1180px block above, and the header then
+     bled 24px out of a 16px padding — an 8px horizontal overflow at 430px
+     that only showed on the one screen whose header is sticky. */
+  .content {
+    --content-pad-x: var(--sp-4);
+    padding: var(--sp-5) var(--content-pad-x) var(--sp-8);
+  }
+
+  /* The topbar becomes two rows rather than a squeeze. */
+  .topbar {
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+  }
+
+  .topbar__meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    row-gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .topbar__account-name {
+    max-width: 12ch;
+  }
+
+  .topbar__subtitle {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  /* One accent colour per screen, so a smaller surface stays legible. */
+  .page-head__title {
+    font-size: var(--fs-title);
+  }
+
+  .page-head__lede {
+    font-size: var(--fs-body);
+  }
+
+  .metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tg-metric__value {
+    font-size: var(--fs-value);
+  }
+
+  [data-accent='risk'] .tg-metric__value {
+    font-size: var(--fs-value-lg);
+  }
+
+  .idea-section {
+    padding: var(--sp-5);
+  }
+
+  .tg-card,
+  .card,
+  .panel,
+  .inv-panel,
+  .idea-section {
+    border-radius: var(--radius-lg);
+  }
+
+  .data-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The event timeline loses its spine on a narrow screen: there is no room
+     for an offset marker, and a marker that overlaps its text is worse than
+     no marker at all. */
+  .event-list {
+    padding-left: 0;
+  }
+
+  .event-list::before,
+  .event-item::before {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar__title {
+    font-size: var(--fs-section);
+  }
+
+  .auth__card {
+    border-radius: var(--radius-xl);
+  }
+}
+
+/* ==========================================================================
+   VISUAL OVERHAUL — REFINEMENTS
+   ==========================================================================
+   The last mile: the pieces the screen layer above could not express without
+   new markup, plus the responsive behaviour of the navigation rail.
+   ========================================================================== */
+
+/* ------------------------------------------------------------
+   26. AUTH — the remaining pieces
+   ------------------------------------------------------------ */
+
+/* The session gate renders before either auth screen exists, so it uses its
+   own two-column shell. It gets the same brand field as the sign-in page, so a
+   trader who sees it never lands on something that looks unfinished. */
+.auth__aside {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: 64px 72px;
+  background: linear-gradient(168deg, var(--auth-navy-1) 0%, var(--auth-navy-2) 58%, var(--auth-navy-3) 100%);
+  border-right: 1px solid var(--auth-hairline);
+}
+
+.auth__aside::after {
+  content: '';
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 90%;
+  pointer-events: none;
+  background: radial-gradient(900px 520px at 14% 10%, var(--auth-glow-a), transparent 62%),
+    radial-gradient(700px 460px at 86% 96%, var(--auth-glow-b), transparent 60%);
+}
+
+.auth__aside-text {
+  position: relative;
+  z-index: 1;
+  max-width: 44ch;
+  margin: 0;
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-body);
+  color: var(--text-body);
+}
+
+.auth__aside > .logo {
+  position: relative;
+  z-index: 1;
+}
+
+/* The small caps marker above the card's heading. Block, not inline-block: the
+   brand lockup follows it, and an inline marker would sit on the same line as
+   the logo. */
+.auth__eyebrow {
+  display: block;
+  margin-bottom: var(--sp-4);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--accent-cyan);
+  opacity: 0.9;
+}
+
+.auth__eyebrow::after {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--grad-cyan);
+  box-shadow: 0 0 12px rgba(25, 217, 255, 0.6);
+}
+
+/* The card's own lockup sits above the gradient title. */
+.auth__head .logo {
+  margin-bottom: var(--sp-4);
+}
+
+/* Create account's paired password row. It stacks the moment there is not
+   room for two fields side by side. */
+.auth__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+@media (max-width: 560px) {
+  .auth__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------
+   27. TRADE IDEA — the numbered marker
+   The step number is its own line above the title, in the section's hue, in
+   monospace. It is what makes the three blocks read as 01 / 02 / 03 rather
+   than as three cards.
+   ------------------------------------------------------------ */
+.idea-section__step {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.idea-section__titles {
+  min-width: 0;
+}
+
+/* The hero action sits in its own panel so it is unmistakably the end of the
+   form rather than one more field. */
+.idea-submit {
+  margin-top: var(--sp-6);
+  padding: var(--sp-5);
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(25, 217, 255, 0.22);
+  background: linear-gradient(180deg, rgba(25, 217, 255, 0.06) 0%, rgba(5, 9, 20, 0.4) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.idea-submit .btn--hero {
+  width: 100%;
+  min-height: 54px;
+}
+
+.idea-submit__note {
+  margin: var(--sp-3) 0 0;
+  text-align: center;
+  font-size: var(--fs-meta);
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------------------
+   28. THE COLLAPSING NAVIGATION RAIL
+   Below 900px the sidebar becomes a 76px icon rail. The eight workflow screens
+   stay permanently reachable without a hamburger, without a horizontal scroll
+   and without the sidebar eating half the viewport — which is what a 250px
+   column does on a phone.
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+  :root {
+    --sidebar-w: 76px;
+  }
+
+  /* The rail, not a stacked band.
+     A narrow screen cannot afford a navigation that owns the top of the page:
+     the earlier rule turned the sidebar into a full-width band, which on a
+     phone pushed the entire workspace below the fold and made the nav look
+     like the product. A persistent 76px rail keeps all eight screens one tap
+     away, costs the content 76px instead of the whole viewport, and needs
+     neither a hamburger nor a horizontal scroll.
+     This has to restate the grid because the band rule sets `display: flex`. */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: var(--sidebar-w);
+    max-width: var(--sidebar-w);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    padding: 0;
+  }
+
+  .sidebar__brand {
+    display: flex;
+    justify-content: center;
+    padding: var(--sp-4) var(--sp-2);
+  }
+
+  /* The wordmark collapses to the mark; the topbar picks the wordmark up. */
+  .sidebar__brand .logo__text {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: column;
+    align-items: center;
+    padding: var(--sp-4) var(--sp-2) var(--sp-5);
+    gap: var(--sp-4);
+    /* Overrides the band rule's 50vh cap — a rail scrolls as a whole. */
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .nav__group {
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+  }
+
+  /* Group labels, captions and the pipeline legend are structure for a wide
+     column; on a rail they would be noise. */
+  .nav__label,
+  .nav__caption,
+  .nav__pipeline {
+    display: none;
+  }
+
+  .nav__items {
+    align-items: center;
+    width: 100%;
+  }
+
+  .nav__item {
+    justify-content: center;
+    padding: 10px 0;
+    width: 100%;
+  }
+
+  .nav__text,
+  .nav__badge {
+    display: none;
+  }
+
+  /* The active edge stays — it moves to the left of the rail tile. */
+  .nav__edge {
+    left: 0;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* The sidebar has collapsed to an icon rail, so the wordmark moves into the
+     topbar to keep the product signed at both ends of the screen. */
+  .topbar__brand {
+    display: flex;
+  }
+
+  .inv-head {
+    position: static;
+    /* The trade header is a row of identity + six facts + an action. On a rail
+       width that row cannot fit, and because the facts block would not wrap it
+       pushed the header 7px past the viewport. It becomes a stack instead. */
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+  }
+
+  .inv-head__id,
+  .inv-head__facts,
+  .inv-head__actions,
+  .inv-head__note {
+    min-width: 0;
+  }
+
+  .inv-head__facts {
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+
+  .inv-fact {
+    min-width: 0;
+  }
+
+  .inv-fact dd,
+  .inv-fact__value {
+    white-space: normal;
+    /* `break-word`, not `anywhere`: a value like "Not specified" should wrap at
+       its space, never mid-word ("speci / fied"). `anywhere` also shrinks the
+       element's intrinsic min-content width, which is how a label ends up
+       splitting a word that would have fitted on the next line. */
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Below the rail breakpoint the facts become a two-column grid: a wrapped
+     row of six facts reads as a paragraph of labels, a grid reads as data. */
+  .inv-head {
+    display: block;
+  }
+
+  .inv-head__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+  }
+
+  .inv-head__actions {
+    margin-top: var(--sp-3);
+  }
+}
+
+@media (max-width: 720px) {
+  .auth__aside,
+  .auth__brand {
+    padding: var(--sp-7) var(--sp-5);
+  }
+
+  .auth__headline {
+    font-size: var(--fs-hero);
+  }
+
+  .idea-submit .btn--hero {
+    font-size: var(--fs-body);
+    letter-spacing: 0.04em;
+  }
+}
+
+/* ------------------------------------------------------------
+   29. SMALL SHARED PIECES
+   ------------------------------------------------------------ */
+.spinner {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-cyan) 26%, transparent);
+  border-top-color: var(--accent-cyan);
+  box-shadow: 0 0 14px rgba(25, 217, 255, 0.28);
+}
+
+.inv-loading {
+  color: var(--text-meta);
+}
+
+.stage__meta {
+  font-size: var(--fs-micro);
+}
+
+/* The screen's own heading block picks up the section hue on its rule, which
+   is what ties the chrome of a screen to the section it belongs to. */
+.page-head {
+  border-bottom-color: var(--border-soft);
+}
+
+/* A section title inside a panel is a secondary heading, so it takes the light
+   blue rather than the heading white — the panel's own title is the heading. */
+.rk__section-title,
+.struct__section-title,
+.hs__section-title,
+.exec__order-title,
+.review__known-title {
+  font-size: var(--fs-card);
+}
+
+/* The report's own section list gets a numbered spine. */
+.report__section-label {
+  font-family: var(--font-mono);
+}
+
+/* Any list of evidence reads as a list, not as a paragraph. */
+.da__list {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+/* Tables: a monospace column for anything numeric. */
+.report__table td.is-numeric,
+.journal__table td.is-numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   30. FOCUS
+   Keyboard focus stays visible everywhere, in the brand hue, and never
+   collides with the glow a mouse hover produces.
+   ------------------------------------------------------------ */
+.btn:focus-visible,
+.nav__item:focus-visible,
+.inv-nav__item:focus-visible,
+.direction__option:focus-visible,
+.decision__option:focus-visible,
+.auth__reveal:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   TRADE IDEA — WORKSPACE SCROLLING
+   ------------------------------------------------------------
+   The Trade Idea screen is a workspace, not a document.
+
+   Before this block the ONLY scroller in the app was the document (`html`):
+   no ancestor of `.idea-layout` declared an overflow, so the whole screen —
+   including the Live Thesis column — travelled upward together. The centre
+   column is ~1370px tall against a ~630px aside, so by the time the trader
+   reached Risk Parameters the right-hand side was simply blank.
+
+   The architecture now:
+
+     .content[data-screen='trade-idea']   fixed-height grid, does NOT scroll
+       ├── .page-head                     row 1 (auto) — screen heading
+       └── .idea-layout                   row 2 (minmax(0,1fr)) — the workspace
+             ├── form.card > .card__body  CENTRE — its own scroll pane
+             └── .idea-layout__aside      RIGHT  — anchored, scrolls internally
+                                                  only if it outgrows the pane
+
+   Two independent panes, no shared scroller, and the aside can never leave a
+   blank column behind because its pane is the full height of the workspace.
+
+   Deliberately scoped to the Trade Idea screen and to viewports with room for
+   it. Tablet already collapses `.idea-layout` to one column (<=1080px), where
+   the aside sits below the form and there is no blank right-hand column to fix;
+   short viewports keep the plain document scroll. Neither is a regression —
+   both are the pre-existing behaviour, left untouched.
+   ============================================================ */
+
+/* The right-hand column at every width. This replaces an inline `style`
+   attribute, so the gap keeps its exact former value: a token would have nudged
+   it to 20px, and a silent 2px shift is still a visual change nobody asked for.
+
+   Flex column rather than grid, and that is load-bearing rather than taste. A
+   grid item's automatic minimum size is clamped to `0` when the item is itself a
+   scroll container, and `.card` carries `overflow: hidden`. As a grid row the
+   Live Thesis card therefore collapsed to the height of its pane and was
+   silently CLIPPED instead of overflowing it — no scrollbar, just missing
+   content. Measured: at 1280x640 the card reported 312px, exactly its pane
+   height, when its content needed ~610px. `flex: none` on the children (set in
+   the block below) removes the shrink, so the pane overflows and scrolls. */
+.idea-layout__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (min-width: 1081px) and (min-height: 620px) {
+  /* The screen becomes a workspace: heading in one row, the two panes in the
+     other. `box-sizing: border-box` puts `.content`'s padding inside this
+     height, so the row arithmetic never has to know what the vertical padding
+     happens to be at this breakpoint — which is exactly the trap that produced
+     an 8px horizontal overflow the last time a token was duplicated. */
+  .content[data-screen='trade-idea'] {
+    height: calc(100vh - var(--topbar-h));
+    height: calc(100dvh - var(--topbar-h));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    /* No row gap: `.page-head` already carries `margin-bottom: var(--sp-6)`,
+       and a gap here would double the space under the heading. */
+    row-gap: 0;
+  }
+
+  /* `minmax(0, 1fr)` plus `min-height: 0` is what lets the workspace be SHORTER
+     than its content. Without it the tallest pane wins the row, the grid grows
+     past the viewport and neither pane ever scrolls — the classic reason a
+     sticky column "does not work". */
+  .content[data-screen='trade-idea'] > .idea-layout {
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  /* CENTRE. The card stays the frame and only its BODY scrolls. Making the card
+     itself the scroll container would drag `.card::after` — the hairline of
+     light along the card's top edge — down the screen with the content, because
+     an absolutely positioned child of a scroll container scrolls with it. */
+  .content[data-screen='trade-idea'] .idea-layout > .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .content[data-screen='trade-idea'] .idea-layout > .card > .card__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* Declaring only `overflow-y` would leave `overflow-x: visible`, which the
+       spec computes to `auto` — a horizontal scroll container nobody asked for,
+       and one that would also make the overflow checker skip every descendant. */
+    overflow-x: hidden;
+    /* The pane must not chain its scroll to the page when it reaches an end. */
+    overscroll-behavior: contain;
+  }
+
+  /* The card's title bar is chrome, not content: it must never be squeezed, so
+     it cannot be pushed out of the pane by a long form. */
+  .content[data-screen='trade-idea'] .idea-layout > .card > .card__header {
+    flex: none;
+  }
+
+  /* RIGHT. Anchored to the top of the workspace and scrolling internally only
+     when the captured thesis plus its key/value block outgrow the pane. */
+  .content[data-screen='trade-idea'] .idea-layout__aside {
+    position: sticky;
+    top: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  /* `flex-shrink: 0` is the fix for the collapsed row described above: the
+     children keep their natural height, so the pane overflows and scrolls
+     instead of silently clipping the Live Thesis card. */
+  .content[data-screen='trade-idea'] .idea-layout__aside > * {
+    flex: none;
+  }
+}
+
+/* ============================================================
+   NATIVE SELECT DROPDOWN READABILITY
+   ------------------------------------------------------------
+   A native <select> popup is painted by the browser, not by this stylesheet,
+   and it cannot use a gradient. `.select` sets its surface with
+   `background: linear-gradient(...)`, which leaves the computed
+   `background-color` TRANSPARENT — so the popup fell back to the platform's
+   default list, which is white, while still inheriting the field's near-white
+   `color`. The result was white text on a white dropdown: the options were
+   present and clickable but effectively unreadable.
+
+   `option` is the only channel that reaches the popup list, so the fix has to
+   be declared there rather than on the select. An opaque `background-color` is
+   required — a transparent or gradient value puts the browser straight back to
+   its default surface. `color-scheme: dark` is declared alongside it so the
+   popup chrome (border, scrollbar, the highlight behind the checked row) is
+   drawn dark as well.
+
+   Options must never be inherited-by-accident again: the colours here are the
+   same tokens the fields use, so a future theme change moves the dropdown too.
+   ============================================================ */
+
+select {
+  color-scheme: dark;
+}
+
+/* The list itself. Opaque and dark, with the same near-white text the closed
+   control shows, so the two read as one component. */
+.select option,
+select option,
+.select optgroup,
+select optgroup {
+  background-color: var(--bg-panel);
+  color: var(--text-heading);
+}
+
+/* The entry the trader is currently on. A lighter surface is what makes "where
+   am I" legible inside a list of similar labels. */
+.select option:checked,
+select option:checked {
+  background-color: var(--bg-elevated);
+  color: var(--text-heading);
+}
+
+/* Pointer / keyboard highlight. Firefox honours these on the popup; Chromium
+   paints its own highlight, so this is progressive rather than required. */
+.select option:hover,
+.select option:focus,
+select option:hover,
+select option:focus {
+  background-color: var(--bg-card-hover);
+  color: var(--text-heading);
+}
+
+/* An optgroup's label is a heading, not a value — dimmer than the options. */
+.select optgroup,
+select optgroup {
+  color: var(--text-subheading);
 }

@@ -27,7 +27,7 @@
 import { useState } from 'react';
 import { fmt } from '../../lib/investigationView.js';
 import { TIMEFRAME_LABELS, EXISTING_POSITION_LABELS } from '../../lib/constants.js';
-import { DataRow } from './primitives.jsx';
+import { Badge, DataRow } from './primitives.jsx';
 
 /**
  * The three options, in the order the trader should consider them.
@@ -130,6 +130,7 @@ function DecisionForm({ onSave, saving, errors, onClearError }) {
                 aria-checked={selected}
                 className={`decision__option${selected ? ' is-selected' : ''}`}
                 data-decision-option={option.value}
+                data-decision-tone={option.value.toLowerCase()}
                 onClick={() => {
                   setDecision(option.value);
                   onClearError?.('decision');
@@ -234,9 +235,13 @@ function DecisionRecord({ record, onEdit }) {
             You recorded: <strong>{record.decisionLabel || record.decision}</strong>
           </div>
         </div>
-        <span className="decision__status" data-decision-status="recorded">
-          {record.statusLabel || 'DECISION RECORDED'}
-        </span>
+        <Badge
+          kind="complete"
+          icon="check"
+          label={record.statusLabel || 'DECISION RECORDED'}
+          className="decision__status"
+          data-decision-status="recorded"
+        />
       </div>
 
       <div className="decision__reason">

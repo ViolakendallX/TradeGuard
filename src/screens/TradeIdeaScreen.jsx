@@ -113,7 +113,11 @@ export default function TradeIdeaScreen({ initialForm, onSubmitted }) {
           onReset={handleReset}
         />
 
-        <div style={{ display: 'grid', gap: 18 }}>
+        {/* The right-hand workspace column. It is a class rather than an inline
+            style because the workspace geometry (sticky anchoring, its own
+            vertical overflow) has to be expressed in the stylesheet, and an
+            inline `style` attribute would outrank every rule there. */}
+        <div className="idea-layout__aside">
           {result && <SubmissionResult result={result} onDismiss={dismissResult} />}
           <ThesisPreview form={form} />
         </div>

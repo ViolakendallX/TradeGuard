@@ -46,11 +46,21 @@
  *     can say what is actually wrong instead of showing a blank list.
  *   - The handler never returns 500.
  *   - No credential value is ever read into a response or a log line.
+ *
+ * OWNERSHIP (added with real authentication)
+ * Every route here requires an authenticated session, and every operation is
+ * scoped to the account behind it. The owner is read from `req.user.id` — set by
+ * the auth middleware from the session — and NEVER from the request body, query
+ * or headers, so a client cannot ask for someone else's Trade Memory by naming
+ * them. Reading another account's trade id returns the ordinary 404 body, which
+ * is the same answer a genuinely unknown id gets: a distinct "403 forbidden"
+ * would confirm the id is real.
  */
 
 import { Router } from 'express';
 import {
   createJournalStore,
+  auditJournal,
   normalizeSessionId,
   newSessionId,
   JOURNAL_STORAGE_NOTE,
@@ -63,23 +73,64 @@ import {
   DEFAULT_JOURNAL_FILE,
   JOURNAL_FILE_ENV,
 } from '../services/tradeJournal.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 
 const router = Router();
-
-/** The store for this request. Recreated per call so the file can be configured. */
-function store() {
-  return createJournalStore({ filePath: process.env[JOURNAL_FILE_ENV] || DEFAULT_JOURNAL_FILE });
-}
 
 /** The file the journal is ACTUALLY reading and writing right now. */
 function journalFilePath() {
   return process.env[JOURNAL_FILE_ENV] || DEFAULT_JOURNAL_FILE;
 }
 
+/**
+ * The store for this request, scoped to the authenticated account.
+ * Recreated per call so the file can be configured and the scope is never stale.
+ *
+ * `req.user.id` is the ONLY source of the owner. It is written by `requireAuth`
+ * from the session, so it cannot be influenced by the client.
+ */
+function store(req) {
+  return createJournalStore({
+    filePath: journalFilePath(),
+    userId: req.user.id,
+  });
+}
+
+/**
+ * How many records predate accounts and therefore belong to nobody.
+ *
+ * Reported so the situation is visible rather than silent: a trader with a
+ * pre-auth journal sees an empty Trade Memory AND an explanation, instead of
+ * concluding their data was deleted.
+ */
+function legacyReport() {
+  const audit = auditJournal({ filePath: journalFilePath() });
+  if (!audit.ok) return { count: 0, known: false, note: null };
+  return {
+    count: audit.unattributed,
+    known: true,
+    note:
+      audit.unattributed > 0
+        ? `${audit.unattributed} saved trade${audit.unattributed === 1 ? '' : 's'} in this journal ` +
+          'were recorded before accounts existed and belong to no account, so they are not shown. ' +
+          'They have not been deleted and have not been attributed to anyone.'
+        : null,
+  };
+}
+
 /** Static contract description, returned with every response. */
 export function meta() {
   return {
     phase: 12,
+    scope: {
+      kind: 'authenticated-user',
+      source: 'session',
+      // Stated explicitly so it is never mistaken for a client-supplied field.
+      clientSuppliedUserId: false,
+      note:
+        'Every Trade Memory operation is scoped to the account behind the request session. ' +
+        'A record belonging to another account is reported as not found.',
+    },
     states: { ...JOURNAL_STATE_LABELS },
     storage: {
       kind: 'local-json-file',
@@ -146,7 +197,7 @@ function readSources(body) {
  * id is missing or unusable — because without an id there is nothing to upsert
  * against, and silently inventing one would scatter one trade across many rows.
  */
-router.post('/journal', (req, res) => {
+router.post('/journal', requireAuth, (req, res) => {
   const sources = readSources(req.body);
 
   const id = normalizeSessionId(sources.id);
@@ -163,7 +214,9 @@ router.post('/journal', (req, res) => {
 
   let result;
   try {
-    result = store().upsert({ ...sources, id });
+    // The owner is `req.user.id` from the session. `sources.userId`, if a client
+    // sent one, is not read at all — `readSources` does not even copy it.
+    result = store(req).upsert({ ...sources, id });
   } catch (e) {
     return res.status(200).json({
       status: 'error',
@@ -199,10 +252,12 @@ router.post('/journal', (req, res) => {
  * Returns summaries only: enough to identify and choose a trade, without
  * shipping every full record on every visit.
  */
-router.get('/journal', (_req, res) => {
+router.get('/journal', requireAuth, (req, res) => {
   let loaded;
   try {
-    loaded = store().list();
+    // Scoped to the session account: the store is constructed with `req.user.id`,
+    // so `list()` can only ever see this account's records.
+    loaded = store(req).list();
   } catch (e) {
     return res.status(200).json({
       status: 'unavailable',
@@ -225,22 +280,31 @@ router.get('/journal', (_req, res) => {
     });
   }
 
+  // Only when this account has nothing to show is the pre-account situation
+  // worth explaining: an empty Trade Memory that is actually a hidden one must
+  // say so, or it reads as data loss.
+  const legacy = loaded.summaries.length ? null : legacyReport();
+
   return res.status(200).json({
     status: 'ok',
     message: loaded.summaries.length
       ? `${loaded.summaries.length} saved trade${loaded.summaries.length === 1 ? '' : 's'}.`
-      : 'No trades have been saved to Trade Memory yet.',
+      : legacy?.note || 'No trades have been saved to Trade Memory yet.',
     records: loaded.summaries,
     count: loaded.summaries.length,
+    legacy,
     ...meta(),
   });
 });
 
 /** GET /api/journal/:id — one saved trade, in full. */
-router.get('/journal/:id', (req, res) => {
+router.get('/journal/:id', requireAuth, (req, res) => {
   let loaded;
   try {
-    loaded = store().get(req.params.id);
+    // Scoped to the session account. An id that belongs to another account is
+    // simply not in this store, so it takes the same 404 path as an unknown id —
+    // the response never confirms that someone else's trade exists.
+    loaded = store(req).get(req.params.id);
   } catch (e) {
     return res.status(200).json({
       status: 'unavailable',

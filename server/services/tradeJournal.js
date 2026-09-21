@@ -205,6 +205,23 @@ export function newSessionId() {
   return randomUUID();
 }
 
+/**
+ * The owner of a record: an account id, or null for an unattributed record.
+ *
+ * A userId is never accepted from a client — the route layer reads it from the
+ * authenticated session and passes it in. This function only guards the SHAPE,
+ * so a hand-edited file cannot introduce an owner that is an object or an array
+ * and confuse the scoping comparison.
+ *
+ * @returns {string|null}
+ */
+export function normalizeUserId(value) {
+  if (typeof value !== 'string') return null;
+  const s = value.trim();
+  if (!s || s.length > 128) return null;
+  return s;
+}
+
 // --- normalising each group -------------------------------------------------
 
 const DECISIONS = ['TAKE', 'WAIT', 'SKIP'];
@@ -616,6 +633,13 @@ export function normalizeRecord(input, now = new Date()) {
 
   const record = {
     id,
+
+    // OWNERSHIP. The account this trade belongs to, or null for a record saved
+    // before accounts existed. `null` is NOT "everyone's" — it is nobody's, and
+    // it is deliberately invisible to every signed-in user. See the OWNERSHIP
+    // note at the head of the store section below.
+    userId: normalizeUserId(src.userId),
+
     createdAt: iso(src.createdAt) || stamp.toISOString(),
     updatedAt: iso(src.updatedAt) || stamp.toISOString(),
 
@@ -689,14 +713,50 @@ export function summarizeRecord(record) {
 // --- the store --------------------------------------------------------------
 
 /**
- * Creates a journal store bound to one file. Stateless between calls, so a store
- * can be created per request and tests can point it at a temporary file.
+ * OWNERSHIP AND SCOPING — the rule this store exists to enforce
  *
- * @param {{ filePath?: string }} [options]
+ * A store is created WITH a scope: `createJournalStore({ filePath, userId })`.
+ * Every read and every write is then confined to that one account, and a
+ * record belonging to anyone else is indistinguishable from a record that does
+ * not exist. That is deliberate: a "403 forbidden" would confirm that the id is
+ * real, which is exactly what someone enumerating ids wants to learn.
+ *
+ * WHY THE SCOPE IS AN OPTION AND NOT A PER-CALL ARGUMENT
+ * A per-call argument is one a caller can forget, and the failure mode of
+ * forgetting it is silent over-permission. Binding it at construction means a
+ * method cannot be invoked without a scope having been chosen.
+ *
+ * WHAT NO SCOPE MEANS — and why it is safe
+ * A store created without a `userId` operates on the UNATTRIBUTED bucket: the
+ * records whose `userId` is null, saved before accounts existed. That is the
+ * least-privileged view there is — it can see legacy rows and nothing else. So a
+ * caller who forgets the scope sees too little rather than too much, and can
+ * never reach a real user's trade.
+ *
+ * LEGACY RECORDS
+ * Records with `userId: null` are never shown to a signed-in user, never
+ * reassigned by guesswork and never deleted. They stay in the file, and
+ * `auditJournal()` reports how many there are so the situation is visible rather
+ * than silently swallowed. Attributing them to an account is an explicit,
+ * operator-run act — see `scripts/claim-legacy-journal.mjs`.
+ */
+
+/**
+ * Creates a journal store bound to one file and one owner.
+ *
+ * @param {{ filePath?: string, userId?: string }} [options]
+ *   `userId` scopes every operation to one account. Omit it only to work with
+ *   unattributed (legacy) records.
  */
 export function createJournalStore(options = {}) {
   const filePath =
     txt(options.filePath) || txt(process.env[JOURNAL_FILE_ENV]) || DEFAULT_JOURNAL_FILE;
+
+  // null means the unattributed bucket, never "all users".
+  const scope = normalizeUserId(options.userId);
+
+  /** True when a record belongs to the scope this store was created with. */
+  const owned = (record) => normalizeUserId(record?.userId) === scope;
 
   /**
    * Reads the file. Never throws: a missing file is an empty journal, and a
@@ -792,20 +852,27 @@ export function createJournalStore(options = {}) {
     }
   }
 
-  /** All saved trades, newest first. */
+  /** This owner's saved trades, newest first. Never another account's. */
   function list() {
     const loaded = read();
     if (!loaded.ok) return { ok: false, records: [], summaries: [], problem: loaded.problem };
 
-    const summaries = loaded.records
+    const records = loaded.records.filter(owned);
+
+    const summaries = records
       .map(summarizeRecord)
       .filter(Boolean)
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 
-    return { ok: true, records: loaded.records, summaries, problem: null };
+    return { ok: true, records, summaries, problem: null };
   }
 
-  /** One saved trade in full, or null. */
+  /**
+   * One saved trade in full, or null.
+   *
+   * A record owned by someone else returns null — the same answer as a record
+   * that does not exist, so the caller cannot learn that an id is taken.
+   */
   function get(id) {
     const wanted = normalizeSessionId(id);
     if (!wanted) return { ok: true, record: null, problem: null };
@@ -813,7 +880,18 @@ export function createJournalStore(options = {}) {
     const loaded = read();
     if (!loaded.ok) return { ok: false, record: null, problem: loaded.problem };
 
-    return { ok: true, record: loaded.records.find((r) => r.id === wanted) ?? null, problem: null };
+    return {
+      ok: true,
+      record: loaded.records.find((r) => r.id === wanted && owned(r)) ?? null,
+      problem: null,
+    };
+  }
+
+  /** True when the id exists at all, under any owner. Used only to refuse a collision. */
+  function idExistsElsewhere(id, wanted) {
+    const loaded = read();
+    if (!loaded.ok) return false;
+    return loaded.records.some((r) => r.id === wanted && !owned(r));
   }
 
   /**
@@ -848,8 +926,16 @@ export function createJournalStore(options = {}) {
     }
 
     const records = loaded.records.slice();
-    const index = records.findIndex((r) => r.id === incoming.id);
+
+    // The lookup is scoped to this store's owner, so a save can only ever update
+    // a record the caller already owns.
+    const index = records.findIndex((r) => r.id === incoming.id && owned(r));
     const stamp = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+
+    // A scoped store stamps its own owner onto the record. It cannot be talked
+    // into writing a record for someone else, because the owner never comes from
+    // the request.
+    incoming.userId = scope;
 
     let record;
     let created;
@@ -871,6 +957,22 @@ export function createJournalStore(options = {}) {
             'A new trade is only ever created by submitting a trade idea.',
         };
       }
+
+      // The id is already used by ANOTHER account. Refusing keeps the file free
+      // of two records sharing an id, and the message is the ordinary
+      // "not in your Trade Memory" one — so a caller who guessed an id learns
+      // nothing about whether it exists.
+      if (idExistsElsewhere(incoming.id, incoming.id)) {
+        return {
+          ok: false,
+          created: false,
+          record: null,
+          problem:
+            'That saved trade is not in your Trade Memory, so there is nothing to update. ' +
+            'A new trade is only ever created by submitting a trade idea.',
+        };
+      }
+
       record = incoming;
       created = true;
     } else {
@@ -941,7 +1043,48 @@ export function createJournalStore(options = {}) {
     return { ok: true, created, record, problem: null };
   }
 
-  return { filePath, read, write, list, get, upsert };
+  return { filePath, userId: scope, read, write, list, get, upsert };
+}
+
+/**
+ * Reports the shape of the journal WITHOUT exposing any record's content.
+ *
+ * This is the only function that looks across owners, and it returns counts
+ * only — never an id, never a thesis, never an owner. It exists so the API can
+ * say honestly "there are 3 saved trades from before accounts existed, and they
+ * belong to nobody" instead of those rows simply vanishing from view.
+ */
+export function auditJournal(options = {}) {
+  const filePath =
+    txt(options.filePath) || txt(process.env[JOURNAL_FILE_ENV]) || DEFAULT_JOURNAL_FILE;
+
+  const loaded = createJournalStore({ filePath }).read();
+  if (!loaded.ok) {
+    return { ok: false, total: 0, attributed: 0, unattributed: 0, owners: 0, problem: loaded.problem };
+  }
+
+  const owners = new Set();
+  let attributed = 0;
+  let unattributed = 0;
+
+  for (const record of loaded.records) {
+    const owner = normalizeUserId(record.userId);
+    if (owner) {
+      attributed += 1;
+      owners.add(owner);
+    } else {
+      unattributed += 1;
+    }
+  }
+
+  return {
+    ok: true,
+    total: loaded.records.length,
+    attributed,
+    unattributed,
+    owners: owners.size,
+    problem: null,
+  };
 }
 
 // --- convenience wrappers over the default store ----------------------------

@@ -30,6 +30,9 @@ function gateView(gate) {
   }
 }
 
+import Icon from '../Icon.jsx';
+import { STAGE_STYLE } from '../../lib/investigation.js';
+
 export default function InvestigationNav({
   sections,
   activeId,
@@ -58,6 +61,7 @@ export default function InvestigationNav({
         {sections.map((section, index) => {
           const isActive = section.id === activeId;
           const isLocked = !section.selectable;
+          const style = STAGE_STYLE[section.id] ?? { accent: 'thesis', icon: 'thesis' };
           return (
             <li className="inv-step" key={section.id}>
               <button
@@ -65,21 +69,24 @@ export default function InvestigationNav({
                 className={`inv-nav__item inv-nav__item--${section.runtime}${
                   isActive ? ' is-active' : ''
                 }`}
+                data-accent={style.accent}
+                data-stage={section.id}
                 onClick={() => onSelect(section.id)}
                 disabled={isLocked}
                 aria-current={isActive ? 'true' : undefined}
                 title={isLocked ? `${section.label} — not available in this build` : section.label}
               >
                 <span className="inv-nav__index">{index + 1}</span>
-                <span className="inv-nav__dot" aria-hidden="true" />
+                <span className="inv-nav__icon">
+                  <Icon name={style.icon} size={15} />
+                </span>
                 <span className="inv-nav__label">
                   <span className="stage__label">{section.label}</span>
                 </span>
+                <span className="inv-nav__dot" aria-hidden="true" />
               </button>
               {index < sections.length - 1 && (
-                <span className="inv-nav__sep" aria-hidden="true">
-                  →
-                </span>
+                <span className="inv-nav__sep" aria-hidden="true" />
               )}
             </li>
           );

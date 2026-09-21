@@ -30,6 +30,7 @@ import { useEffect, useState } from 'react';
 import { fmt, pct, bucketLabel } from '../../lib/investigationView.js';
 import { TIMEFRAME_LABELS, EXISTING_POSITION_LABELS } from '../../lib/constants.js';
 import { DataRow, UnavailableNotice } from './primitives.jsx';
+import Icon from '../Icon.jsx';
 import WorkspaceNav from './WorkspaceNav.jsx';
 
 /** Plain-language headline for each report status. */
@@ -66,20 +67,38 @@ const REPORT_TABS = [
   { id: 'boundary', label: 'Boundary', index: 10, title: 'Final decision boundary' },
 ];
 
-/** A small AVAILABLE / PARTIAL / UNAVAILABLE chip. */
+/** Report section -> the section hue it belongs to. An intelligence report is
+ *  read by scanning, so each section marker carries the colour of the analysis
+ *  stage it summarises. */
+const TAB_ACCENT = {
+  summary: 'report',
+  thesis: 'thesis',
+  market: 'market',
+  events: 'events',
+  attack: 'attack',
+  history: 'history',
+  risk: 'risk',
+  structure: 'structure',
+  gaps: 'events',
+  boundary: 'decision',
+};
+
+/** A small AVAILABLE / PARTIAL / UNAVAILABLE chip. Icon + text, never colour alone. */
 function StateBadge({ state }) {
   if (!state) return null;
+  const modifier = STATE_MODIFIER[state] || 'unavailable';
   return (
-    <span className={`report__state report__state--${STATE_MODIFIER[state] || 'unavailable'}`}>
+    <span className={`report__state report__state--${modifier} tg-badge tg-badge--${modifier}`} data-badge={modifier}>
+      <Icon name={modifier === 'available' ? 'check' : modifier === 'partial' ? 'alert' : 'gap'} size={11} />
       {STATE_LABELS[state] || String(state).toUpperCase()}
     </span>
   );
 }
 
 /** A numbered report section with its own availability badge. */
-function ReportSection({ index, title, state, children }) {
+function ReportSection({ id, index, title, state, children }) {
   return (
-    <section className="report__section" data-report-section={title}>
+    <section className="report__section" data-report-section={title} data-accent={TAB_ACCENT[id] || 'report'}>
       <div className="report__section-title">
         {index != null && <span className="report__section-index">{index}</span>}
         <span className="report__section-label">{title}</span>
@@ -854,7 +873,12 @@ export default function FinalReportPanel({ report }) {
           )}
         </section>
       ) : (
-        <ReportSection index={active.index} title={active.title} state={stateOf[active.id]}>
+        <ReportSection
+          id={active.id}
+          index={active.index}
+          title={active.title}
+          state={stateOf[active.id]}
+        >
           {renderBody()}
         </ReportSection>
       )}

@@ -8,18 +8,85 @@ import TradeReportScreen from './screens/TradeReportScreen.jsx';
 import TradeReviewScreen from './screens/TradeReviewScreen.jsx';
 import TradeMemoryScreen from './screens/TradeMemoryScreen.jsx';
 import TraderReviewScreen from './screens/TraderReviewScreen.jsx';
+import LoginScreen from './screens/LoginScreen.jsx';
+import CreateAccountScreen from './screens/CreateAccountScreen.jsx';
 import PlaceholderScreen from './screens/PlaceholderScreen.jsx';
+import Logo from './components/Logo.jsx';
 import { NAV_ITEMS } from './lib/constants.js';
 import { checkHealth } from './lib/api.js';
 import useTradeSession from './lib/useTradeSession.js';
+import useAuth, { SESSION_STATE } from './lib/useAuth.js';
 import { newSessionId, useJournalSync } from './lib/journal.js';
 
 const DEFAULT_SCREEN = 'trade-idea';
 const SCREEN_IDS = NAV_ITEMS.map((item) => item.id);
 
+/**
+ * Authentication screens are routable but are NOT workflow screens: they are
+ * deliberately absent from NAV_ITEMS, so the sidebar keeps listing exactly the
+ * trading workflow. They render outside AppShell as full-screen pages.
+ */
+const AUTH_SCREEN_IDS = ['login', 'create-account'];
+const ROUTABLE_IDS = [...SCREEN_IDS, ...AUTH_SCREEN_IDS];
+
 function readScreenFromHash() {
   const id = window.location.hash.replace(/^#\/?/, '');
-  return SCREEN_IDS.includes(id) ? id : DEFAULT_SCREEN;
+  return ROUTABLE_IDS.includes(id) ? id : DEFAULT_SCREEN;
+}
+
+/**
+ * Shown while the app is asking the server who it is.
+ *
+ * This exists because "not signed in yet" and "not signed in" are different
+ * answers, and rendering either screen during the question would be wrong: a
+ * login page would flash at a signed-in trader, and the app shell would appear to
+ * someone who is about to be redirected away from it.
+ */
+function SessionGate({ state }) {
+  const unreachable = state === SESSION_STATE.UNREACHABLE;
+
+  return (
+    <div className="auth" data-accent="thesis" data-session-gate={state}>
+      <div className="auth__aside">
+        <Logo size="lg" showTagline />
+        <p className="auth__aside-text">
+          A decision desk for traders who want their thesis examined before their capital is at
+          risk.
+        </p>
+      </div>
+
+      <div className="auth__panel">
+        <div className="auth__card">
+          <div className="auth__head">
+            <Logo size="sm" />
+            <h2 className="auth__title">
+              {unreachable ? 'TradeGuard could not reach the server' : 'Restoring your session…'}
+            </h2>
+            <p className="auth__subtitle">
+              {unreachable
+                ? 'The API is not answering, so your session could not be checked. Nothing has been changed.'
+                : 'Checking which account is signed in on this browser.'}
+            </p>
+          </div>
+
+          {unreachable ? (
+            <button
+              type="button"
+              className="btn btn--primary auth__submit"
+              onClick={() => window.location.reload()}
+              data-session-retry
+            >
+              Try again
+            </button>
+          ) : (
+            <div className="auth__empty" data-session-checking>
+              <span className="spinner" /> Checking…
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -52,6 +119,11 @@ export default function App() {
   // an ordinary save can never overwrite a reflection that is already stored.
   const [reflection, setReflection] = useState('');
   const [reflectionTouched, setReflectionTouched] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Who is signed in. The server is the authority; this only holds the answer.
+  const auth = useAuth();
+  const signedIn = auth.state === SESSION_STATE.SIGNED_IN;
 
   // The current trade's server-side records (research, attack, history, risk,
   // structure, report, the execution gate, and the trade review). Fetched ONCE
@@ -65,8 +137,11 @@ export default function App() {
   // analysis and sends nothing to any venue. The gate evaluation is used when no
   // order was submitted, so the journal remembers LOCKED / READY / UNAVAILABLE
   // honestly rather than as a blank. Phase 13 adds the trader's own reflection.
+  //
+  // It is disabled while signed out, because every Trade Memory route requires a
+  // session — and because there is no account for the record to belong to.
   const journalSync = useJournalSync({
-    sessionId,
+    sessionId: signedIn ? sessionId : null,
     idea: session.idea,
     decision,
     execution: execution || session.gate || null,
@@ -99,6 +174,29 @@ export default function App() {
     window.location.hash = `#/${id}`;
     setScreen(id);
   }, []);
+
+  /**
+   * Routing, once the session is known.
+   *
+   * Two rules, and they are the same rule seen from both sides: the sign-in
+   * screens are only reachable when signed out, and the workflow screens are only
+   * reachable when signed in. A hash that disagrees with the session is corrected
+   * rather than honoured, so a stale bookmark or a hand-typed `#/trade-memory`
+   * cannot put a signed-out browser in front of an account's data.
+   */
+  useEffect(() => {
+    if (auth.state === SESSION_STATE.CHECKING) return;
+
+    const onAuthScreen = AUTH_SCREEN_IDS.includes(screen);
+
+    if (!signedIn && !onAuthScreen) {
+      navigate('login');
+      return;
+    }
+    if (signedIn && onAuthScreen) {
+      navigate(DEFAULT_SCREEN);
+    }
+  }, [auth.state, signedIn, screen, navigate]);
 
   // Called by Trade Idea on a successful submission (online or local offline capture).
   const handleSubmitted = useCallback(
@@ -149,6 +247,45 @@ export default function App() {
     navigate('trade-idea');
   }, [navigate]);
 
+  /**
+   * Sign out.
+   *
+   * The session is destroyed on the server first, then the whole trade in
+   * progress is cleared from this component. That second part matters: the next
+   * account to sign in on this browser must not inherit the previous trader's
+   * thesis, decision, execution record or reflection — and the surest way to
+   * guarantee that is to forget all of it.
+   */
+  const handleSignOut = useCallback(async () => {
+    setSigningOut(true);
+    await auth.signOut();
+    setSubmission(null);
+    setDraft(null);
+    setDecision(null);
+    setExecution(null);
+    setReviewNotes('');
+    setReflection('');
+    setReflectionTouched(false);
+    setSessionId(null);
+    setSigningOut(false);
+    navigate('login');
+  }, [auth, navigate]);
+
+  // The session is still being resolved. Neither the app nor the sign-in screen
+  // is the right thing to show yet, so a third render covers the question.
+  if (auth.state === SESSION_STATE.CHECKING || auth.state === SESSION_STATE.UNREACHABLE) {
+    return <SessionGate state={auth.state} />;
+  }
+
+  // Signed out: the sign-in screens, and only the sign-in screens.
+  if (!signedIn) {
+    return screen === 'create-account' ? (
+      <CreateAccountScreen onNavigate={navigate} onAuthenticated={auth.signIn} />
+    ) : (
+      <LoginScreen onNavigate={navigate} onAuthenticated={auth.signIn} />
+    );
+  }
+
   const active = NAV_ITEMS.find((item) => item.id === screen) ?? NAV_ITEMS[0];
 
   const subtitle =
@@ -177,6 +314,9 @@ export default function App() {
       apiOnline={apiOnline}
       title={active.label}
       subtitle={subtitle}
+      user={auth.user}
+      onSignOut={handleSignOut}
+      signingOut={signingOut}
     >
       {screen === 'trade-idea' ? (
         <TradeIdeaScreen initialForm={draft} onSubmitted={handleSubmitted} />

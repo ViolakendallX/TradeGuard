@@ -17,8 +17,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createServer } from 'node:http';
-import express from 'express';
 
 import {
   createJournalStore,
@@ -34,6 +32,7 @@ import {
   PNL_NOTE,
 } from '../services/tradeJournal.js';
 import journalRouter from '../routes/tradeJournal.js';
+import { createAuthTestKit } from './helpers/authTestKit.js';
 
 // --- helpers ----------------------------------------------------------------
 
@@ -804,26 +803,33 @@ test('S-unavailable — the gaps are listed explicitly and honestly', () => {
 
 test('R1 — POST /api/journal saves, updates, and rejects a missing session id', async (t) => {
   const file = tempJournalFile();
-  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
-  process.env.TRADEGUARD_JOURNAL_FILE = file;
-
-  const app = express();
-  app.use(express.json({ limit: '128kb' }));
-  app.use('/api', journalRouter);
-  const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(() => {
-    server.close();
-    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
-    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  const kit = await createAuthTestKit({
+    routers: [journalRouter],
+    env: { TRADEGUARD_JOURNAL_FILE: file },
   });
+  t.after(() => kit.cleanup());
 
-  // (a) create
-  const created = await fetch(`${base}/api/journal`, {
+  const { cookie, user } = await kit.signedInUser();
+  const base = kit.base;
+
+  // (a) an unauthenticated save is refused before anything is written
+  const anonymous = await fetch(`${base}/api/journal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(completedSources()),
+  });
+  assert.equal(anonymous.status, 401);
+  const anonymousBody = await anonymous.json();
+  assert.equal(anonymousBody.status, 'unauthenticated');
+  assert.equal(anonymousBody.authenticated, false);
+  // The refusal must not confirm or deny anything about the journal itself.
+  assert.equal('records' in anonymousBody, false);
+  assert.equal(fs.existsSync(file), false, 'a refused save must not create the journal file');
+
+  // (b) create
+  const created = await fetch(`${base}/api/journal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: JSON.stringify(completedSources()),
   });
   assert.equal(created.status, 201);
@@ -834,11 +840,15 @@ test('R1 — POST /api/journal saves, updates, and rejects a missing session id'
   assert.equal(createdBody.record.execution.pnl, null);
   assert.equal(createdBody.storage.kind, 'local-json-file');
   assert.equal(createdBody.storage.cloud, false);
+  // The stored record is attributed to the signed-in account, from the session.
+  assert.equal(createdBody.record.userId, user.id);
+  assert.equal(createdBody.scope.kind, 'authenticated-user');
+  assert.equal(createdBody.scope.clientSuppliedUserId, false);
 
-  // (b) update the same session
+  // (c) update the same session
   const updated = await fetch(`${base}/api/journal`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: JSON.stringify(completedSources({ notes: 'Second pass.' })),
   });
   assert.equal(updated.status, 200);
@@ -846,10 +856,10 @@ test('R1 — POST /api/journal saves, updates, and rejects a missing session id'
   assert.equal(updatedBody.created, false);
   assert.equal(updatedBody.record.notes, 'Second pass.');
 
-  // (c) no id -> 400, and nothing is written
+  // (d) no id -> 400, and nothing new is written
   const invalid = await fetch(`${base}/api/journal`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: JSON.stringify({ idea: completedSources().idea }),
   });
   assert.equal(invalid.status, 400);
@@ -857,22 +867,26 @@ test('R1 — POST /api/journal saves, updates, and rejects a missing session id'
   assert.equal(invalidBody.status, 'invalid');
   assert.equal(Boolean(invalidBody.errors.id), true);
 
-  // (d) list
-  const list = await fetch(`${base}/api/journal`);
+  // (e) list
+  const list = await fetch(`${base}/api/journal`, { headers: { Cookie: cookie } });
   assert.equal(list.status, 200);
   const listBody = await list.json();
   assert.equal(listBody.status, 'ok');
   assert.equal(listBody.count, 1);
   assert.equal(listBody.records[0].id, 'sess-A');
 
-  // (e) read one
-  const one = await fetch(`${base}/api/journal/sess-A`);
+  // (f) an unauthenticated list is refused
+  const listAnonymous = await fetch(`${base}/api/journal`);
+  assert.equal(listAnonymous.status, 401);
+
+  // (g) read one
+  const one = await fetch(`${base}/api/journal/sess-A`, { headers: { Cookie: cookie } });
   assert.equal(one.status, 200);
   const oneBody = await one.json();
   assert.equal(oneBody.record.decision.reason, completedSources().decision.reason);
 
-  // (f) unknown id
-  const unknown = await fetch(`${base}/api/journal/nope`);
+  // (h) unknown id
+  const unknown = await fetch(`${base}/api/journal/nope`, { headers: { Cookie: cookie } });
   assert.equal(unknown.status, 404);
   const unknownBody = await unknown.json();
   assert.equal(unknownBody.status, 'not-found');
@@ -884,30 +898,23 @@ test('R2 — GET /api/journal reports a corrupt file honestly instead of an empt
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, 'not json at all', 'utf8');
 
-  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
-  process.env.TRADEGUARD_JOURNAL_FILE = file;
-
-  const app = express();
-  app.use(express.json());
-  app.use('/api', journalRouter);
-  const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(() => {
-    server.close();
-    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
-    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  const kit = await createAuthTestKit({
+    routers: [journalRouter],
+    env: { TRADEGUARD_JOURNAL_FILE: file },
   });
+  t.after(() => kit.cleanup());
 
-  const list = await fetch(`${base}/api/journal`);
+  const { cookie } = await kit.signedInUser();
+  const base = kit.base;
+
+  const list = await fetch(`${base}/api/journal`, { headers: { Cookie: cookie } });
   assert.equal(list.status, 200);
   const body = await list.json();
   assert.equal(body.status, 'unavailable');
   assert.match(body.message, /not valid JSON/);
   assert.deepEqual(body.records, []);
 
-  const one = await fetch(`${base}/api/journal/anything`);
+  const one = await fetch(`${base}/api/journal/anything`, { headers: { Cookie: cookie } });
   assert.equal(one.status, 200);
   assert.equal((await one.json()).status, 'unavailable');
 });
@@ -915,23 +922,16 @@ test('R2 — GET /api/journal reports a corrupt file honestly instead of an empt
 test('R3 — GET /api/journal on a fresh install is an honest empty state', async (t) => {
   const file = tempJournalFile();
 
-  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
-  process.env.TRADEGUARD_JOURNAL_FILE = file;
-
-  const app = express();
-  app.use(express.json());
-  app.use('/api', journalRouter);
-  const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(() => {
-    server.close();
-    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
-    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  const kit = await createAuthTestKit({
+    routers: [journalRouter],
+    env: { TRADEGUARD_JOURNAL_FILE: file },
   });
+  t.after(() => kit.cleanup());
 
-  const body = await (await fetch(`${base}/api/journal`)).json();
+  const { cookie } = await kit.signedInUser();
+  const base = kit.base;
+
+  const body = await (await fetch(`${base}/api/journal`, { headers: { Cookie: cookie } })).json();
   assert.equal(body.status, 'ok');
   assert.equal(body.count, 0);
   assert.match(body.message, /No trades have been saved/);
@@ -1232,27 +1232,20 @@ test('T13 — the journal list reports whether a reflection was recorded', () =>
 
 test('T14 — POST /api/journal carries the reflection through and reports it in meta', async (t) => {
   const file = tempJournalFile();
-  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
-  process.env.TRADEGUARD_JOURNAL_FILE = file;
-
-  const app = express();
-  app.use(express.json({ limit: '128kb' }));
-  app.use('/api', journalRouter);
-  const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(() => {
-    server.close();
-    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
-    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  const kit = await createAuthTestKit({
+    routers: [journalRouter],
+    env: { TRADEGUARD_JOURNAL_FILE: file },
   });
+  t.after(() => kit.cleanup());
+
+  const { cookie } = await kit.signedInUser();
+  const base = kit.base;
 
   const post = async (body) =>
     (
       await fetch(`${base}/api/journal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
         body: JSON.stringify(body),
       })
     ).json();
@@ -1272,11 +1265,11 @@ test('T14 — POST /api/journal carries the reflection through and reports it in
   assert.equal(plain.record.traderReview.notes, 'Written in Trader Review.');
 
   // The read-back route returns it too.
-  const one = await (await fetch(`${base}/api/journal/sess-A`)).json();
+  const one = await (await fetch(`${base}/api/journal/sess-A`, { headers: { Cookie: cookie } })).json();
   assert.equal(one.record.traderReview.notes, 'Written in Trader Review.');
 
   // And the list marks it as reflected on.
-  const list = await (await fetch(`${base}/api/journal`)).json();
+  const list = await (await fetch(`${base}/api/journal`, { headers: { Cookie: cookie } })).json();
   assert.equal(list.records[0].hasReflection, true);
 });
 
@@ -1378,27 +1371,20 @@ test('T17 — a reflection-only save cannot disturb a second trade', () => {
 
 test('T18 — POST /api/journal with only a reflection updates only the reflection', async (t) => {
   const file = tempJournalFile();
-  const previous = process.env.TRADEGUARD_JOURNAL_FILE;
-  process.env.TRADEGUARD_JOURNAL_FILE = file;
-
-  const app = express();
-  app.use(express.json({ limit: '128kb' }));
-  app.use('/api', journalRouter);
-  const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(() => {
-    server.close();
-    if (previous === undefined) delete process.env.TRADEGUARD_JOURNAL_FILE;
-    else process.env.TRADEGUARD_JOURNAL_FILE = previous;
+  const kit = await createAuthTestKit({
+    routers: [journalRouter],
+    env: { TRADEGUARD_JOURNAL_FILE: file },
   });
+  t.after(() => kit.cleanup());
+
+  const { cookie } = await kit.signedInUser();
+  const base = kit.base;
 
   const post = async (body) =>
     (
       await fetch(`${base}/api/journal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
         body: JSON.stringify(body),
       })
     ).json();
@@ -1413,7 +1399,7 @@ test('T18 — POST /api/journal with only a reflection updates only the reflecti
   assert.equal(reflected.record.traderReview.notes, 'Written looking back.');
 
   // Read back: the reflection landed, everything else is as it was.
-  const one = await (await fetch(`${base}/api/journal/sess-A`)).json();
+  const one = await (await fetch(`${base}/api/journal/sess-A`, { headers: { Cookie: cookie } })).json();
   assert.equal(one.record.traderReview.notes, 'Written looking back.');
   assert.deepEqual(one.record.trade, created.record.trade);
   assert.deepEqual(one.record.decision, created.record.decision);
@@ -1424,6 +1410,6 @@ test('T18 — POST /api/journal with only a reflection updates only the reflecti
   assert.equal(ghost.status, 'unavailable');
   assert.match(ghost.message, /no longer in Trade Memory/i);
 
-  const list = await (await fetch(`${base}/api/journal`)).json();
+  const list = await (await fetch(`${base}/api/journal`, { headers: { Cookie: cookie } })).json();
   assert.equal(list.count, 1, 'the refused write created no record');
 });

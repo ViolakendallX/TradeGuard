@@ -15,7 +15,23 @@ coverage/
 
 # Phase 12 — Trade Memory journal. Local runtime data written by the API; the
 # saved trades are the user's own and are never committed.
+#
+# This also covers the two files real authentication writes:
+#   server/data/users.json    — accounts, each with a scrypt password hash
+#   server/data/sessions.json — open sessions, each stored as a token digest
+# Neither may ever be committed: the first is a credential store, and the second
+# is the set of live sign-ins.
 server/data/
 
 # WorkBuddy internal workspace files (never commit these)
 .workbuddy-ai/
+
+# Screenshots produced by the visual harnesses (scripts/shots-visual.mjs,
+# scripts/verify-visual-redesign.mjs). They are review artefacts — regenerated
+# on demand, and they carry a real trader's on-screen data, so they must not
+# enter the repository.
+.visual-shots/
+
+# Scratch files used while editing the stylesheet in bulk.
+.tmp-*.css
+.tmp-*.py
